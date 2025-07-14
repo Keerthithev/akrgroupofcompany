@@ -1,67 +1,86 @@
-import { Button } from "@/components/ui/button"
-import { CompanyCard } from "@/components/CompanyCard"
-import { HeroSlideshow } from "@/components/HeroSlideshow"
+import { Button } from "../components/ui/button"
+import { CompanyCard } from "../components/CompanyCard"
+import { HeroSlideshow } from "../components/HeroSlideshow"
+import React, { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog";
 
-const companies = [
-  {
-    name: "AKR & SONS (PVT) LTD",
-    description:
-      "Leading private enterprise providing comprehensive business solutions with decades of expertise in corporate management and strategic development.",
-    icon: "🏢",
-    image: "/images/akr-sons.jpg",
-  },
-  {
-    name: "AKR Multi Complex",
-    description:
-      "Modern commercial and residential complex offering premium spaces for businesses and families with state-of-the-art facilities and services.",
-    icon: "🏗️",
-    image: "/images/akr-multi-complex.jpg",
-  },
-  {
-    name: "AKR Construction",
-    description:
-      "Professional construction company delivering high-quality infrastructure projects, residential complexes, and commercial buildings with innovative designs.",
-    icon: "🔨",
-    image: "/images/akr-construction.jpg",
-  },
-  {
-    name: "AKR Lanka Filing Station",
-    description:
-      "Reliable fuel station providing quality petroleum products and automotive services to meet all your vehicle maintenance needs.",
-    icon: "⛽",
-    image: "/images/akr-fuel-station.jpg",
-  },
-  {
-    name: "AKR Wine Store",
-    description:
-      "Premium wine retail store offering carefully curated selection of finest wines from around the world for connoisseurs and enthusiasts.",
-    icon: "🍷",
-    image: "/images/akr-wine-store.jpg",
-  },
-  {
-    name: "AKR Farm",
-    description:
-      "Sustainable agricultural enterprise focusing on organic farming practices and fresh produce cultivation using modern farming techniques.",
-    icon: "🌾",
-    image: "/images/akr-farm.jpg",
-  },
-  {
-    name: "AKR'S Amma Organization",
-    description:
-      "Dedicated social organization committed to community development, charitable activities, and supporting underprivileged families in society.",
-    icon: "❤️",
-    image: "/images/AKR%20AMMA.jpg",
-  },
-  {
-    name: "AKR Easy Credit (Pvt) Ltd",
-    description:
-      "Reliable financial services provider offering easy credit solutions, personal loans, and flexible payment options to meet diverse financial needs.",
-    icon: "💳",
-    image: "/images/akr-easy-credit.jpg",
-  },
-]
+const AKR_COMPANY_NAME = "AKR & SONS (PVT) LTD";
 
 export default function Index() {
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [akrCompany, setAkrCompany] = useState<any>(null);
+  const [akrVehicles, setAkrVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("http://localhost:5050/api/companies")
+      .then(res => res.json())
+      .then(data => {
+        setCompanies(data);
+        const akr = data.find(c => c.name === AKR_COMPANY_NAME);
+        setAkrCompany(akr);
+        if (akr) fetchAkrVehicles(akr._id);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load companies");
+        setLoading(false);
+      });
+  }, []);
+
+  const fetchAkrVehicles = (companyId) => {
+    fetch(`http://localhost:5050/api/vehicles/company/${companyId}`)
+      .then(res => res.json())
+      .then(setAkrVehicles)
+      .catch(() => setAkrVehicles([]));
+  };
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setAdminError("");
+    if (!adminEmail || !adminPassword) {
+      setAdminError("Please enter both email and password.");
+      return;
+    }
+    setAdminLoading(true);
+    try {
+      const res = await fetch("http://localhost:5050/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setAdminError(data.message || "Login failed");
+        setAdminLoading(false);
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem("isAdmin", "true");
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminName", data.name);
+      localStorage.setItem("adminEmail", data.email);
+      window.location.href = "/admin/dashboard";
+    } catch (err) {
+      setAdminError("Unable to connect to server. Please try again later.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Group vehicles by category
+  const vehiclesByCategory = akrVehicles.reduce((acc, v) => {
+    if (!acc[v.category]) acc[v.category] = [];
+    acc[v.category].push(v);
+    return acc;
+  }, {});
+
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -271,7 +290,7 @@ export default function Index() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {companies.map((company, index) => (
-              <div key={index} className="group">
+              <div key={company._id || index} className="group">
               <CompanyCard
                 name={company.name}
                 description={company.description}
@@ -486,6 +505,43 @@ export default function Index() {
           </div>
         </div>
       </footer>
+      {/* Hidden Admin Entry */}
+      <button
+        className="fixed bottom-3 right-3 z-50 text-xs text-gray-400 hover:text-gray-700 opacity-40 hover:opacity-80 transition-all px-2 py-1 rounded"
+        onClick={() => setAdminOpen(true)}
+        aria-label="Admin Login"
+      >
+        Admin
+      </button>
+      <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+        <DialogContent className="max-w-xs w-full">
+          <DialogTitle>Admin Login</DialogTitle>
+          <DialogDescription>Enter your admin credentials to access the dashboard.</DialogDescription>
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Email or Username"
+              className="w-full border rounded px-3 py-2 text-sm"
+              value={adminEmail}
+              onChange={e => setAdminEmail(e.target.value)}
+              autoFocus
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full border rounded px-3 py-2 text-sm"
+              value={adminPassword}
+              onChange={e => setAdminPassword(e.target.value)}
+              required
+            />
+            {adminError && <div className="text-xs text-red-500 text-center">{adminError}</div>}
+            <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded py-2 text-sm font-medium disabled:opacity-60" disabled={adminLoading}>
+              {adminLoading ? "Logging in..." : "Login"}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

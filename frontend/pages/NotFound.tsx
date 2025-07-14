@@ -5,6 +5,9 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
+    if (window.location.pathname.startsWith("/admin/dashboard") && !localStorage.getItem("isAdmin")) {
+      window.location.href = "/";
+    }
     console.error(
       "404 Error: User attempted to access non-existent route:",
       location.pathname

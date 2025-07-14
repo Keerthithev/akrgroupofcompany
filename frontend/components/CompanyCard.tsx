@@ -35,7 +35,7 @@ export function CompanyCard({ name, description, icon, image }: CompanyCardProps
           )
         )}
         <div>
-          <h3 className="text-lg sm:text-xl font-old-english text-foreground mb-2 sm:mb-3 group-hover:gradient-text transition-all duration-300 leading-tight">
+          <h3 className="text-lg sm:text-xl text-foreground mb-2 sm:mb-3 group-hover:gradient-text transition-all duration-300 leading-tight">
             {name}
           </h3>
           <p className="text-gray-700 text-sm sm:text-base leading-relaxed mb-4 sm:mb-6 group-hover:text-gray-800 transition-colors duration-300 font-medium break-words">

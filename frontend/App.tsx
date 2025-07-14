@@ -1,12 +1,14 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
 import Index from "./pages/Index";
 import AkrSonsBikeStore from "./pages/AkrSonsBikeStore";
 import NotFound from "./pages/NotFound";
 import AkrMultiComplex from "./pages/AkrMultiComplex";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/akr-sons-bike-store" element={<AkrSonsBikeStore />} />
           <Route path="/akr-multi-complex" element={<AkrMultiComplex />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
