@@ -78,7 +78,7 @@ export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, 
       <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-old-english text-gray-800">Bike Details</h2>
+          <h2 className="text-2xl text-gray-800">Bike Details</h2>
           <Button variant="ghost" onClick={onClose} className="text-gray-500 hover:text-gray-700">
             ✕
           </Button>
@@ -123,7 +123,7 @@ export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, 
 
                 <div className="space-y-6">
                   <div>
-                    <h1 className="text-3xl font-old-english text-gray-800 mb-2">
+                    <h1 className="text-3xl text-gray-800 mb-2">
                       {currentBike.name}
                     </h1>
                     <div className="flex items-center gap-4 mb-4">
@@ -195,7 +195,7 @@ export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, 
 
               {/* Specifications */}
               <div className="border-t border-gray-200 pt-8">
-                <h3 className="text-2xl font-old-english text-gray-800 mb-6">Technical Specifications</h3>
+                <h3 className="text-2xl text-gray-800 mb-6">Technical Specifications</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <Card className="p-4">
                     <h4 className="font-semibold text-gray-800 mb-2">Engine</h4>
@@ -226,7 +226,7 @@ export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, 
 
               {/* Contact Information */}
               <div className="border-t border-gray-200 pt-8">
-                <h3 className="text-2xl font-old-english text-gray-800 mb-6">Get This Bike</h3>
+                <h3 className="text-2xl text-gray-800 mb-6">Get This Bike</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center space-y-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">

@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-@import url('https://fonts.cdnfonts.com/css/engravers-old-english');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -182,14 +181,6 @@
 
   .bg-gradient-accent {
     background: var(--gradient-accent);
-  }
-
-  /* Old English font for company headings */
-  .font-old-english {
-    font-family: 'Monotype Engravers Old English', 'UnifrakturMaguntia', 'Times New Roman', serif;
-    font-weight: normal;
-    font-style: normal;
-    letter-spacing: 0.05em;
   }
 
   /* Dynamic moving element animations */

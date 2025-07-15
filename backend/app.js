@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/company');
 const vehicleRoutes = require('./routes/vehicle');
+const preBookingRoutes = require('./routes/preBooking');
 
 // Load env vars
 dotenv.config({ path: './.env' });
@@ -33,6 +34,7 @@ mongoose.connect(process.env.MONGO_URI, {
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/prebookings', preBookingRoutes);
 
 // Error Handler
 app.use(errorHandler);

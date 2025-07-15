@@ -52,7 +52,7 @@ exports.getVehicle = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
+}; 
 
 // Update vehicle details
 exports.updateVehicle = async (req, res, next) => {

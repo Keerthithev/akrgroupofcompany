@@ -49,7 +49,7 @@ export function BookingForm({ bikeName, bikePrice, onClose }: BookingFormProps) 
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md w-full text-center">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-old-english text-gray-800 mb-4">Booking Submitted!</h2>
+          <h2 className="text-2xl text-gray-800 mb-4">Booking Submitted!</h2>
           <p className="text-gray-600 mb-6">
             Thank you for your booking request. We'll contact you within 24 hours to confirm your reservation.
           </p>
@@ -66,7 +66,7 @@ export function BookingForm({ bikeName, bikePrice, onClose }: BookingFormProps) 
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-old-english text-gray-800">Book Your Bike</h2>
+            <h2 className="text-2xl text-gray-800">Book Your Bike</h2>
             <p className="text-gray-600">Reserve your {bikeName}</p>
           </div>
           <Button variant="ghost" onClick={onClose} className="text-gray-500 hover:text-gray-700">

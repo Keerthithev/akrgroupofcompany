@@ -90,7 +90,7 @@ export default function AkrMultiComplex() {
               Back to Home
             </Button>
             <div className="text-center">
-              <h1 className="text-base sm:text-lg font-old-english text-gray-500 tracking-wide leading-tight">AKR Multi Complex</h1>
+              <h1 className="text-base sm:text-lg text-gray-500 tracking-wide leading-tight">AKR Multi Complex</h1>
               <p className="text-xs sm:text-xs text-gray-400 leading-tight mt-1">Premium Commercial & Residential Hub</p>
             </div>
             <div className="flex items-center gap-4">
@@ -106,7 +106,7 @@ export default function AkrMultiComplex() {
       {/* Hero Section */}
       <section className="relative z-10 pt-28 sm:pt-36 pb-10 sm:pb-16 px-2 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-old-english text-gray-800 mb-4 sm:mb-6 drop-shadow-sm bg-white/70 inline-block px-3 sm:px-6 py-2 rounded-xl">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl text-gray-800 mb-4 sm:mb-6 drop-shadow-sm bg-white/70 inline-block px-3 sm:px-6 py-2 rounded-xl">
             AKR Multi Complex
           </h1>
           <p className="text-base sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-3xl mx-auto">
@@ -130,7 +130,7 @@ export default function AkrMultiComplex() {
                     />
                     <div className="absolute top-2 left-2">{facility.icon}</div>
                   </div>
-                  <h3 className="text-xl font-old-english text-gray-800 group-hover:gradient-text transition-all duration-300">
+                  <h3 className="text-xl text-gray-800 group-hover:gradient-text transition-all duration-300">
                     {facility.name}
                   </h3>
                   <p className="text-gray-600 text-sm mb-2">{facility.description}</p>
@@ -157,7 +157,7 @@ export default function AkrMultiComplex() {
             </div>
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 bg-white/95 border-b border-gray-200 flex justify-between items-center px-4 sm:px-6 py-3">
-              <h2 className="text-lg sm:text-2xl font-old-english text-gray-800 text-center w-full">{selectedFacility.name} Details</h2>
+              <h2 className="text-lg sm:text-2xl text-gray-800 text-center w-full">{selectedFacility.name} Details</h2>
               <button
                 className="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold z-20"
                 onClick={() => setSelectedFacility(null)}
@@ -169,7 +169,7 @@ export default function AkrMultiComplex() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-8 py-4">
               <div className="max-w-2xl mx-auto">
-                <h3 className="text-xl sm:text-2xl font-old-english text-gray-800 mb-2 text-center">{selectedFacility.name}</h3>
+                <h3 className="text-xl sm:text-2xl text-gray-800 mb-2 text-center">{selectedFacility.name}</h3>
                 <p className="text-gray-600 mb-6 text-center">{selectedFacility.description}</p>
                 {/* Features */}
                 <div className="mb-6">

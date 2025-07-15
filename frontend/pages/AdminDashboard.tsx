@@ -2,13 +2,16 @@ import React, { useEffect, useState, useRef } from "react";
 import { Chart } from "../components/ui/chart";
 import { User, Bell, Activity, Home, Building2, Store, Leaf, HeartHandshake, Wine, Fuel, Wrench, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog";
-import { Layout, Menu, Form, Input, Select, Upload, Button, Modal, message, Row, Col, Table, List, Card, Space, Tag, Rate, Spin } from "antd";
+import { Layout, Menu, Form, Input, Select, Upload, Button, Modal, message, Row, Col, Table, List, Card, Space, Tag, Rate, Spin, Descriptions } from "antd";
 import { UserOutlined, BellOutlined, HomeOutlined, BuildOutlined, MoreOutlined, LeftOutlined, LineOutlined, WechatOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import { UploadOutlined } from "@ant-design/icons";
 import { UploadFile } from "antd/es/upload/interface";
 import { MenuOutlined } from '@ant-design/icons';
 import { Drawer } from 'antd';
 import Swal from 'sweetalert2';
+import saveAs from 'file-saver';
+import { DownloadOutlined } from '@ant-design/icons';
+import { Select as AntdSelect } from 'antd';
 
 const AKR_COMPANY_NAME = "AKR & SONS (PVT) LTD";
 
@@ -360,6 +363,20 @@ function useIsMobile() {
   return isMobile;
 }
 
+// CSV Export Function
+function exportPreBookingsToCSV(bookings) {
+  if (!bookings.length) return;
+  const header = [
+    'Booking ID', 'Customer', 'Email', 'Phone', 'National ID', 'Address', 'Vehicle Model', 'Status', 'Notes', 'Created At'
+  ];
+  const rows = bookings.map(b => [
+    b.bookingId, b.fullName, b.email, b.phone, b.nationalId, b.address, b.vehicleModel, b.status, b.notes || '', new Date(b.createdAt).toLocaleString()
+  ]);
+  const csv = [header, ...rows].map(r => r.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, 'prebookings.csv');
+}
+
 export default function AdminDashboard() {
   console.log("Cloudinary config:", CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
   // Redirect if not admin
@@ -416,6 +433,18 @@ export default function AdminDashboard() {
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState("")
 
+  // Add state for pre-bookings
+  const [preBookings, setPreBookings] = useState<any[]>([]);
+  const [preBookingLoading, setPreBookingLoading] = useState(false);
+  const [preBookingError, setPreBookingError] = useState("");
+  const [selectedPreBooking, setSelectedPreBooking] = useState<any>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  // Add state to track selected AKR tab
+  const [akrTab, setAkrTab] = useState<'vehicles' | 'prebookings'>('vehicles');
+  // Add state for search and filter
+  const [preBookingSearch, setPreBookingSearch] = useState('');
+  const [preBookingStatus, setPreBookingStatus] = useState('All');
+
   useEffect(() => {
     fetch("http://localhost:5050/api/companies")
       .then(res => res.json())
@@ -438,6 +467,21 @@ export default function AdminDashboard() {
       setEmployees(oldCompanyInfo[selectedCompany.name]?.employees || []);
     }
   }, [selectedCompany]);
+
+  // Fetch pre-bookings on mount
+  useEffect(() => {
+    setPreBookingLoading(true);
+    fetch("http://localhost:5050/api/prebookings")
+      .then(res => res.json())
+      .then(data => {
+        setPreBookings(data);
+        setPreBookingLoading(false);
+      })
+      .catch(() => {
+        setPreBookingError("Failed to load pre-bookings");
+        setPreBookingLoading(false);
+      });
+  }, []);
 
   const fetchVehicles = (companyId: string) => {
     fetch(`http://localhost:5050/api/vehicles/company/${companyId}`)
@@ -633,7 +677,7 @@ export default function AdminDashboard() {
   // Responsive sidebar for mobile and desktop
   const renderSidebar = (isMobile = false) => (
     <div className="h-full flex flex-col justify-between">
-      <div>
+        <div>
         <div className="p-4 flex items-center gap-3 border-b border-white/10 justify-between">
           <div className="flex items-center gap-3">
             <img src="/images/image copy 2.png" alt="AKR Admin Logo" className="h-12 w-12 object-contain mb-2" />
@@ -649,63 +693,88 @@ export default function AdminDashboard() {
             }}
             className="ml-2"
           />
-        </div>
-        <Menu
-          mode="inline"
-          defaultSelectedKeys={['1']}
-          style={{ borderRight: 0 }}
-          items={[
-            {
-              key: '1',
-              label: 'Companies',
-              icon: <HomeOutlined />,
-              children: companies.map(company => ({
-                key: company._id,
-                label: company.name,
-                onClick: () => {
-                  setSelectedCompany(company);
-                  if (company.name === AKR_COMPANY_NAME) fetchVehicles(company._id);
-                  setVehicleForm({
-                    vehicleType: "Motorcycle",
-                    name: "",
-                    category: "",
-                    price: "",
-                    description: "",
-                    features: [],
-                    specs: [
-                      { key: "Engine", value: "" },
-                      { key: "Mileage", value: "" },
-                      { key: "Fuel Capacity", value: "" },
-                      { key: "Transmission", value: "" },
-                      { key: "Power", value: "" },
-                      { key: "Weight", value: "" },
-                    ],
-                    colors: [],
-                    variants: [],
-                    faqs: [],
-                  });
-                  setImageFiles([]);
-                  setImagePreviews([]);
-                  setSidebarOpen(false);
-                }
-              }))
-            },
+          </div>
+          <Menu
+            mode="inline"
+            defaultSelectedKeys={['1']}
+            style={{ borderRight: 0 }}
+            items={[
+              {
+                key: '1',
+                label: 'Companies',
+                icon: <HomeOutlined />,
+                children: companies.map(company =>
+                  company.name === AKR_COMPANY_NAME ? {
+                    key: company._id,
+                    label: company.name,
+                    children: [
+                      {
+                        key: `${company._id}-vehicles`,
+                        label: 'Vehicles',
+                        onClick: () => {
+                          setSelectedCompany(company);
+                          setAkrTab('vehicles');
+                          fetchVehicles(company._id);
+                        }
+                      },
+                      {
+                        key: `${company._id}-prebookings`,
+                        label: 'Pre-Bookings',
+                        onClick: () => {
+                          setSelectedCompany(company);
+                          setAkrTab('prebookings');
+                        }
+                      }
+                    ]
+                  } : {
+                    key: company._id,
+                    label: company.name,
+                    onClick: () => {
+                      setSelectedCompany(company);
+                      setAkrTab('vehicles');
+                      if (company.name === AKR_COMPANY_NAME) fetchVehicles(company._id);
+                      setVehicleForm({
+                        vehicleType: "Motorcycle",
+                        name: "",
+                        category: "",
+                        price: "",
+                        description: "",
+                        features: [],
+                        specs: [
+                          { key: "Engine", value: "" },
+                          { key: "Mileage", value: "" },
+                          { key: "Fuel Capacity", value: "" },
+                          { key: "Transmission", value: "" },
+                          { key: "Power", value: "" },
+                          { key: "Weight", value: "" },
+                        ],
+                        colors: [],
+                        variants: [],
+                        faqs: [],
+                      });
+                      setImageFiles([]);
+                      setImagePreviews([]);
+                      setSidebarOpen(false);
+                    }
+                  }
+                )
+              },
             { key: '2', label: 'Employees', icon: <UserOutlined /> },
             { key: '3', label: 'Activity', icon: <Activity /> },
             { key: '4', label: 'Reports', icon: <LineOutlined /> },
             { key: '5', label: 'Settings', icon: <WechatOutlined /> },
-          ]}
-        />
-      </div>
-      <div className="p-6 border-t border-white/10">
-        <div className="flex items-center gap-3">
-          <UserOutlined className="w-8 h-8 text-emerald-600 bg-emerald-100 rounded-full p-1" />
-          <div>
-            <div className="font-semibold text-emerald-900">admin@akr.com</div>
-            <Button type="text" onClick={() => setLogoutOpen(true)}>Logout</Button>
+            ]}
+          />
+        </div>
+        <div className="p-6 border-t border-white/10">
+          <div className="flex items-center gap-3">
+            <UserOutlined className="w-8 h-8 text-emerald-600 bg-emerald-100 rounded-full p-1" />
+            <div>
+              <div className="font-semibold text-emerald-900">admin@akr.com</div>
+              <Button type="text" onClick={() => setLogoutOpen(true)}>Logout</Button>
+            </div>
           </div>
         </div>
-      </div>
     </div>
   );
 
@@ -755,6 +824,59 @@ export default function AdminDashboard() {
     },
   ];
 
+  // Add pre-booking columns for Table
+  const preBookingColumns = [
+    { title: 'Booking ID', dataIndex: 'bookingId', key: 'bookingId' },
+    { title: 'Customer', dataIndex: 'fullName', key: 'fullName' },
+    { title: 'Vehicle Model', dataIndex: 'vehicleModel', key: 'vehicleModel' },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status, record) => (
+        <AntdSelect
+          value={status}
+          style={{ width: 130 }}
+          onChange={async (val) => {
+            setStatusUpdating(true);
+            try {
+              const res = await fetch(`http://localhost:5050/api/prebookings/${record._id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: val })
+              });
+              if (res.ok) {
+                setPreBookings(preBookings => preBookings.map(b => b._id === record._id ? { ...b, status: val } : b));
+                message.success('Status updated');
+              } else {
+                message.error('Failed to update status');
+              }
+            } catch {
+              message.error('Failed to update status');
+            }
+            setStatusUpdating(false);
+          }}
+          loading={statusUpdating}
+          options={['Pending', 'Ordered', 'Delivered', 'Cancelled'].map(s => ({ value: s, label: s }))}
+        />
+      )
+    },
+    { title: 'Created At', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => new Date(date).toLocaleString() },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_: any, record: any) => (
+        <Button type="link" onClick={() => setSelectedPreBooking(record)}>View Details</Button>
+      )
+    }
+  ];
+
+  // Filtered bookings
+  const filteredPreBookings = preBookings.filter(b =>
+    (preBookingStatus === 'All' || b.status === preBookingStatus) &&
+    (b.fullName.toLowerCase().includes(preBookingSearch.toLowerCase()) || b.vehicleModel.toLowerCase().includes(preBookingSearch.toLowerCase()))
+  );
+
   return (
     <Layout className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-100 flex">
       {/* Sidebar: Drawer for mobile, Sider for desktop */}
@@ -773,7 +895,7 @@ export default function AdminDashboard() {
         onClose={() => setSidebarOpen(false)}
         open={sidebarOpen}
         width={260}
-        bodyStyle={{ padding: 0 }}
+        styles={{ body: { padding: 0 } }}
         className="md:hidden"
       >
         {renderSidebar(true)}
@@ -795,7 +917,7 @@ export default function AdminDashboard() {
         </Layout.Header>
         <Layout.Content className="flex-1 p-4 md:p-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* AKR & SONS (PVT) LTD: New Concept */}
-          {selectedCompany.name === AKR_COMPANY_NAME ? (
+          {selectedCompany.name === AKR_COMPANY_NAME && akrTab === 'vehicles' && (
             <>
               <div className="glass-card rounded-2xl shadow-lg p-3 md:p-6 flex flex-col gap-4 xl:col-span-2">
                 <div className="flex items-center gap-3 mb-2">
@@ -815,8 +937,8 @@ export default function AdminDashboard() {
                             <img src={vehicle.images[0]} alt="vehicle" className="object-cover w-full h-full" />
                           ) : (
                             <div className="text-gray-300">No Image</div>
-                          )}
-                        </div>
+                )}
+              </div>
                         <div className="p-4 flex-1 flex flex-col gap-2">
                           <div className="flex items-center justify-between mb-1">
                             <div className="font-bold text-lg truncate" title={vehicle.name}>{vehicle.name}</div>
@@ -889,54 +1011,54 @@ export default function AdminDashboard() {
                     closeIcon={<CloseOutlined />}
                     bodyStyle={{ padding: 24 }}
                   >
-                    <div className="font-bold text-lg gradient-text mb-2">Add New Vehicle</div>
+                <div className="font-bold text-lg gradient-text mb-2">Add New Vehicle</div>
                     {showSuccess && (
                       <div className="text-green-600 text-center font-semibold py-2">Uploaded successfully</div>
                     )}
                     {!showSuccess && (
                       <Form onFinish={handleAddVehicle} layout="vertical" className="space-y-4 mt-4">
-                        <Form.Item label="Vehicle Type" name="vehicleType" rules={[{ required: true, message: 'Please select a vehicle type!' }]}>
-                          <Select
-                            placeholder="Select a vehicle type"
-                            onChange={handleVehicleTypeChange}
-                            options={VEHICLE_TYPES.map(type => ({ value: type, label: type }))}
-                          />
-                        </Form.Item>
-                        <Form.Item label="Name" name="name" rules={[{ required: true, message: 'Please enter vehicle name!' }]}>
-                          <Input placeholder="Bike Name" onChange={handleVehicleFormChange} />
-                        </Form.Item>
-                        <Form.Item label="Category" name="category" rules={[{ required: true, message: 'Please enter vehicle category!' }]}>
-                          <Input placeholder="Category (e.g. Pulsar, CT 100)" onChange={handleVehicleFormChange} />
-                        </Form.Item>
-                        <Form.Item label="Price" name="price" rules={[{ required: true, message: 'Please enter vehicle price!' }]}>
-                          <Input placeholder="Price (LKR)" onChange={handleVehicleFormChange} />
-                        </Form.Item>
-                        <Form.Item label="Description" name="description">
-                          <Input.TextArea placeholder="Description" onChange={handleVehicleFormChange} />
-                        </Form.Item>
-                        <Form.Item label="Features" name="features">
-                          <FeatureInput value={vehicleForm.features} onChange={handleFeatureChange} />
-                        </Form.Item>
-                        <Form.Item label="Specs" name="specs">
-                          <SpecsInput value={vehicleForm.specs} onChange={handleSpecsChange} />
-                        </Form.Item>
-                        <Form.Item label="Colors" name="colors">
-                          <ColorInput value={vehicleForm.colors} onChange={handleColorsChange} />
-                        </Form.Item>
-                        <Form.Item label="Variants" name="variants">
-                          <VariantInput value={vehicleForm.variants} onChange={handleVariantChange} />
-                        </Form.Item>
-                        <Form.Item label="FAQs" name="faqs">
-                          <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
-                        </Form.Item>
-                        {/* 2. Remove the 'Rating' and last 'Images' upload fields from the Add Vehicle form. */}
-                        {addError && <div className="text-xs text-red-500">{addError}</div>}
-                        <Form.Item>
+                  <Form.Item label="Vehicle Type" name="vehicleType" rules={[{ required: true, message: 'Please select a vehicle type!' }]}>
+                    <Select
+                      placeholder="Select a vehicle type"
+                      onChange={handleVehicleTypeChange}
+                      options={VEHICLE_TYPES.map(type => ({ value: type, label: type }))}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Name" name="name" rules={[{ required: true, message: 'Please enter vehicle name!' }]}>
+                    <Input placeholder="Bike Name" onChange={handleVehicleFormChange} />
+                  </Form.Item>
+                  <Form.Item label="Category" name="category" rules={[{ required: true, message: 'Please enter vehicle category!' }]}>
+                    <Input placeholder="Category (e.g. Pulsar, CT 100)" onChange={handleVehicleFormChange} />
+                  </Form.Item>
+                  <Form.Item label="Price" name="price" rules={[{ required: true, message: 'Please enter vehicle price!' }]}>
+                    <Input placeholder="Price (LKR)" onChange={handleVehicleFormChange} />
+                  </Form.Item>
+                  <Form.Item label="Description" name="description">
+                    <Input.TextArea placeholder="Description" onChange={handleVehicleFormChange} />
+                  </Form.Item>
+                  <Form.Item label="Features" name="features">
+                    <FeatureInput value={vehicleForm.features} onChange={handleFeatureChange} />
+                  </Form.Item>
+                  <Form.Item label="Specs" name="specs">
+                    <SpecsInput value={vehicleForm.specs} onChange={handleSpecsChange} />
+                  </Form.Item>
+                  <Form.Item label="Colors" name="colors">
+                    <ColorInput value={vehicleForm.colors} onChange={handleColorsChange} />
+                  </Form.Item>
+                  <Form.Item label="Variants" name="variants">
+                    <VariantInput value={vehicleForm.variants} onChange={handleVariantChange} />
+                  </Form.Item>
+                  <Form.Item label="FAQs" name="faqs">
+                    <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
+                  </Form.Item>
+                  {/* 2. Remove the 'Rating' and last 'Images' upload fields from the Add Vehicle form. */}
+                  {addError && <div className="text-xs text-red-500">{addError}</div>}
+                  <Form.Item>
                           <Button type="primary" htmlType="submit" loading={addLoading || uploading} block size="large">
-                            {addLoading ? "Adding..." : "Add Vehicle"}
-                          </Button>
-                        </Form.Item>
-                      </Form>
+                      {addLoading ? "Adding..." : "Add Vehicle"}
+                    </Button>
+                  </Form.Item>
+                </Form>
                     )}
                   </Modal>
                 </>
@@ -992,124 +1114,96 @@ export default function AdminDashboard() {
                       </Form.Item>
                     </Form>
                   )}
-                </div>
+              </div>
               )}
             </>
-          ) : (
-            // Old dashboard for other companies
-            <>
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4 xl:col-span-2">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl font-bold gradient-text">{selectedCompany.name}</span>
-                  <span className="ml-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold shadow">{oldCompanyInfo[selectedCompany.name]?.status || "N/A"}</span>
-                </div>
-                <div className="text-gray-600 mb-2">{oldCompanyInfo[selectedCompany.name]?.description || "No description."}</div>
-                <div className="flex flex-wrap gap-6 mt-2">
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold text-emerald-700">{oldCompanyInfo[selectedCompany.name]?.kpis?.revenue || "-"}</span>
-                    <span className="text-xs text-gray-500">Revenue</span>
+          )}
+          {selectedCompany.name === AKR_COMPANY_NAME && akrTab === 'prebookings' && (
+            <div className="w-full mt-8 px-4 md:px-8 col-span-full xl:col-span-3">
+              <div className="mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+                  <div>
+                    <span className="text-3xl font-bold gradient-text">Pre-Bookings</span>
+                    <div className="text-gray-600 mt-1 text-base">Manage and review all customer pre-bookings. Use the search, filter, and export to quickly find and download bookings.</div>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold text-cyan-700">{oldCompanyInfo[selectedCompany.name]?.kpis?.growth || "-"}</span>
-                    <span className="text-xs text-gray-500">Growth</span>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto mt-2 md:mt-0">
+                    <input
+                      type="text"
+                      placeholder="Search by customer or model..."
+                      value={preBookingSearch}
+                      onChange={e => setPreBookingSearch(e.target.value)}
+                      className="border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 shadow w-full sm:w-64"
+                    />
+                    <select
+                      value={preBookingStatus}
+                      onChange={e => setPreBookingStatus(e.target.value)}
+                      className="border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 shadow w-full sm:w-40"
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Ordered">Ordered</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={() => exportPreBookingsToCSV(filteredPreBookings)}
+                      className="bg-blue-600 text-white font-semibold border-0 hover:bg-blue-700"
+                      style={{ minWidth: 120 }}
+                    >
+                      Export CSV
+                    </Button>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold text-emerald-700">{employees.length}</span>
-                    <span className="text-xs text-gray-500">Employees</span>
-                  </div>
                 </div>
               </div>
-              {/* Notifications */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <BellOutlined className="w-5 h-5 text-emerald-500" />
-                  <span className="text-lg font-bold gradient-text">Notifications</span>
-                </div>
-                <List
-                  dataSource={notifications}
-                  renderItem={(item: any) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<span className="text-gray-800">{item.message}</span>}
-                        description={<span className="text-xs text-gray-400 mt-1">{item.time}</span>}
-                      />
-                    </List.Item>
-                  )}
-                />
+              <div className="w-full">
+                {preBookingLoading ? (
+                  <div className="text-center py-8"><Spin /></div>
+                ) : preBookingError ? (
+                  <div className="text-center text-red-500">{preBookingError}</div>
+                ) : (
+                  <Table
+                    dataSource={filteredPreBookings}
+                    columns={preBookingColumns}
+                    rowKey="_id"
+                    pagination={{ pageSize: 8 }}
+                    className="rounded-xl overflow-hidden shadow-lg bg-white w-full"
+                  />
+                )}
               </div>
-              {/* Employee Management */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4 xl:col-span-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <UserOutlined className="w-5 h-5 text-cyan-500" />
-                  <span className="text-lg font-bold gradient-text">Employees</span>
-                  <span className="ml-2 px-2 py-0.5 rounded bg-cyan-100 text-cyan-700 text-xs font-semibold">{employees.length}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 mb-2">
-                  <Input className="border px-3 py-2 rounded-lg text-sm flex-1 focus:ring-2 focus:ring-emerald-200 shadow" placeholder="Name" value={newEmp.name} onChange={e => setNewEmp({ ...newEmp, name: e.target.value })} />
-                  <Input className="border px-3 py-2 rounded-lg text-sm flex-1 focus:ring-2 focus:ring-cyan-200 shadow" placeholder="Role" value={newEmp.role} onChange={e => setNewEmp({ ...newEmp, role: e.target.value })} />
-                  <Button size="small" onClick={handleAddEmp}>Add</Button>
-                </div>
-                <List
-                  dataSource={employees}
-                  renderItem={(emp: any) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<span className="text-gray-800">{emp.name} <span className="text-xs text-gray-400">({emp.role})</span></span>}
-                        description={<Button size="small" danger onClick={() => handleDeleteEmp(emp.id)}>Delete</Button>}
-                      />
-                    </List.Item>
-                  )}
-                />
-              </div>
-              {/* Recent Activity */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity className="w-5 h-5 text-fuchsia-500" />
-                  <span className="text-lg font-bold gradient-text">Recent Activity</span>
-                </div>
-                <List
-                  dataSource={activities}
-                  renderItem={(item: any) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<span className="text-gray-800">{item.action}</span>}
-                        description={<span className="text-xs text-gray-400 mt-1">{item.time}</span>}
-                      />
-                    </List.Item>
-                  )}
-                />
-              </div>
-              {/* Services/Operations */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4 xl:col-span-2">
-                <div className="text-lg font-bold gradient-text mb-2">Services/Operations</div>
-                <List
-                  dataSource={(oldCompanyInfo[selectedCompany.name]?.services || []).map(s => ({ title: s }))}
-                  renderItem={(item: any) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<span className="text-gray-700">{item.title}</span>}
-                      />
-                    </List.Item>
-                  )}
-                />
-              </div>
-              {/* Reports/Analytics */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4 xl:col-span-2">
-                <div className="text-lg font-bold gradient-text mb-2">Reports/Analytics</div>
-                <div className="bg-white/80 rounded-xl shadow p-4">
-                  <Chart />
-                </div>
-              </div>
-              {/* Editable Content */}
-              <div className="glass-card rounded-2xl shadow-lg p-6 flex flex-col gap-4 col-span-full">
-                <div className="text-lg font-bold gradient-text mb-2">Editable Content</div>
-                <Input.TextArea className="w-full border rounded-lg p-3 min-h-[80px] focus:ring-2 focus:ring-emerald-200 shadow" placeholder="Edit company notes or info here..." />
-                <div className="mt-2">
-                  <label className="block text-sm mb-1">Image Upload (placeholder):</label>
-                  <Input type="file" className="block" disabled />
-                </div>
-              </div>
-            </>
+              {/* Pre-booking details modal */}
+              <Modal
+                open={!!selectedPreBooking}
+                onCancel={() => setSelectedPreBooking(null)}
+                footer={null}
+                title={selectedPreBooking ? `Booking: ${selectedPreBooking.bookingId}` : ''}
+                width={600}
+                centered
+                bodyStyle={{ padding: 32 }}
+              >
+                {selectedPreBooking && (
+                  <Descriptions
+                    bordered
+                    column={1}
+                    size="middle"
+                    labelStyle={{ fontWeight: 600, width: 180 }}
+                    contentStyle={{ background: '#fff' }}
+                  >
+                    <Descriptions.Item label="Customer Name">{selectedPreBooking.fullName}</Descriptions.Item>
+                    <Descriptions.Item label="Email">{selectedPreBooking.email}</Descriptions.Item>
+                    <Descriptions.Item label="Phone">{selectedPreBooking.phone}</Descriptions.Item>
+                    <Descriptions.Item label="National ID">{selectedPreBooking.nationalId}</Descriptions.Item>
+                    <Descriptions.Item label="Address">{selectedPreBooking.address}</Descriptions.Item>
+                    <Descriptions.Item label="Vehicle Model">{selectedPreBooking.vehicleModel}</Descriptions.Item>
+                    <Descriptions.Item label="Status">
+                      <Tag color={selectedPreBooking.status === 'Pending' ? 'orange' : selectedPreBooking.status === 'Ordered' ? 'blue' : selectedPreBooking.status === 'Delivered' ? 'green' : 'red'}>{selectedPreBooking.status}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Notes">{selectedPreBooking.notes || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="Created At">{new Date(selectedPreBooking.createdAt).toLocaleString()}</Descriptions.Item>
+                  </Descriptions>
+                )}
+              </Modal>
+            </div>
           )}
         </Layout.Content>
       </Layout>

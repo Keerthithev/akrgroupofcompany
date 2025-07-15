@@ -53,6 +53,8 @@
     "dotenv": "^17.1.0",
     "embla-carousel-react": "^8.3.0",
     "express": "^5.1.0",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.5",
     "gsap": "^3.13.0",
     "input-otp": "^1.2.4",
     "jsonwebtoken": "^9.0.2",
@@ -73,6 +75,7 @@
     "sweetalert2": "^11.22.2",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^11.1.0",
     "vaul": "^0.9.3",
     "zod": "^3.23.8"
   },
