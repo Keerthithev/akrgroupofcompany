@@ -266,7 +266,7 @@ export default function VehicleDetails() {
                       className="mb-6"
                     >
                       <a
-                        href="/brochures/PULSAR-NS400Z-BROCHURE.pdf"
+                        href="/PULSAR-NS400Z-BROCHURE.pdf"
                         download
                         target="_blank"
                         rel="noopener noreferrer"
