@@ -65,7 +65,7 @@ export function HeroSlideshow() {
   }
 
   return (
-    <div className="relative h-96 w-3/4 mx-auto overflow-hidden rounded-xl">
+    <div className="relative h-96 md:h-[32rem] w-full overflow-hidden rounded-3xl shadow-2xl">
       {/* Slides */}
       {slides.map((slide, index) => (
         <div

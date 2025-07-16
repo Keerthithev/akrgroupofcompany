@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Search, ShoppingCart, Eye, Heart, Star } from "lucide-react"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { useNavigate } from "react-router-dom";
 
 // Sample bike data with different brands and models
 const bikeData = {
@@ -112,6 +114,8 @@ export default function AKRSonsBikeStore() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedBike, setSelectedBike] = useState(null)
   const [selectedColor, setSelectedColor] = useState("")
+  const [slideIndex, setSlideIndex] = useState(0);
+  const slideIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const categories = ["All", "Sport", "Street", "Commuter", "Premium"]
   const brands = ["All", "Bajaj", "Honda", "Yamaha"]
@@ -123,6 +127,26 @@ export default function AKRSonsBikeStore() {
     return matchesCategory && matchesBrand && matchesSearch
   })
 
+  useEffect(() => {
+    if (filteredBikes.length <= 4) return;
+    slideIntervalRef.current = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % filteredBikes.length);
+    }, 1500);
+    return () => {
+      if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
+    };
+  }, [filteredBikes.length]);
+
+  // Get 4 bikes for the train/circle effect
+  const getVisibleBikes = () => {
+    const result = [];
+    for (let i = 0; i < 4; i++) {
+      result.push(filteredBikes[(slideIndex + i) % filteredBikes.length]);
+    }
+    return result;
+  };
+  const visibleBikes = getVisibleBikes();
+
   const handleBikeClick = (bike) => {
     setSelectedBike(bike)
     setSelectedColor(bike.colors[0])
@@ -133,9 +157,11 @@ export default function AKRSonsBikeStore() {
     setSelectedColor("")
   }
 
+  const navigate = useNavigate();
+
   if (selectedBike) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40">
         {/* Header */}
         <header className="bg-white shadow-lg border-b">
           <div className="container mx-auto px-6 py-4">
@@ -228,9 +254,9 @@ export default function AKRSonsBikeStore() {
                 </div>
 
                 <div className="space-y-3">
-                  <Button className="w-full bg-gradient-primary hover:bg-gradient-primary/90 text-lg py-6">
+                  <Button className="w-full bg-gradient-primary hover:bg-gradient-primary/90 text-lg py-6" onClick={() => navigate('/prebook')}>
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    Book Now
+                    Prebook
                   </Button>
                   <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="py-3 bg-transparent">
@@ -274,8 +300,21 @@ export default function AKRSonsBikeStore() {
     )
   }
 
+  const heroImages = [
+    "/images/PHOTO-2025-07-15-16-10-44.jpg",
+    "/images/PHOTO-2025-07-15-16-12-19.jpg",
+    "/images/PHOTO-2025-07-15-16-10-44.jpg",
+  ];
+  const [heroIndex, setHeroIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40">
       {/* Header */}
       <header className="bg-white shadow-lg border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -300,10 +339,23 @@ export default function AKRSonsBikeStore() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-primary text-white py-16">
-        <div className="container mx-auto px-6 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">Premium Bike Collection</h1>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
+      <section className="relative w-full h-[400px] md:h-[500px] flex items-center justify-center overflow-hidden">
+        {/* Slideshow background */}
+        {heroImages.map((img, idx) => (
+          <img
+            key={img}
+            src={img}
+            alt="Pulsar NS400Z Hero"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${heroIndex === idx ? 'opacity-100 z-0' : 'opacity-0 z-0'}`}
+            style={{ transition: 'opacity 1s' }}
+          />
+        ))}
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40 z-10" />
+        {/* Hero Content */}
+        <div className="relative z-20 w-full text-center text-white px-4">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">Premium Bike Collection</h1>
+          <p className="text-xl mb-8 max-w-2xl mx-auto drop-shadow">
             Discover our extensive range of motorcycles from top brands. Quality, performance, and style combined.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
@@ -343,123 +395,108 @@ export default function AKRSonsBikeStore() {
               />
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-4">
-              <select
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
-              >
-                {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Removed All Vehicle Types filter dropdown */}
           </div>
         </div>
       </section>
 
       {/* Bike Grid */}
       <section className="py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredBikes.map((bike) => (
-              <Card
-                key={bike.id}
-                className="glass-card overflow-hidden hover:shadow-2xl transition-all duration-300 group cursor-pointer"
-              >
-                <div className="relative">
-                  <img
-                    src={bike.image || "/placeholder.svg"}
-                    alt={bike.name}
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <Badge className="absolute top-3 left-3 bg-primary text-white">{bike.category}</Badge>
-                  <div className="absolute top-3 right-3 flex items-center space-x-1 bg-white/90 px-2 py-1 rounded-full">
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs font-medium">{bike.rating}</span>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <h3 className="text-lg font-bold mb-2 group-hover:gradient-text transition-all duration-300">
-                    {bike.name}
-                  </h3>
-                  <p className="text-2xl font-bold text-primary mb-4">Rs. {bike.price.toLocaleString()}</p>
-
-                  {/* Colors */}
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 mb-2">Available Colors:</p>
-                    <div className="flex space-x-2">
-                      {bike.colors.slice(0, 4).map((color, index) => (
-                        <div
-                          key={index}
-                          className="w-4 h-4 rounded-full border-2 border-gray-300"
-                          style={{
-                            backgroundColor: color.toLowerCase() === "silver" ? "#C0C0C0" : color.toLowerCase(),
-                          }}
-                          title={color}
-                        />
-                      ))}
-                      {bike.colors.length > 4 && (
-                        <span className="text-xs text-gray-500">+{bike.colors.length - 4}</span>
-                      )}
+        <div className="relative w-screen left-1/2 right-1/2 -translate-x-1/2 px-0">
+          <div className="overflow-hidden w-full">
+            <div
+              className="flex gap-8 w-full transition-transform duration-700"
+              style={{
+                transform: `translateX(-${slideIndex * (100 / 4)}%)`,
+                width: `${(filteredBikes.length / 4) * 100}%`,
+              }}
+            >
+              {filteredBikes.concat(filteredBikes.slice(0, 4)).map((bike, idx) => (
+                <div key={bike.id + '-' + idx} className="flex-1 min-w-0 flex">
+                  <Card
+                    className="overflow-hidden hover:shadow-2xl transition-all duration-300 group cursor-pointer w-full flex-1 bg-gradient-to-r from-emerald-200/60 via-blue-200/60 to-green-200/60 backdrop-blur-xl bg-opacity-80 border border-white/40 !bg-transparent"
+                    onClick={() => handleBikeClick(bike)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={bike.image || "/placeholder.svg"}
+                        alt={bike.name}
+                        className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      <Badge className="absolute top-3 left-3 bg-primary text-white">{bike.category}</Badge>
+                      <div className="absolute top-3 right-3 flex items-center space-x-1 bg-white/90 px-2 py-1 rounded-full">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-medium">{bike.rating}</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Stock */}
-                  <div className="mb-4">
-                    <Badge variant={bike.stock > 10 ? "default" : "destructive"} className="text-xs">
-                      {bike.stock} in stock
-                    </Badge>
-                  </div>
+                    <div className="p-6">
+                      <h3 className="text-lg font-bold mb-2 group-hover:gradient-text transition-all duration-300">
+                        {bike.name}
+                      </h3>
+                      <p className="text-2xl font-bold text-primary mb-4">Rs. {bike.price.toLocaleString()}</p>
 
-                  {/* Features */}
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-1">
-                      {bike.features.slice(0, 2).map((feature, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {feature}
+                      {/* Colors */}
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Available Colors:</p>
+                        <div className="flex space-x-2">
+                          {bike.colors.slice(0, 4).map((color, index) => (
+                            <div
+                              key={index}
+                              className="w-4 h-4 rounded-full border-2 border-gray-300"
+                              style={{
+                                backgroundColor: color.toLowerCase() === "silver" ? "#C0C0C0" : color.toLowerCase(),
+                              }}
+                              title={color}
+                            />
+                          ))}
+                          {bike.colors.length > 4 && (
+                            <span className="text-xs text-gray-500">+{bike.colors.length - 4}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Stock */}
+                      <div className="mb-4">
+                        <Badge variant={bike.stock > 10 ? "default" : "destructive"} className="text-xs">
+                          {bike.stock} in stock
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Button
-                      className="w-full bg-gradient-primary hover:bg-gradient-primary/90"
-                      onClick={() => handleBikeClick(bike)}
-                    >
-                      View Details
-                    </Button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm">
-                        <Heart className="w-4 h-4 mr-1" />
-                        Wishlist
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        Book
-                      </Button>
+                      {/* Features */}
+                      <div className="mb-6">
+                        <div className="flex flex-wrap gap-1">
+                          {bike.features.slice(0, 2).map((feature, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {feature}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Button
+                          className="w-full bg-gradient-primary hover:bg-gradient-primary/90"
+                          onClick={() => handleBikeClick(bike)}
+                        >
+                          View Details
+                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" size="sm">
+                            <Heart className="w-4 h-4 mr-1" />
+                            Wishlist
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => navigate('/prebook')}>
+                            <ShoppingCart className="w-4 h-4 mr-1" />
+                            Pre-Book
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </Card>
                 </div>
-              </Card>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>

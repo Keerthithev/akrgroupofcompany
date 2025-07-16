@@ -23,17 +23,20 @@ const VehicleSchema = new mongoose.Schema({
   description: String,
   variants: [VariantSchema],
   features: [String],
-  specs: {
-    type: Map,
-    of: String,
-    default: {}
-  },
+  specs: { type: Object, default: {} },
   colors: [ColorSchema],
+  price: { type: Number, required: true },
   rating: { type: Number },
   company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
   images: [String],
+  galleryImages: [String],
   faqs: [{ question: String, answer: String }],
   createdAt: { type: Date, default: Date.now }
 });
 
+// Commonly used spec keys for vehicles (should be included in frontend grouped specs input):
+// - Power (optional)
+// - Torque (optional)
+// - Mileage (optional)
+// These are stored as part of the 'specs' object for each vehicle.
 module.exports = mongoose.model('Vehicle', VehicleSchema); 

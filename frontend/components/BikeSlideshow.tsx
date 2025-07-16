@@ -1,9 +1,11 @@
+import React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, ChevronRight, Star, Calendar, MapPin, Phone, Mail } from "lucide-react"
 import { ColorSelector } from "@/components/ColorSelector"
+import { useNavigate } from "react-router-dom"
 
 interface Bike {
   id: number
@@ -36,6 +38,7 @@ interface BikeSlideshowProps {
 export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, onColorChange }: BikeSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % bikes.length)
@@ -288,10 +291,10 @@ export function BikeSlideshow({ bikes, onClose, onBookNow, selectedColors = {}, 
             </Button>
             <Button 
               className="bg-gradient-primary hover:bg-gradient-primary/90"
-              onClick={() => onBookNow && onBookNow({ name: currentBike.name, price: currentBike.price })}
+              onClick={() => navigate('/prebook')}
             >
               <Calendar className="w-4 h-4 mr-2" />
-              Book Now
+              Pre-Book
             </Button>
           </div>
         </div>

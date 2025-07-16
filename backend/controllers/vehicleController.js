@@ -32,8 +32,18 @@ exports.addVehicle = async (req, res, next) => {
     if (req.body.rating && typeof req.body.rating !== 'number') {
       return res.status(400).json({ message: 'Rating must be a number' });
     }
+    if (!req.body.price || isNaN(Number(req.body.price))) {
+      return res.status(400).json({ message: 'Price is required and must be a number.' });
+    }
 
-    const vehicle = new Vehicle({ ...req.body, company: company._id });
+    const vehicleData = {
+      ...req.body,
+      price: Number(req.body.price),
+      galleryImages: req.body.galleryImages || [],
+      specs: req.body.specs || {},
+    };
+
+    const vehicle = new Vehicle(vehicleData);
     await vehicle.save();
     company.vehicles.push(vehicle._id);
     await company.save();
@@ -71,6 +81,9 @@ exports.updateVehicle = async (req, res, next) => {
     // Validate rating
     if (req.body.rating && typeof req.body.rating !== 'number') {
       return res.status(400).json({ message: 'Rating must be a number' });
+    }
+    if (!req.body.price || isNaN(Number(req.body.price))) {
+      return res.status(400).json({ message: 'Price is required and must be a number.' });
     }
     // If specs is an array, convert to object
     if (Array.isArray(req.body.specs)) {

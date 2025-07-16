@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/company');
 const vehicleRoutes = require('./routes/vehicle');
 const preBookingRoutes = require('./routes/preBooking');
+const roomRoutes = require('./routes/room');
 
 // Load env vars
 dotenv.config({ path: './.env' });
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/prebookings', preBookingRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Error Handler
 app.use(errorHandler);
