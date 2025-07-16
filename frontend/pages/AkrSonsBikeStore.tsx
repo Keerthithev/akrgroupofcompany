@@ -1,5 +1,5 @@
-import React from "react"
-import { useEffect, useState, useRef } from "react"
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { Row, Col, Card, Button, Typography, Badge, Spin, message, Modal, Tag, Select, Image, Grid } from "antd"
 import { ArrowLeftOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined, EyeOutlined, CalendarOutlined, StarFilled, ShoppingCartOutlined, LeftOutlined, RightOutlined, PictureOutlined, ThunderboltOutlined, HomeOutlined, SmileOutlined } from "@ant-design/icons"
 import { useNavigate } from "react-router-dom"
@@ -210,33 +210,22 @@ export default function AkrSonsBikeStore() {
       </section>
 
       {/* Sticky Filter Bar */}
-      <div style={{
-        position: 'sticky',
-        top: 80,
-        zIndex: 20,
-        background: 'rgba(255,255,255,0.95)',
-        borderRadius: 16,
-        boxShadow: '0 2px 8px #e0e7ef',
-        padding: '12px 0',
-        marginBottom: 24,
-        maxWidth: 1200,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        overflowX: 'auto',
-        whiteSpace: 'nowrap',
-        display: 'flex',
-        gap: 16,
-      }}>
-        {filterOptions.map(opt => (
-          <Button
-            key={opt.value}
-            className={`font-bold rounded-2xl min-w-[120px] px-4 py-2 transition text-gray-900 ${activeFilter === opt.value ? 'bg-gradient-primary hover:scale-105' : 'bg-white border border-emerald-300 hover:bg-emerald-50'}`}
-            style={{ fontWeight: 600, whiteSpace: 'normal' }}
-            onClick={() => setActiveFilter(opt.value)}
-          >
-            {opt.label}
-          </Button>
-        ))}
+      <div
+        className="sticky top-20 z-20 bg-white/95 rounded-2xl shadow-xl py-3 mb-6 w-full overflow-x-auto"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className="flex flex-nowrap gap-3 min-w-max px-4">
+          {filterOptions.map(opt => (
+            <Button
+              key={opt.value}
+              className={`font-bold rounded-2xl min-w-[120px] px-4 py-2 transition text-gray-900 ${activeFilter === opt.value ? 'bg-gradient-primary hover:scale-105' : 'bg-white border border-emerald-300 hover:bg-emerald-50'}`}
+              style={{ fontWeight: 600, whiteSpace: 'normal' }}
+              onClick={() => setActiveFilter(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Bikes Grid - Grouped by Category */}
@@ -266,137 +255,8 @@ export default function AkrSonsBikeStore() {
           ).map(([category, bikes]) => (
             <div key={category} className="mb-12">
               <h2 className="text-2xl font-bold mb-4 ml-2 text-blue-700">{category}</h2>
-              <div className="overflow-x-auto pb-4" style={{ scrollBehavior: 'smooth' }}>
-                <div className="flex gap-8 min-w-full" style={{ scrollSnapType: 'x mandatory' }}>
-                  {bikes.map((bike) => {
-                    const images = selectedColors[bike._id]?.images || bike.colors?.[0]?.images || bike.images;
-                    return (
-                      <div
-                        key={bike._id}
-                        className="flex-shrink-0"
-                        style={{ width: 320, scrollSnapAlign: 'start' }}
-                      >
-                        <Card
-                          hoverable
-                          cover={
-                            <div className="relative w-full h-56 rounded-xl overflow-hidden group">
-                              {/* Vehicle Category Badge */}
-                              {bike.category && (
-                                <span className="absolute top-3 left-3 z-20 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full px-4 py-1 shadow-md" style={{letterSpacing: 0.5}}>
-                                  {bike.category}
-                                </span>
-                              )}
-                              {images && images.length > 0 ? (
-                                images.map((img: string, idx: number) => (
-                                  <img
-                                    key={img}
-                                    src={img}
-                                    alt={bike.name}
-                                    className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${idx === (slideIndexes[bike._id] ?? 0) ? 'opacity-100' : 'opacity-0'}`}
-                                    style={{ borderRadius: 8 }}
-                                    draggable={false}
-                                    onError={e => { (e.currentTarget as HTMLImageElement).src = '/images/placeholder.svg'; }}
-                                  />
-                                ))
-                              ) : (
-                                <div className="flex flex-col items-center justify-center absolute inset-0 bg-gray-100 text-gray-400" style={{ borderRadius: 8 }}>
-                                  <PictureOutlined style={{ fontSize: 48, marginBottom: 8 }} />
-                                  <span className="font-semibold text-base">No Image Available</span>
-                                </div>
-                              )}
-                              {/* Slideshow controls */}
-                              {images && images.length > 1 && (
-                                <>
-                                  <button
-                                    onClick={e => { e.stopPropagation(); handlePrev(bike._id, images); }}
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
-                                  >
-                                    <LeftOutlined />
-                                  </button>
-                                  <button
-                                    onClick={e => { e.stopPropagation(); handleNext(bike._id, images); }}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
-                                  >
-                                    <RightOutlined />
-                                  </button>
-                                </>
-                              )}
-                              {/* Dots indicator */}
-                              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex space-x-1">
-                                {(images || []).map((_, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={e => { e.stopPropagation(); setSlideIndexes(si => ({ ...si, [bike._id]: idx })); }}
-                                    className={`w-2 h-2 rounded-full ${idx === (slideIndexes[bike._id] ?? 0) ? 'bg-blue-600' : 'bg-white/60'} border border-white transition`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          }
-                          style={{ borderRadius: 20, boxShadow: "0 4px 24px #e0e7ef", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: '2px solid #e0e7ef', margin: '0 auto' }}
-                          bodyStyle={{ padding: 24 }}
-                        >
-                          {/* Color Selector (inline) */}
-                          {bike.colors && bike.colors.length > 0 && (
-                            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 14, color: '#888', marginRight: 6 }}>Color:</span>
-                              {bike.colors.map((color: any, idx: number) => (
-                                <div
-                                  key={color.value || color.name || idx}
-                                  style={{
-                                    width: 20,
-                                    height: 20,
-                                    borderRadius: '50%',
-                                    background: color.hex,
-                                    border: (selectedColors[bike._id]?.value || bike.colors[0]?.value) === color.value ? '2px solid #1890ff' : '1.5px solid #ccc',
-                                    boxShadow: (selectedColors[bike._id]?.value || bike.colors[0]?.value) === color.value ? '0 2px 8px #e6f7ff' : 'none',
-                                    cursor: 'pointer',
-                                    transition: 'box-shadow 0.2s',
-                                    marginRight: 4,
-                                  }}
-                                  title={color.name}
-                                  onClick={() => handleColorChange(bike._id, color)}
-                                />
-                              ))}
-                            </div>
-                          )}
-                          {/* Model Name */}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                            <Title level={4} style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>{bike.name}</Title>
-                          </div>
-                          {/* Engine, Power, Torque */}
-                          <div style={{ fontSize: 14, color: '#444', marginBottom: 10, lineHeight: 1.6 }}>
-                            <div>Engine: <b>{bike.specs?.Engine || '-'}</b></div>
-                            <div>Power: <b>{bike.specs?.Power || '-'}</b></div>
-                            <div>Torque: <b>{bike.specs?.Torque || '-'}</b></div>
-                          </div>
-                          {/* Price */}
-                          <div style={{ fontWeight: 700, fontSize: 18, color: "#222", marginBottom: 8 }}>
-                            {bike.price ? `LKR ${bike.price}` : ""}
-                          </div>
-                          {/* Action Buttons */}
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <Button
-                              icon={<EyeOutlined />}
-                              onClick={() => navigate(`/akr-sons-bike-store/${bike._id}`)}
-                              className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition"
-                            >
-                              View Details
-                            </Button>
-                            <Button
-                              icon={<CalendarOutlined />}
-                              onClick={() => navigate('/prebook')}
-                              className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition"
-                            >
-                              Pre-Book
-                            </Button>
-                          </div>
-                        </Card>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Embla Carousel for infinite, snapping, auto-scroll */}
+              <EmblaVehicleCarousel bikes={bikes} selectedColors={selectedColors} setSlideIndexes={setSlideIndexes} slideIndexes={slideIndexes} handlePrev={handlePrev} handleNext={handleNext} navigate={navigate} />
             </div>
           ))
         )}
@@ -538,4 +398,159 @@ export default function AkrSonsBikeStore() {
       </footer>
     </div>
   )
+}
+
+function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideIndexes, handlePrev, handleNext, navigate }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start', skipSnaps: false });
+  const autoScrollInterval = useRef<any>(null);
+
+  // Auto-scroll logic
+  useEffect(() => {
+    if (!emblaApi) return;
+    autoScrollInterval.current = setInterval(() => {
+      if (emblaApi) emblaApi.scrollNext();
+    }, 3500);
+    return () => clearInterval(autoScrollInterval.current);
+  }, [emblaApi]);
+
+  return (
+    <div className="relative">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex">
+          {bikes.map((bike) => {
+            // Use mock data for missing fields
+            const images = (selectedColors[bike._id]?.images || bike.colors?.[0]?.images || bike.images) ?? ['/images/placeholder.svg'];
+            const engine = bike.specs?.Engine || '150cc, 4-stroke, Air-cooled';
+            const power = bike.specs?.Power || '12.5 PS @ 8500 rpm';
+            const torque = bike.specs?.Torque || '11 Nm @ 6500 rpm';
+            const price = bike.price || 'Contact for price';
+            return (
+              <div
+                key={bike._id}
+                className="flex-shrink-0 px-4"
+                style={{ width: 320 }}
+              >
+                <Card
+                  hoverable
+                  cover={
+                    <div className="relative w-full h-56 rounded-xl overflow-hidden group">
+                      {/* Vehicle Category Badge */}
+                      {bike.category && (
+                        <span className="absolute top-3 left-3 z-20 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full px-4 py-1 shadow-md" style={{letterSpacing: 0.5}}>
+                          {bike.category}
+                        </span>
+                      )}
+                      {images && images.length > 0 ? (
+                        images.map((img: string, idx: number) => (
+                          <img
+                            key={img}
+                            src={img}
+                            alt={bike.name}
+                            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${idx === (slideIndexes[bike._id] ?? 0) ? 'opacity-100' : 'opacity-0'}`}
+                            style={{ borderRadius: 8 }}
+                            draggable={false}
+                            onError={e => { (e.currentTarget as HTMLImageElement).src = '/images/placeholder.svg'; }}
+                          />
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center absolute inset-0 bg-gray-100 text-gray-400" style={{ borderRadius: 8 }}>
+                          <PictureOutlined style={{ fontSize: 48, marginBottom: 8 }} />
+                          <span className="font-semibold text-base">No Image Available</span>
+                        </div>
+                      )}
+                      {/* Slideshow controls */}
+                      {images && images.length > 1 && (
+                        <>
+                          <button
+                            onClick={e => { e.stopPropagation(); handlePrev(bike._id, images); }}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
+                          >
+                            <LeftOutlined />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleNext(bike._id, images); }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
+                          >
+                            <RightOutlined />
+                          </button>
+                        </>
+                      )}
+                      {/* Dots indicator */}
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex space-x-1">
+                        {(images || []).map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={e => { e.stopPropagation(); setSlideIndexes(si => ({ ...si, [bike._id]: idx })); }}
+                            className={`w-2 h-2 rounded-full ${idx === (slideIndexes[bike._id] ?? 0) ? 'bg-blue-600' : 'bg-white/60'} border border-white transition`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  }
+                  style={{ borderRadius: 20, boxShadow: "0 4px 24px #e0e7ef", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: '2px solid #e0e7ef', margin: '0 auto' }}
+                  bodyStyle={{ padding: 24 }}
+                >
+                  {/* Color Selector (inline) */}
+                  {bike.colors && bike.colors.length > 0 && (
+                    <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: '#888', marginRight: 6 }}>Color:</span>
+                      {bike.colors.map((color: any, idx: number) => (
+                        <div
+                          key={color.value || color.name || idx}
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: color.hex,
+                            border: (selectedColors[bike._id]?.value || bike.colors[0]?.value) === color.value ? '2px solid #1890ff' : '1.5px solid #ccc',
+                            boxShadow: (selectedColors[bike._id]?.value || bike.colors[0]?.value) === color.value ? '0 2px 8px #e6f7ff' : 'none',
+                            cursor: 'pointer',
+                            transition: 'box-shadow 0.2s',
+                            marginRight: 4,
+                          }}
+                          title={color.name}
+                          onClick={() => handleColorChange(bike._id, color)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {/* Model Name */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <Title level={4} style={{ margin: 0, fontWeight: 600, fontSize: 20 }}>{bike.name}</Title>
+                  </div>
+                  {/* Engine, Power, Torque */}
+                  <div style={{ fontSize: 14, color: '#444', marginBottom: 10, lineHeight: 1.6 }}>
+                    <div>Engine: <b>{engine}</b></div>
+                    <div>Power: <b>{power}</b></div>
+                    <div>Torque: <b>{torque}</b></div>
+                  </div>
+                  {/* Price */}
+                  <div style={{ fontWeight: 700, fontSize: 18, color: "#222", marginBottom: 8 }}>
+                    {price}
+                  </div>
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 w-full mt-2">
+                    <Button
+                      icon={<EyeOutlined />}
+                      onClick={() => navigate(`/akr-sons-bike-store/${bike._id}`)}
+                      className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition min-w-0"
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      icon={<CalendarOutlined />}
+                      onClick={() => navigate('/prebook')}
+                      className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition min-w-0"
+                    >
+                      Pre-Book
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 } 

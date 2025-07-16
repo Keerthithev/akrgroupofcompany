@@ -12,6 +12,8 @@ import Swal from 'sweetalert2';
 import saveAs from 'file-saver';
 import { DownloadOutlined } from '@ant-design/icons';
 import { Select as AntdSelect } from 'antd';
+import { Card as AntdCard, Statistic, Row as AntdRow, Col as AntdCol } from 'antd';
+import { CarOutlined, BookOutlined } from "@ant-design/icons";
 
 const AKR_COMPANY_NAME = "AKR & SONS (PVT) LTD";
 
@@ -439,6 +441,60 @@ function exportPreBookingsToCSV(bookings) {
   saveAs(blob, 'prebookings.csv');
 }
 
+// Add OverviewSection component before AdminDashboard
+function OverviewSection({ vehicles, preBookings }) {
+  // Calculate stats
+  const totalVehicles = vehicles.length;
+  const totalBookings = preBookings.length;
+  // Revenue: sum of all booking vehicle prices (mock, since real revenue may not be available)
+  const revenue = preBookings.reduce((sum, b) => sum + (b.price ? Number(b.price) : 0), 0);
+  // Satisfaction: mock value
+  const satisfaction = 96;
+  return (
+    <AntdRow gutter={[24, 24]}>
+      <AntdCol xs={24} md={12} lg={6}>
+        <AntdCard bordered className="glass-card">
+          <Statistic title="Total Vehicles" value={totalVehicles} valueStyle={{ color: '#10b981' }} />
+        </AntdCard>
+      </AntdCol>
+      <AntdCol xs={24} md={12} lg={6}>
+        <AntdCard bordered className="glass-card">
+          <Statistic title="Total Bookings" value={totalBookings} valueStyle={{ color: '#2563eb' }} />
+        </AntdCard>
+      </AntdCol>
+      <AntdCol xs={24} md={12} lg={6}>
+        <AntdCard bordered className="glass-card">
+          <Statistic title="Revenue (LKR)" value={revenue.toLocaleString()} valueStyle={{ color: '#f59e42' }} />
+        </AntdCard>
+      </AntdCol>
+      <AntdCol xs={24} md={12} lg={6}>
+        <AntdCard bordered className="glass-card">
+          <Statistic title="Customer Satisfaction" value={satisfaction + '%'} valueStyle={{ color: '#22d3ee' }} />
+        </AntdCard>
+      </AntdCol>
+      <AntdCol xs={24} lg={12}>
+        <AntdCard bordered className="glass-card h-full flex flex-col justify-between">
+          <div className="font-semibold mb-2">Monthly Revenue Trend</div>
+          <Chart />
+        </AntdCard>
+      </AntdCol>
+      <AntdCol xs={24} lg={12}>
+        <AntdCard bordered className="glass-card h-full flex flex-col justify-between">
+          <div className="font-semibold mb-2">Recent Bookings</div>
+          <ul className="divide-y divide-gray-100">
+            {preBookings.slice(0, 5).map(b => (
+              <li key={b._id} className="py-2 flex flex-col">
+                <span className="font-medium">{b.fullName}</span>
+                <span className="text-xs text-gray-500">{b.vehicleModel} &middot; {b.status}</span>
+              </li>
+            ))}
+          </ul>
+        </AntdCard>
+      </AntdCol>
+    </AntdRow>
+  );
+}
+
 export default function AdminDashboard() {
   console.log("Cloudinary config:", CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
   // Redirect if not admin
@@ -496,7 +552,7 @@ export default function AdminDashboard() {
   const [selectedPreBooking, setSelectedPreBooking] = useState<any>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   // Add state to track selected AKR tab
-  const [akrTab, setAkrTab] = useState<'vehicles' | 'prebookings' | ''>('vehicles');
+  const [akrTab, setAkrTab] = useState<'overview' | 'vehicles' | 'prebookings' | ''>('vehicles');
   // Add state for search and filter
   const [preBookingSearch, setPreBookingSearch] = useState('');
   const [preBookingStatus, setPreBookingStatus] = useState('All');
@@ -583,7 +639,10 @@ export default function AdminDashboard() {
         setCompanies(data);
         const akr = data.find((c: any) => c.name === AKR_COMPANY_NAME);
         setSelectedCompany(akr || (data[0] || null));
-        if (akr) fetchVehicles(akr._id);
+        if (akr) {
+          fetchVehicles(akr._id);
+          setAkrTab('overview'); // Set default tab to overview
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -980,17 +1039,27 @@ export default function AdminDashboard() {
           </div>
           <Menu
             mode="inline"
-            defaultSelectedKeys={['1']}
+            defaultSelectedKeys={[selectedCompany && selectedCompany.name === AKR_COMPANY_NAME ? akrTab || 'overview' : '1']}
             style={{ borderRight: 0 }}
             items={[
+              // Always show Overview for AKR & SONS
+              ...(selectedCompany && selectedCompany.name === AKR_COMPANY_NAME ? [{
+                key: 'overview',
+                label: 'Overview',
+                icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><HomeOutlined style={{ fontSize: 20 }} /></span>,
+                onClick: () => {
+                  setAkrTab('overview');
+                  setAkrFacilityTab(null);
+                }
+              }] : []),
               {
                 key: '1',
                 label: 'Companies',
-                icon: <HomeOutlined />,
+                icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><Store style={{ fontSize: 20 }} /></span>,
                 children: companies.map(company =>
                   company.name === 'AKR Multi Complex' ? {
-                  key: company._id,
-                  label: company.name,
+                    key: company._id,
+                    label: company.name,
                     children: [
                       {
                         key: `${company._id}-shopping-center`,
@@ -998,7 +1067,7 @@ export default function AdminDashboard() {
                         onClick: () => {
                           setSelectedCompany(company);
                           setAkrFacilityTab('shopping-center');
-                          setAkrTab(''); // Ensure only facility content shows
+                          setAkrTab('');
                         }
                       },
                       {
@@ -1046,16 +1115,18 @@ export default function AdminDashboard() {
                       {
                         key: `${company._id}-vehicles`,
                         label: 'Vehicles',
+                        icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><CarOutlined style={{ fontSize: 20 }} /></span>,
                         onClick: () => {
                           setSelectedCompany(company);
                           setAkrTab('vehicles');
-                          setAkrFacilityTab(null); // Ensure only vehicles content shows
+                          setAkrFacilityTab(null);
                           fetchVehicles(company._id);
                         }
                       },
                       {
                         key: `${company._id}-prebookings`,
                         label: 'Pre-Bookings',
+                        icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><BookOutlined style={{ fontSize: 20 }} /></span>,
                         onClick: () => {
                           setSelectedCompany(company);
                           setAkrTab('prebookings');
@@ -1090,10 +1161,10 @@ export default function AdminDashboard() {
                   }
                 )
               },
-            { key: '2', label: 'Employees', icon: <UserOutlined /> },
-            { key: '3', label: 'Activity', icon: <Activity /> },
-            { key: '4', label: 'Reports', icon: <LineOutlined /> },
-            { key: '5', label: 'Settings', icon: <WechatOutlined /> },
+              { key: '2', label: 'Employees', icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><UserOutlined style={{ fontSize: 20 }} /></span> },
+              { key: '3', label: 'Activity', icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><Activity style={{ fontSize: 20 }} /></span> },
+              { key: '4', label: 'Reports', icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><LineOutlined style={{ fontSize: 20 }} /></span> },
+              { key: '5', label: 'Settings', icon: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22 }}><WechatOutlined style={{ fontSize: 20 }} /></span> },
             ]}
           />
         </div>
@@ -1247,6 +1318,12 @@ export default function AdminDashboard() {
           <span className="text-2xl font-bold gradient-text">Admin Dashboard</span>
         </Layout.Header>
         <Layout.Content className="flex-1 p-4 md:p-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Overview Section for AKR & SONS */}
+          {selectedCompany.name === AKR_COMPANY_NAME && akrTab === 'overview' && (
+            <div className="col-span-full">
+              <OverviewSection vehicles={vehicles} preBookings={preBookings} />
+            </div>
+          )}
           {/* AKR & SONS (PVT) LTD: New Concept */}
           {selectedCompany.name === AKR_COMPANY_NAME && akrTab === 'vehicles' && (
             <>
@@ -1641,7 +1718,7 @@ export default function AdminDashboard() {
               </Modal>
                 </div>
           )}
-          {akrFacilityTab === 'hotel-rooms' && akrTab !== 'prebookings' && (
+          {akrFacilityTab === 'hotel-rooms' && akrTab !== 'overview' && akrTab !== 'prebookings' && (
             <>
               <div className="col-span-full xl:col-span-2">
                 <div className="mb-6 flex items-center justify-between">

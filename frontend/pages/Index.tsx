@@ -391,30 +391,19 @@ export default function Index() {
               Discover the diverse portfolio of companies that make up the AKR Group family. Each division reflects our unwavering commitment to excellence, innovation, and community impact — driving progress across industries while staying rooted in our core values.
             </p>
           </div>
-          {/* Synchronized Opposite Carousels */}
-          <div className="space-y-8">
-            {/* Top row: left-to-right */}
-            <div className="overflow-x-auto flex flex-row gap-8 justify-center transition-all duration-500">
-              {topCompanies.map((company) => (
-                <div key={company.name} className="w-full max-w-[320px]">
+          {/* Responsive Company Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {companies.map((company) => (
+              <div key={company.name} className="w-full max-w-[320px] mx-auto">
                   <CompanyCard {...company} />
                 </div>
               ))}
-            </div>
-            {/* Bottom row: right-to-left (reverse order) */}
-            <div className="flex flex-row-reverse gap-8 justify-center transition-all duration-500">
-              {bottomCompanies.map((company) => (
-                <div key={company.name} className="w-full max-w-[320px]">
-                  <CompanyCard {...company} />
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
       {/* Enhanced About Section */}
-      <section id="about" className="py-16 md:py-24 bg-white/90 relative overflow-hidden">
+      <section id="about" className="py-16 md:py-24 bg-white/30 backdrop-blur-md rounded-3xl border border-white/30 shadow-xl mx-2 md:mx-auto max-w-5xl relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <svg width="100%" height="100%" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-0 left-0 w-full h-32 opacity-10"><path fill="#10b981" fillOpacity="0.2" d="M0,160L60,170.7C120,181,240,203,360,197.3C480,192,600,160,720,133.3C840,107,960,85,1080,101.3C1200,117,1320,171,1380,197.3L1440,224L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path></svg>
         </div>
@@ -428,24 +417,96 @@ export default function Index() {
               style={{ aspectRatio: '16/9', background: '#f3f4f6' }}
             />
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-2 gradient-text">About AKR Group</h2>
-          <p className="text-lg md:text-xl text-emerald-800 font-semibold mb-4">Empowering industries, Building futures, Creating value.</p>
-          <p className="text-base md:text-lg text-gray-700 mb-8">AKR Group is a modern, integrated business group built on a legacy of vision, resilience, and community upliftment. We empower progress across industries with integrity, innovation, and a commitment to excellence.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8">
-            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-              <ShieldCheck className="w-10 h-10 text-emerald-500 mb-2" />
-              <h3 className="text-lg font-bold gradient-text mb-2">Integrity</h3>
-              <p className="text-gray-700 text-sm">We build trust through honesty and transparency in all we do.</p>
+          <h2 className="text-4xl md:text-5xl font-bold mb-2 gradient-text">The Story of AKR Group</h2>
+          <p className="text-lg md:text-xl text-emerald-800 font-semibold mb-8">From Humble Beginnings to Regional Leadership</p>
+          <div className="text-left mx-auto max-w-3xl space-y-8 text-gray-800">
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Our Journey</h3>
+              <p className="mb-2">The story of AKR Group is more than a business journey — it is a legacy of vision, resilience, and a deep commitment to uplift the community.</p>
+              <p className="mb-2">In 1978, Mr. Anton began his professional life as a bus driver with the Sri Lanka Transport Board. With unyielding determination and a dream to build something greater, he ventured abroad in 1984. After returning to Sri Lanka in 1989, he set his sights on transforming the regional commercial landscape.</p>
+              <p className="mb-2">In 1990, he founded AKA, initially focusing on transport services and innovative mobile fuel sales using containers. Beyond business, Mr. Anton remained devoted to public welfare, launching initiatives to improve community well-being.</p>
+              <p className="mb-2">This relentless spirit of progress soon led to the rebranding of AKA as AKR, marking a pivotal phase of growth with the launch of the AKR Filling Station and AKR Wine Store, further expanding the company’s commercial reach and impact.</p>
             </div>
-            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-              <Star className="w-10 h-10 text-yellow-500 mb-2" />
-              <h3 className="text-lg font-bold gradient-text mb-2">Excellence</h3>
-              <p className="text-gray-700 text-sm">We set new standards in quality, service, and innovation.</p>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Our Family Legacy</h3>
+              <p className="mb-2">AKR’s strength lies in its roots — a family legacy built on integrity, hard work, and visionary leadership.</p>
+              <p className="mb-2">As the torchbearer of this legacy, Mr. Rojar Stalin, Mr. Anton’s son, took over the leadership and propelled the company into a new era. His forward-thinking mindset and commitment to community development have driven AKR to new heights while staying true to the values instilled by his father.</p>
+              <p className="mb-2">Together, the family’s collective dedication continues to guide AKR’s mission: empowering communities, fostering economic growth, and creating sustainable value for future generations.</p>
             </div>
-            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-              <Users className="w-10 h-10 text-blue-500 mb-2" />
-              <h3 className="text-lg font-bold gradient-text mb-2">Community</h3>
-              <p className="text-gray-700 text-sm">We uplift communities and empower lives through every project.</p>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">AKR Today: A Pillar of Progress</h3>
+              <p className="mb-2">Today, AKR Group stands as a leading, integrated commercial powerhouse in Sri Lanka’s Northern Province. Our diverse range of divisions reflects our commitment to serving a wide spectrum of community and customer needs:</p>
+              <ul className="list-disc ml-6 mb-2">
+                <li>AKR & Sons (Pvt) Ltd</li>
+                <li>AKR Multi Complex</li>
+                <li>AKR Construction</li>
+                <li>AKR Lanka Filling Station</li>
+                <li>AKR Wine Store</li>
+                <li>AKR Farm</li>
+                <li>AKR's Amma Organization</li>
+                <li>Filling Stations</li>
+                <li>AKR Easy Credit (Pvt) Ltd</li>
+              </ul>
+              <p>With each endeavor, we aim to set new standards of quality, reliability, and innovation.</p>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Our Guiding Principle</h3>
+              <blockquote className="italic border-l-4 border-emerald-500 pl-4 mb-2 text-emerald-700 font-semibold">"Eradicate poverty, empower through knowledge."</blockquote>
+              <p>This ethos reflects our unwavering dedication to community development, education, and creating opportunities for growth. Through various public service initiatives and regional development projects, we strive to make a meaningful impact — transforming lives and building a future where every individual can thrive.</p>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Our Pride & Promise</h3>
+              <p>From humble beginnings to becoming a beacon of progress, AKR Group’s journey embodies the spirit of resilience and shared success. We take immense pride in our history and even greater pride in the future we continue to build — together with our family, our employees, and the communities we serve.</p>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Mission & Vision</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-lg mb-1">Mission</h4>
+                  <p>To deliver exceptional products and services across diverse industries, while setting new standards in quality, innovation, and customer care — all driven by a deep commitment to uplifting communities and empowering lives.</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-1">Vision</h4>
+                  <p>To become Sri Lanka’s most trusted and admired business group, recognized for our unwavering dedication to excellence, sustainable growth, and a meaningful impact on every community we serve.</p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <h4 className="font-semibold text-lg mb-2">Values</h4>
+                <ul className="list-disc ml-6">
+                  <li><b>Integrity & Transparency</b> — We build trust through honesty and openness in everything we do.</li>
+                  <li><b>Excellence in Service</b> — We go beyond expectations, delivering value at every touchpoint.</li>
+                  <li><b>Community Development</b> — We believe in giving back and nurturing strong, resilient communities.</li>
+                  <li><b>Sustainable Growth</b> — We grow responsibly, with a focus on long-term impact and environmental stewardship.</li>
+                </ul>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">Our Portfolio</h3>
+              <p className="mb-2">Discover the diverse portfolio of companies that make up the AKR Group family. Each division reflects our unwavering commitment to excellence, innovation, and community impact — driving progress across industries while staying rooted in our core values. Together, they form a vibrant ecosystem dedicated to serving people, empowering growth, and building a stronger future.</p>
+              <ul className="list-disc ml-6 space-y-1">
+                <li><b>AKR Sons (Pvt) Ltd:</b> A trusted premium dealership for Bajaj motorcycles and three-wheelers, offering a diverse range of reliable, fuel-efficient models perfect for every commute and adventure. With flexible financing, genuine after-sales support, and a commitment to quality, we help you ride with confidence and style.</li>
+                <li><b>AKR Multi Complex:</b> A vibrant, all-in-one destination offering premium shopping, dining, entertainment, fitness, hospitality, and vehicle services — designed to bring families, guests, and businesses together under one roof.</li>
+                <li><b>AKR Construction:</b> Your reliable source for premium construction materials — including sea sand, red soil, metal, gravel, and more — ensuring strong, durable, and high-quality results for every project.</li>
+                <li><b>AKR Lanka Filling Station:</b> Your dependable stop for high-quality fuel, petroleum products, and full automotive services — keeping you safe and moving forward with confidence.</li>
+                <li><b>AKR Wine Store:</b> A refined retail destination offering a curated selection of fine wines from around the world, crafted for true connoisseurs and enthusiasts alike.</li>
+                <li><b>AKR Farm:</b> A forward-thinking agricultural initiative promoting sustainable, organic farming practices to provide fresh, healthy produce from our fields to your table.</li>
+                <li><b>AKR's Amma Organization:</b> A heartfelt social initiative dedicated to uplifting communities through charitable projects, education programs, and family-centered support.</li>
+                <li><b>AKR Easy Credit (Pvt) Ltd:</b> Your trusted partner for flexible credit solutions and personal loans, empowering individuals and businesses with financial freedom and confidence.</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold mb-2 gradient-text">AKR's Amma Organization</h3>
+              <p className="mb-2 font-semibold text-emerald-700">Empowering Communities, Enriching Lives</p>
+              <blockquote className="italic border-l-4 border-emerald-500 pl-4 mb-2 text-emerald-700 font-semibold">"Eradicate poverty, empower through knowledge."</blockquote>
+              <p className="mb-2">This isn't just a motto; it's the heartbeat of AKR's Amma. Established in 2019, our organization is deeply committed to serving the community and fostering a brighter future for all in Sri Lanka.</p>
+              <h4 className="font-semibold text-lg mb-2 mt-4">Our Initiatives: Making a Difference, Every Day</h4>
+              <ul className="list-disc ml-6 mb-2">
+                <li><b>Empowering Education:</b> Annual school supply distribution for underprivileged students and support for university students to help them pursue higher education dreams.</li>
+                <li><b>Youth Sports Development:</b> Organizing the annual "AKR Challenge Cup Football Tournament" and providing essential gear to local sports clubs.</li>
+                <li><b>Hunger Relief Program:</b> Distributing dry ration packs to families below the poverty line and sanitation workers during times of national hardship and the COVID-19 pandemic.</li>
+                <li><b>Preserving Our Rich Heritage:</b> Organizing and hosting the traditional bullock cart race, a cherished cultural event in our region.</li>
+              </ul>
+              <p>At AKR's Amma, we're more than just an organization; we're a movement dedicated to positive change. Join us in building stronger, more educated, and vibrant communities.</p>
             </div>
           </div>
         </div>

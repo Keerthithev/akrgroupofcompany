@@ -122,12 +122,12 @@ export default function PreBook() {
 
   // Step 0: Booking Form
   const bookingForm = (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
       <StepsIndicator />
       <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-lg">
-        <Card className="rounded-2xl shadow-xl">
+        <Card className="rounded-2xl bg-white/30 backdrop-blur-md border border-white/30 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-blue-700">Pre-Book Your Vehicle</CardTitle>
+            <CardTitle className="text-2xl font-bold text-emerald-700">Pre-Book Your Vehicle</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="space-y-5" onSubmit={handleContinue} autoComplete="off">
@@ -175,7 +175,7 @@ export default function PreBook() {
                 </Label>
               </div>
               {error && <div className="text-red-600 text-sm font-medium">{error}</div>}
-              <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Submitting...' : 'Continue'}</Button>
+              <Button type="submit" className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-8 py-3 text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Submitting...' : 'Continue'}</Button>
             </form>
           </CardContent>
         </Card>
@@ -185,12 +185,12 @@ export default function PreBook() {
 
   // Step 1: Confirmation
   const confirmStep = (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
       <StepsIndicator />
       <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-lg">
-        <Card className="rounded-2xl shadow-xl">
+        <Card className="rounded-2xl bg-white/30 backdrop-blur-md border border-white/30 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-blue-700">Confirm Your Details</CardTitle>
+            <CardTitle className="text-2xl font-bold text-emerald-700">Confirm Your Details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 mb-6">
@@ -206,7 +206,7 @@ export default function PreBook() {
             {error && <div className="text-red-600 text-sm font-medium mb-2">{error}</div>}
             <div className="flex gap-4">
               <Button type="outline" className="flex-1" onClick={() => setStep(0)}>Back</Button>
-              <Button type="primary" className="flex-1" onClick={handleConfirm} disabled={loading}>{loading ? 'Submitting...' : 'Confirm & Submit'}</Button>
+              <Button onClick={handleConfirm} className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-8 py-3 text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Booking...' : 'Confirm & Book'}</Button>
             </div>
           </CardContent>
         </Card>

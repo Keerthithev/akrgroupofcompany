@@ -37,6 +37,9 @@ import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Skeleton } from "../../components/ui/skeleton";
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+gsap.registerPlugin(ScrollTrigger);
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -65,6 +68,7 @@ export default function VehicleDetails() {
   const [showVideo, setShowVideo] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const heroRef = useRef<HTMLDivElement>(null);
+  const heroImageRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 1], [0, -50]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -86,6 +90,29 @@ export default function VehicleDetails() {
     }
     if (id) fetchVehicle();
   }, [id]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  useEffect(() => {
+    if (heroImageRef.current) {
+      gsap.fromTo(
+        heroImageRef.current,
+        { scale: 1, y: 0 },
+        {
+          scale: 1.15,
+          y: -60,
+          scrollTrigger: {
+            trigger: heroImageRef.current,
+            start: 'top center',
+            end: 'bottom top',
+            scrub: true,
+          },
+        }
+      );
+    }
+  }, []);
 
   const getCurrentImages = () => {
     return selectedColor?.images || vehicle?.images || ["/hero-bg.jpg"];
@@ -225,11 +252,29 @@ export default function VehicleDetails() {
                       transition={{ delay: 0.5 }}
                       className="flex items-center gap-4 mb-6"
                     >
-                      {vehicle.price && <p className="text-3xl font-bold text-blue-600">LKR {vehicle.price}</p>}
+                      {vehicle.price && <p className="text-3xl font-bold text-emerald-600">LKR {vehicle.price}</p>}
                       <Badge variant="outline" className="text-green-600 border-green-600">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         {vehicle.availability}
                       </Badge>
+                    </motion.div>
+                    {/* Download Brochure Button */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.55 }}
+                      className="mb-6"
+                    >
+                      <a
+                        href="/brochures/PULSAR-NS400Z-BROCHURE.pdf"
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-6 py-2 text-base shadow-lg hover:scale-105 transition"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download Brochure
+                      </a>
                     </motion.div>
                   </div>
                   {/* Quick Stats */}
@@ -250,7 +295,7 @@ export default function VehicleDetails() {
                         whileHover={{ scale: 1.05 }}
                         className="text-center p-4 bg-white rounded-xl shadow-sm border"
                       >
-                        <stat.icon className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                        <stat.icon className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
                         <p className="text-sm text-gray-600">{stat.label}</p>
                         <p className="font-semibold text-gray-900">{stat.value}</p>
                       </motion.div>
@@ -287,7 +332,7 @@ export default function VehicleDetails() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8 }}
                 >
-                  <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="relative aspect-[4/3] flex items-center justify-center">
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={currentImageIndex}
@@ -446,12 +491,79 @@ export default function VehicleDetails() {
             className="mb-12"
           >
             <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-gradient-primary text-white rounded-2xl p-8 shadow-lg">
-              <div>
+              {/* Left column: image slideshow for all color images */}
+              <div ref={heroImageRef} className="flex flex-col items-center w-full max-w-md md:order-1 order-2">
+                <div className="relative aspect-[4/3] flex items-center justify-center w-full">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentImageIndex}
+                      initial={{ opacity: 0, scale: 1.1 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.5 }}
+                      className="absolute inset-0"
+                    >
+                      <img
+                        src={allGalleryImages[currentImageIndex] || "/hero-bg.jpg"}
+                        alt={vehicle.name}
+                        className="object-cover w-full h-full cursor-pointer"
+                        onClick={() => setShowImageGallery(true)}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                  {allGalleryImages.length > 1 && (
+                    <>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2"
+                      >
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="bg-white/80 hover:bg-white backdrop-blur-sm"
+                          onClick={() => setCurrentImageIndex((currentImageIndex - 1 + allGalleryImages.length) % allGalleryImages.length)}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2"
+                      >
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="bg-white/80 hover:bg-white backdrop-blur-sm"
+                          onClick={() => setCurrentImageIndex((currentImageIndex + 1) % allGalleryImages.length)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    </>
+                  )}
+                  {/* Image Indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {allGalleryImages.map((_, index) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.2 }}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === currentImageIndex ? "bg-white" : "bg-white/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-sm text-white/80 mt-2">100% Genuine. Warranty Included.</span>
+              </div>
+              {/* Right column: offer text and Pre-Book button */}
+              <div className="w-full flex flex-col items-center text-center md:order-2 order-1">
                 <h2 className="text-3xl font-bold mb-2">Unleash the Power. Ride with Confidence.</h2>
-                <p className="text-lg mb-4">
-                  Discover the perfect blend of performance, style, and reliability. Every ride is a new adventure with AKR & SONS.
-                </p>
-                <div className="flex flex-wrap gap-4 mb-4">
+                <p className="text-lg mb-6 max-w-xl">Discover the perfect blend of performance, style, and reliability. Every ride is a new adventure with AKR & SONS.</p>
+                <div className="flex flex-wrap justify-center gap-3 mb-6">
                   <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
                     <CheckCircle className="h-4 w-4 mr-1" /> 2-Year Warranty
                   </span>
@@ -464,21 +576,36 @@ export default function VehicleDetails() {
                   <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
                     <Zap className="h-4 w-4 mr-1" /> Flexible Financing
                   </span>
+                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
+                    <CheckCircle className="h-4 w-4 mr-1" /> First 2 Services Free
+                  </span>
                 </div>
-                <Button
-                  onClick={() => navigate('/prebook')}
-                  className="bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition flex items-center"
-                >
-                  Pre-Book
-                </Button>
-              </div>
-              <div className="flex flex-col items-center">
-                <img
-                  src={currentImages[0] || '/hero-bg.jpg'}
-                  alt={vehicle.name}
-                  className="w-72 h-48 object-cover rounded-xl shadow-md mb-4"
-                />
-                <span className="text-sm text-white/80">100% Genuine. Warranty Included.</span>
+                {/* New: Choose One Offer */}
+                <div className="mt-4 w-full max-w-3xl">
+                  <h3 className="text-xl font-bold mb-4 text-white text-center">Choose One of These Exclusive Offers</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-white mb-1">Full Tank Petrol + Jacket + Helmet</span>
+                      <span className="text-sm text-white/80">Get a full tank of petrol, a stylish jacket, and a helmet with your new ride.</span>
+                    </div>
+                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-white mb-1">15,000 LKR Discount</span>
+                      <span className="text-sm text-white/80">Enjoy an instant discount of 15,000 LKR on your purchase.</span>
+                    </div>
+                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-white mb-1">Registration Fee Waived</span>
+                      <span className="text-sm text-white/80">We’ll cover your registration fee for a hassle-free start.</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-center mt-8 w-full relative z-20">
+                  <Button
+                    onClick={() => navigate('/prebook')}
+                    className="bg-gradient-to-r from-emerald-500 to-green-500 text-white font-extrabold rounded-2xl px-10 py-4 text-xl shadow-2xl border-2 border-white hover:scale-105 transition"
+                  >
+                    Pre-Book
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.section>
@@ -493,55 +620,77 @@ export default function VehicleDetails() {
             >
               <div className="flex flex-col items-center justify-center">
                 <motion.h2
-                  className="text-2xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-primary"
+                  className="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-primary"
                   initial={{ scale: 0.95, opacity: 0 }}
                   whileInView={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', bounce: 0.3, duration: 0.5 }}
                 >
-                  Specifications
+                  Specifications & Features
                 </motion.h2>
-                {/* Pyramid layout: 1, 2, 3 cards */}
-                {(() => {
-                  const specEntries = Object.entries(groupedSpecs).filter(([heading]) => heading !== 'Other');
-                  const rows = [
-                    specEntries.slice(0, 1),
-                    specEntries.slice(1, 3),
-                    specEntries.slice(3, 6),
-                  ];
-                  return (
-                    <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-4">
-                      {rows.map((row, i) => (
-                        <div key={i} className={`flex justify-center gap-4 w-full ${i === 0 ? 'mb-2' : ''}`}>
-                          {row.map(([heading, specs]) => (
-                            <motion.div
-                              key={heading}
-                              className="flex-1 min-w-[220px] max-w-xs rounded-xl p-4 bg-white/60 backdrop-blur-md shadow border border-white/50 flex flex-col items-center"
-                              initial={{ y: 20, opacity: 0 }}
-                              whileInView={{ y: 0, opacity: 1 }}
-                              transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                            >
-                              <h3 className="text-lg font-semibold mb-2 text-emerald-700 text-center">{heading}</h3>
-                              <ul className="space-y-1 w-full text-center">
-                                {(specs as { label: string; value: string }[]).map(spec => (
-                                  <li key={spec.label} className="flex flex-col items-center">
-                                    <span className="font-semibold text-gray-700 text-base">{spec.label}</span>
-                                    <span className="text-gray-900 text-lg font-bold">{spec.value}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </motion.div>
-                          ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl items-start">
+                  {['Engine', 'Brakes & Tyres', 'Electricals', 'Vehicle'].filter(heading => groupedSpecs[heading]).map((heading) => {
+                    const specs = groupedSpecs[heading];
+                    let icon: React.ReactNode = null;
+                    if (heading === 'Engine') icon = <Gauge className="w-6 h-6 text-emerald-600 mr-2" />;
+                    else if (heading === 'Brakes & Tyres') icon = <Star className="w-6 h-6 text-blue-600 mr-2" />;
+                    else if (heading === 'Electricals') icon = <Zap className="w-6 h-6 text-yellow-500 mr-2" />;
+                    else if (heading === 'Vehicle') icon = <Settings className="w-6 h-6 text-gray-700 mr-2" />;
+                    else return null;
+                    return (
+                      <motion.div
+                        key={heading}
+                        className="rounded-2xl bg-white/80 shadow p-5 border border-white/60 flex flex-col min-h-[220px] min-w-[160px]"
+                        initial={{ y: 20, opacity: 0 }}
+                        whileInView={{ y: 0, opacity: 1 }}
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                      >
+                        <div className="flex items-center mb-3">
+                          {icon}
+                          <h3 className="text-lg font-bold text-emerald-800">{heading}</h3>
                         </div>
-                      ))}
-                    </div>
-                  );
-                })()}
+                        <table className="w-full text-left text-xs">
+                          <tbody>
+                            {(specs as { label: string; value: string }[]).map(spec => (
+                              <tr key={spec.label}>
+                                <td className="py-1 pr-2 font-semibold text-gray-700 whitespace-nowrap align-top">{spec.label}</td>
+                                <td className="py-1 text-gray-900 font-bold align-top">{spec.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </motion.div>
+                    );
+                  })}
+                  {/* Features as a card matching specs style */}
+                  {vehicle.features && vehicle.features.length > 0 && (
+                    <motion.div
+                      className="rounded-2xl bg-white/80 shadow p-5 border border-white/60 flex flex-col min-h-[220px] min-w-[160px]"
+                      initial={{ y: 20, opacity: 0 }}
+                      whileInView={{ y: 0, opacity: 1 }}
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                    >
+                      <div className="flex items-center mb-3">
+                        <Star className="w-6 h-6 text-blue-600 mr-2" />
+                        <h3 className="text-lg font-bold text-emerald-800">Features</h3>
+                      </div>
+                      <div className="w-full text-xs flex flex-wrap gap-2">
+                        {vehicle.features.map((feature: string, index: number) => (
+                          <span
+                            key={index}
+                            className="inline-block bg-emerald-50 border border-emerald-200 rounded px-3 py-1 font-semibold text-gray-700 whitespace-pre-line max-w-full break-words"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               </div>
             </motion.section>
 
-            {/* Features & Variants Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl mx-auto">
-              {/* Features */}
+            {/* Variants */}
+            {vehicle.variants && vehicle.variants.length > 0 && (
               <motion.section
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -555,78 +704,39 @@ export default function VehicleDetails() {
                     whileInView={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', bounce: 0.3, duration: 0.5 }}
                   >
-                    Features
+                    Variants
                   </motion.h2>
-                  <motion.div
-                    className="rounded-xl p-4 bg-white/60 backdrop-blur-md shadow border border-white/50 flex flex-col items-center w-full"
-                    initial={{ y: 20, opacity: 0 }}
-                    whileInView={{ y: 0, opacity: 1 }}
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                  >
-                    <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full text-center">
-                      {vehicle.features?.map((feature: string, index: number) => (
-                        <motion.li
-                          key={index}
-                          className="font-semibold text-base text-gray-800 bg-white/80 rounded px-3 py-1 shadow-sm mx-auto"
-                          initial={{ scale: 0.97, opacity: 0 }}
-                          whileInView={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: index * 0.03, type: 'spring', bounce: 0.2, duration: 0.3 }}
-                        >
-                          {feature}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
+                  <div className="w-full">
+                    {vehicle.variants.map((variant: any, index: number) => (
+                      <motion.div
+                        key={index}
+                        className="rounded-xl p-4 bg-white/60 backdrop-blur-md shadow border border-white/50 flex flex-col items-center mb-4"
+                        initial={{ y: 20, opacity: 0 }}
+                        whileInView={{ y: 0, opacity: 1 }}
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                      >
+                        <h3 className="text-xl font-bold mb-2 text-blue-700 text-center">{variant.name}</h3>
+                        <span className="text-lg font-bold text-emerald-700 mb-1">LKR {variant.price}</span>
+                        <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full text-center">
+                          {variant.features?.map((feature: string, fIndex: number) => (
+                            <motion.li
+                              key={fIndex}
+                              className="text-base font-semibold text-gray-900 bg-white/80 rounded px-3 py-1 shadow-sm mx-auto"
+                              initial={{ scale: 0.97, opacity: 0 }}
+                              whileInView={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: fIndex * 0.03, type: 'spring', bounce: 0.2, duration: 0.3 }}
+                            >
+                              {feature}
+                            </motion.li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               </motion.section>
-              {/* Variants */}
-              {vehicle.variants && vehicle.variants.length > 0 && (
-                <motion.section
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                >
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <motion.h2
-                      className="text-2xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-primary"
-                      initial={{ scale: 0.95, opacity: 0 }}
-                      whileInView={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', bounce: 0.3, duration: 0.5 }}
-                    >
-                      Variants
-                    </motion.h2>
-                    <div className="w-full">
-                      {vehicle.variants.map((variant: any, index: number) => (
-                        <motion.div
-                          key={index}
-                          className="rounded-xl p-4 bg-white/60 backdrop-blur-md shadow border border-white/50 flex flex-col items-center mb-4"
-                          initial={{ y: 20, opacity: 0 }}
-                          whileInView={{ y: 0, opacity: 1 }}
-                          transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                        >
-                          <h3 className="text-xl font-bold mb-2 text-blue-700 text-center">{variant.name}</h3>
-                          <span className="text-lg font-bold text-emerald-700 mb-1">LKR {variant.price}</span>
-                          <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full text-center">
-                            {variant.features?.map((feature: string, fIndex: number) => (
-                              <motion.li
-                                key={fIndex}
-                                className="text-base font-semibold text-gray-900 bg-white/80 rounded px-3 py-1 shadow-sm mx-auto"
-                                initial={{ scale: 0.97, opacity: 0 }}
-                                whileInView={{ scale: 1, opacity: 1 }}
-                                transition={{ delay: fIndex * 0.03, type: 'spring', bounce: 0.2, duration: 0.3 }}
-                              >
-                                {feature}
-                              </motion.li>
-                            ))}
-                          </ul>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.section>
-              )}
-            </div>
+            )}
+          </div>
 
             {/* Reviews Section */}
             {vehicle.reviews && vehicle.reviews.length > 0 && (
@@ -684,7 +794,7 @@ export default function VehicleDetails() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-0">
                       {vehicle.galleryImages.map((image: string, index: number) => (
                         <motion.div
                           key={index}
@@ -693,7 +803,7 @@ export default function VehicleDetails() {
                           viewport={{ once: true }}
                           transition={{ delay: index * 0.05 }}
                           whileHover={{ scale: 1.05 }}
-                          className="aspect-square rounded-lg overflow-hidden cursor-pointer"
+                          className="aspect-square overflow-hidden cursor-pointer"
                           onClick={() => {
                             setCurrentImageIndex(index);
                             setShowImageGallery(true);
@@ -702,8 +812,8 @@ export default function VehicleDetails() {
                           <img
                             src={image || "/hero-bg.jpg"}
                             alt={`${vehicle.name} gallery ${index + 1}`}
-                            width={200}
-                            height={200}
+                            width={60}
+                            height={60}
                             className="w-full h-full object-cover"
                           />
                         </motion.div>
@@ -856,7 +966,6 @@ export default function VehicleDetails() {
             </DialogContent>
           </Dialog>
         </div> {/* End of glass container */}
-      </div>
       <footer className="bg-gradient-to-r from-emerald-900 to-green-800 text-white py-10 mt-12">
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
