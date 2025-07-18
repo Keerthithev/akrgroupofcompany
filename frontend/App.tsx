@@ -7,13 +7,12 @@ import React from "react";
 import Index from "./pages/Index";
 import AkrSonsBikeStore from "./pages/AkrSonsBikeStore";
 import NotFound from "./pages/NotFound";
-import AkrMultiComplex from "./pages/AkrMultiComplex";
+
 import AdminDashboard from "./pages/AdminDashboard";
 import VehicleDetails from "./pages/akr-sons-bike-store/VehicleDetails";
 import PreBook from "./pages/PreBook";
 import Terms from "./pages/terms";
-import RoomsList from "./pages/akr-multi-complex/rooms/index";
-import RoomDetails from "./pages/akr-multi-complex/rooms/[id]";
+
 import AdminLogin from "./pages/admin-login";
 
 const queryClient = new QueryClient();
@@ -25,12 +24,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<AkrSonsBikeStore />} />
           <Route path="/akr-sons-bike-store" element={<AkrSonsBikeStore />} />
           <Route path="/akr-sons-bike-store/:id" element={<VehicleDetails />} />
-          <Route path="/akr-multi-complex" element={<AkrMultiComplex />} />
-          <Route path="/akr-multi-complex/rooms" element={<RoomsList />} />
-          <Route path="/akr-multi-complex/rooms/:id" element={<RoomDetails />} />
+
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/prebook" element={<PreBook />} />
           <Route path="/terms" element={<Terms />} />

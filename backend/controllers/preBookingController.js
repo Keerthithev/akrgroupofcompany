@@ -1,53 +1,56 @@
 const PreBooking = require('../models/PreBooking');
-const { v4: uuidv4 } = require('uuid');
+
+// Generate the next bookingId in the format 'akr-01', 'akr-02', ...
+async function generateBookingId() {
+  // Find the latest booking by bookingId (descending)
+  const latest = await PreBooking.findOne({ bookingId: /^akr-\d+$/i })
+    .sort({ createdAt: -1 })
+    .lean();
+  let nextNum = 1;
+  if (latest && latest.bookingId) {
+    const match = latest.bookingId.match(/akr-(\d+)/i);
+    if (match) {
+      nextNum = parseInt(match[1], 10) + 1;
+    }
+  }
+  // Pad with leading zeros if needed (akr-01, akr-02, ...)
+  const padded = String(nextNum).padStart(2, '0');
+  return `akr-${padded}`;
+}
 
 // Create a new pre-booking
-exports.createPreBooking = async (req, res) => {
+exports.createPreBooking = async (req, res, next) => {
   try {
-    const { fullName, email, phone, nationalId, address, vehicleModel, notes } = req.body;
-    if (!fullName || !email || !phone || !nationalId || !address || !vehicleModel) {
-      return res.status(400).json({ error: 'All required fields must be filled.' });
-    }
-    const bookingId = 'AKR-' + uuidv4().split('-')[0].toUpperCase();
-    const preBooking = new PreBooking({
-      fullName,
-      email,
-      phone,
-      nationalId,
-      address,
-      vehicleModel,
-      notes,
-      bookingId
-    });
+    const bookingId = await generateBookingId();
+    const preBooking = new PreBooking({ ...req.body, bookingId });
     await preBooking.save();
-    res.status(201).json({ bookingId });
+    res.status(201).json(preBooking);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create pre-booking.' });
+    next(err);
   }
 };
 
-// Get all pre-bookings (admin)
-exports.getAllPreBookings = async (req, res) => {
+// Get all pre-bookings
+exports.getAllPreBookings = async (req, res, next) => {
   try {
-    const bookings = await PreBooking.find().sort({ createdAt: -1 });
-    res.json(bookings);
+    const preBookings = await PreBooking.find().sort({ createdAt: -1 });
+    res.json(preBookings);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch pre-bookings.' });
+    next(err);
   }
 };
 
-// Update pre-booking status (admin)
-exports.updatePreBookingStatus = async (req, res) => {
+// Update a pre-booking by ID
+exports.updatePreBooking = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    if (!['Pending', 'Ordered', 'Delivered', 'Cancelled'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status.' });
-    }
-    const booking = await PreBooking.findByIdAndUpdate(id, { status }, { new: true });
-    if (!booking) return res.status(404).json({ error: 'Booking not found.' });
-    res.json(booking);
+    const preBooking = await PreBooking.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!preBooking) return res.status(404).json({ message: 'Pre-booking not found' });
+    res.json(preBooking);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update status.' });
+    next(err);
   }
 }; 

@@ -31,7 +31,9 @@ const VehicleSchema = new mongoose.Schema({
   images: [String],
   galleryImages: [String],
   faqs: [{ question: String, answer: String }],
-  createdAt: { type: Date, default: Date.now }
+  brochure: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  available: { type: Boolean, default: true }
 });
 
 // Commonly used spec keys for vehicles (should be included in frontend grouped specs input):

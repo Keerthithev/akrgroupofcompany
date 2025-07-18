@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { Row, Col, Card, Button, Typography, Badge, Spin, message, Modal, Tag, Select, Image, Grid } from "antd"
+import { Row, Col, Card, Button, Typography, Badge, Spin, message, Modal, Tag, Select, Image, Grid, Link } from "antd"
 import { ArrowLeftOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined, EyeOutlined, CalendarOutlined, StarFilled, ShoppingCartOutlined, LeftOutlined, RightOutlined, PictureOutlined, ThunderboltOutlined, HomeOutlined, SmileOutlined } from "@ant-design/icons"
 import { useNavigate } from "react-router-dom"
 import { BikeSlideshow } from "@/components/BikeSlideshow"
@@ -24,19 +24,25 @@ export default function AkrSonsBikeStore() {
   const screens = Grid.useBreakpoint()
   const carouselRef = useRef<HTMLDivElement>(null);
   const cardWidth = 336; // 320px card + 16px gap
+  const [settings, setSettings] = useState({ mode: 'online', bannerImages: [], bannerText: '', bannerHeading: '', bannerSubheading: '', phone: '', email: '', address: '', companyName: '', socialLinks: {}, openingHours: [] });
 
-  const heroImages = [
-    "/images/PHOTO-2025-07-15-21-49-15.jpg",
-    "/images/PHOTO-2025-07-15-21-49-51.jpg",
-    "/images/PHOTO-2025-07-15-21-50-18.jpg"
-  ];
+  useEffect(() => {
+    fetch('http://localhost:5050/api/settings')
+      .then(res => res.json())
+      .then(data => setSettings(data));
+  }, []);
+
+  const heroImages = settings.bannerImages && settings.bannerImages.length > 0
+    ? settings.bannerImages
+    : ["/images/PHOTO-2025-07-15-21-49-15.jpg"];
   const [heroIndex, setHeroIndex] = useState(0);
+  // Change hero slideshow interval to 3 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       setHeroIndex((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
+    }, 3000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroImages.length]);
   const handleHeroPrev = () => setHeroIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length);
   const handleHeroNext = () => setHeroIndex((prev) => (prev + 1) % heroImages.length);
 
@@ -58,26 +64,17 @@ export default function AkrSonsBikeStore() {
     async function fetchData() {
       setLoading(true)
       try {
-        const companiesRes = await fetch("http://localhost:5050/api/companies")
-        const companies = await companiesRes.json()
-        const akr = companies.find((c: any) => c.name === AKR_COMPANY_NAME)
-        if (!akr) {
-          setError("AKR & SONS (PVT) LTD not found.")
-          setLoading(false)
-          return
-        }
-        setCompany(akr)
-        const vehiclesRes = await fetch(`http://localhost:5050/api/vehicles/company/${akr._id}`)
-        const vehiclesData = await vehiclesRes.json()
-        setVehicles(vehiclesData)
+        const vehiclesRes = await fetch("http://localhost:5050/api/vehicles");
+        const vehiclesData = await vehiclesRes.json();
+        setVehicles(vehiclesData.filter((v: any) => v.available !== false));
       } catch (err) {
-        setError("Failed to load vehicles.")
+        setError("Failed to load vehicles.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (!carouselRef.current) return;
@@ -154,15 +151,7 @@ export default function AkrSonsBikeStore() {
         <div className="absolute top-1/4 left-1/2 w-16 h-16 border-2 border-indigo-400/25 rounded-full animate-dynamicRotate2"></div>
       </div>
       {/* Navigation */}
-      <div className="fixed top-4 left-4 z-50">
-        <button
-          onClick={() => navigate("/")}
-          className="p-2 rounded-full bg-gradient-to-r from-emerald-900 to-green-800 text-white shadow-lg hover:scale-110 transition"
-          aria-label="Back to Home"
-        >
-          <ArrowLeftOutlined className="text-xl" />
-        </button>
-      </div>
+      {/* Removed back arrow button from hero slideshow */}
 
       {/* Modern hero section with background slideshow */}
       <section className="relative z-10 pt-28 sm:pt-36 pb-10 sm:pb-16 px-2 sm:px-6 lg:px-8 flex items-center justify-center min-h-[350px]">
@@ -177,20 +166,46 @@ export default function AkrSonsBikeStore() {
           />
         ))}
         <div className="absolute inset-0 bg-black/10 z-0" />
-        <button
-          onClick={handleHeroPrev}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/30 hover:bg-white/50 transition backdrop-blur-sm"
-          aria-label="Previous background"
-        >
-          <LeftOutlined className="w-6 h-6 text-white" />
-        </button>
-        <button
-          onClick={handleHeroNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/30 hover:bg-white/50 transition backdrop-blur-sm"
-          aria-label="Next background"
-        >
-          <RightOutlined className="w-6 h-6 text-white" />
-        </button>
+        {/* Maintenance mode banner */}
+        {settings.mode === 'maintenance' && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/70 text-white text-center p-8">
+            {settings.bannerImages && settings.bannerImages[0] && <img src={settings.bannerImages[0]} alt="Banner" className="max-h-48 mx-auto mb-4 rounded-xl shadow-lg" />}
+            <h2 className="text-3xl font-bold mb-2">Maintenance Mode</h2>
+            <p className="text-lg font-semibold mb-2">{settings.bannerText || 'The platform is currently under maintenance. Please check back soon.'}</p>
+          </div>
+        )}
+        {(settings.bannerHeading || settings.bannerSubheading) && settings.mode !== 'maintenance' && (
+          <div className="relative z-10 max-w-3xl w-full mx-auto text-center p-8 sm:p-12">
+            {/* Company Logo above banner text */}
+            <div className="flex justify-center mb-4">
+              <img src="/images/image copy 2.png" alt="Company Logo" className="h-24 w-24 rounded-full object-cover shadow-lg" style={{ background: 'transparent' }} />
+            </div>
+            {settings.bannerHeading && (
+              <h1
+                style={{
+                  color: '#22c55e',
+                  textShadow: '0 2px 12px rgba(0,0,0,0.85), 0 1px 0 #fff'
+                }}
+                className="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-4"
+              >
+                {settings.bannerHeading}
+              </h1>
+            )}
+            {settings.bannerSubheading && (
+              <h2
+                style={{
+                  color: '#fff',
+                  textShadow: '0 1px 8px rgba(0,0,0,0.7), 0 1px 0 #22c55e'
+                }}
+                className="text-base sm:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto font-medium"
+              >
+                {settings.bannerSubheading}
+              </h2>
+            )}
+          </div>
+        )}
+        {/* Remove hero slideshow arrows */}
+        {/* <button ...> ... </button> <button ...> ... </button> */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex space-x-2">
           {heroImages.map((_, idx) => (
             <button
@@ -201,24 +216,18 @@ export default function AkrSonsBikeStore() {
             />
           ))}
         </div>
-        <div className="relative z-10 max-w-3xl w-full mx-auto text-center bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 sm:p-12">
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-gray-100 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">AKR & SONS</h1>
-          <p className="text-base sm:text-xl text-gray-100 mb-6 sm:mb-8 max-w-2xl mx-auto font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
-            Trusted Bajaj dealership for motorcycles and three-wheelers. Reliable, fuel-efficient models, flexible financing, and genuine after-sales support for every journey.
-          </p>
-        </div>
       </section>
 
-      {/* Sticky Filter Bar */}
+      {/* Sticky Filter Bar - always visible, green theme, scrollable */}
       <div
-        className="sticky top-20 z-20 bg-white/95 rounded-2xl shadow-xl py-3 mb-6 w-full overflow-x-auto"
+        className="sticky top-0 z-30 bg-white/95 rounded-2xl shadow-xl py-3 mb-6 w-full overflow-x-auto border-t-4 border-green-500"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         <div className="flex flex-nowrap gap-3 min-w-max px-4">
           {filterOptions.map(opt => (
             <Button
               key={opt.value}
-              className={`font-bold rounded-2xl min-w-[120px] px-4 py-2 transition text-gray-900 ${activeFilter === opt.value ? 'bg-gradient-primary hover:scale-105' : 'bg-white border border-emerald-300 hover:bg-emerald-50'}`}
+              className={`font-bold rounded-2xl min-w-[120px] px-4 py-2 transition ${activeFilter === opt.value ? 'bg-gradient-to-r from-green-600 to-emerald-400 hover:scale-105' : 'bg-green-100 border border-green-300 hover:bg-green-200'} text-black`}
               style={{ fontWeight: 600, whiteSpace: 'normal' }}
               onClick={() => setActiveFilter(opt.value)}
             >
@@ -254,61 +263,13 @@ export default function AkrSonsBikeStore() {
               }, {})
           ).map(([category, bikes]) => (
             <div key={category} className="mb-12">
-              <h2 className="text-2xl font-bold mb-4 ml-2 text-blue-700">{category}</h2>
+              <h2 className="text-2xl font-bold mb-4 ml-2 text-green-700">{category}</h2>
               {/* Embla Carousel for infinite, snapping, auto-scroll */}
               <EmblaVehicleCarousel bikes={bikes} selectedColors={selectedColors} setSlideIndexes={setSlideIndexes} slideIndexes={slideIndexes} handlePrev={handlePrev} handleNext={handleNext} navigate={navigate} />
             </div>
           ))
         )}
       </div>
-
-      {/* Bike Store Highlights section */}
-      <section className="relative z-10 py-8 px-2 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-8 text-center">Bike Store Highlights</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <StarFilled className="text-yellow-500 text-3xl mb-2" />
-              <h3 className="font-semibold text-lg mb-2">Top Brands</h3>
-              <p className="text-gray-600 text-sm">We offer the best motorcycles from leading brands in Sri Lanka.</p>
-            </div>
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <ThunderboltOutlined className="text-blue-500 text-3xl mb-2" />
-              <h3 className="font-semibold text-lg mb-2">Performance</h3>
-              <p className="text-gray-600 text-sm">Powerful, fuel-efficient bikes for city and adventure rides.</p>
-            </div>
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <HomeOutlined className="text-green-500 text-3xl mb-2" />
-              <h3 className="font-semibold text-lg mb-2">Trusted Service</h3>
-              <p className="text-gray-600 text-sm">Expert support, genuine parts, and reliable after-sales service.</p>
-            </div>
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <SmileOutlined className="text-pink-500 text-3xl mb-2" />
-              <h3 className="font-semibold text-lg mb-2">Happy Customers</h3>
-              <p className="text-gray-600 text-sm">Thousands of satisfied riders across the country.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Customer Reviews section */}
-      <section className="relative z-10 py-8 px-2 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-8 text-center">Customer Reviews</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <SmileOutlined className="text-blue-500 text-3xl mb-2" />
-              <p className="text-gray-700 italic mb-2">“Great selection and friendly staff. My new bike is perfect!”</p>
-              <div className="font-semibold text-gray-800">- Saman, Colombo</div>
-            </div>
-            <div className="bg-white/90 rounded-2xl shadow p-6 flex flex-col items-center text-center">
-              <SmileOutlined className="text-blue-500 text-3xl mb-2" />
-              <p className="text-gray-700 italic mb-2">“Smooth buying process and excellent after-sales support.”</p>
-              <div className="font-semibold text-gray-800">- Anjali, Kandy</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Contact Section */}
       <div style={{ background: "#fff", padding: "48px 0", marginTop: 32 }}>
@@ -317,26 +278,32 @@ export default function AkrSonsBikeStore() {
           <Row gutter={[32, 32]} justify="center">
             <Col xs={24} md={8}>
               <div style={{ background: "#f6ffed", borderRadius: 12, padding: 24 }}>
-                <PhoneOutlined style={{ fontSize: 32, color: "#52c41a" }} />
+                <PhoneOutlined style={{ fontSize: 32, color: "#22c55e" }} />
                 <Title level={5} style={{ margin: "16px 0 8px 0" }}>Call Us</Title>
-                <Text>+94 11 234 5678</Text>
+                <Text>{settings.phone}</Text>
               </div>
             </Col>
             <Col xs={24} md={8}>
               <div style={{ background: "#e6f7ff", borderRadius: 12, padding: 24 }}>
-                <MailOutlined style={{ fontSize: 32, color: "#1890ff" }} />
+                <MailOutlined style={{ fontSize: 32, color: "#22c55e" }} />
                 <Title level={5} style={{ margin: "16px 0 8px 0" }}>Email Us</Title>
-                <Text>info@akrsons.lk</Text>
+                <Text>{settings.email}</Text>
               </div>
             </Col>
             <Col xs={24} md={8}>
-              <div style={{ background: "#fff1f0", borderRadius: 12, padding: 24 }}>
-                <EnvironmentOutlined style={{ fontSize: 32, color: "#fa541c" }} />
+              <div style={{ background: "#f0fdf4", borderRadius: 12, padding: 24 }}>
+                <EnvironmentOutlined style={{ fontSize: 32, color: "#22c55e" }} />
                 <Title level={5} style={{ margin: "16px 0 8px 0" }}>Visit Us</Title>
-                <Text>Colombo, Sri Lanka</Text>
+                <Text>{settings.address}</Text>
               </div>
             </Col>
           </Row>
+          <div className="flex justify-center gap-6 mt-8">
+            {settings.socialLinks?.facebook && <a href={settings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-facebook"></i></a>}
+            {settings.socialLinks?.instagram && <a href={settings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-instagram"></i></a>}
+            {settings.socialLinks?.whatsapp && <a href={settings.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-whatsapp"></i></a>}
+            {settings.socialLinks?.twitter && <a href={settings.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-twitter"></i></a>}
+          </div>
         </div>
       </div>
 
@@ -365,36 +332,42 @@ export default function AkrSonsBikeStore() {
         ))}
       </Image.PreviewGroup>
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-emerald-900 to-green-800 text-white py-10 mt-12">
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="bg-gradient-to-r from-green-700 to-emerald-500 text-white py-10 mt-12">
+        <div className="container mx-auto px-6 flex flex-col md:flex-row md:justify-between md:items-start gap-8">
           <div>
-            <img src="/images/image copy 2.png" alt="AKR Group Logo" className="h-10 mb-3" />
-            <div className="font-bold text-lg mb-2">AKR & SONS</div>
-            <p className="text-sm opacity-80">Your trusted partner for premium motorcycles and exceptional service.</p>
+            <img src="/images/image copy 2.png" alt="AKR Group Logo" className="h-16 w-16 rounded-full object-cover mb-3 mx-auto" style={{ background: 'transparent' }} />
+            <div className="font-bold text-lg mb-2 text-center">{settings.bannerHeading}</div>
+            <p className="text-sm opacity-80 text-center">{settings.bannerSubheading}</p>
           </div>
           <div>
-            <div className="font-semibold mb-2">Quick Links</div>
-            <ul className="space-y-1 text-sm">
-              <li><a href="/" className="hover:underline">Home</a></li>
-              <li><a href="/akr-sons-bike-store" className="hover:underline">Book Vehicle</a></li>
-              <li><a href="/akr-multi-complex/rooms" className="hover:underline">Book Room</a></li>
+            <div className="font-semibold mb-2">About Us</div>
+            <p className="text-sm opacity-80">We are committed to providing premium motorcycles, exceptional service, and a seamless booking experience for all our customers. Your satisfaction is our top priority.</p>
+          </div>
+          <div>
+            <div className="font-semibold mb-2">Opening Hours</div>
+            <ul className="text-sm opacity-80">
+              {(Array.isArray(settings.openingHours) ? settings.openingHours : [settings.openingHours]).filter(Boolean).map((line, idx) => (
+                <li key={idx}>{line}</li>
+              ))}
             </ul>
           </div>
           <div>
             <div className="font-semibold mb-2">Contact</div>
-            <p className="text-sm">akrfuture@gmail.com</p>
-            <p className="text-sm">0773111266</p>
+            <p className="text-sm">{settings.email}</p>
+            <p className="text-sm">{settings.phone}</p>
+            <p className="text-sm">{settings.address}</p>
           </div>
           <div>
             <div className="font-semibold mb-2">Follow Us</div>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-blue-400"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.47.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04A4.28 4.28 0 0 0 16.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.7-.02-1.36-.21-1.94-.53v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.1 2.94 3.95 2.97A8.6 8.6 0 0 1 2 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 0 0 8.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0 0 22.46 6z" /></svg></a>
-              <a href="#" className="hover:text-pink-400"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.584.012 4.85.07 1.17.056 1.97.24 2.43.41.59.22 1.01.48 1.45.92.44.44.7.86.92 1.45.17.46.354 1.26.41 2.43.058 1.266.07 1.65.07 4.85s-.012 3.584-.07 4.85c-.056 1.17-.24 1.97-.41 2.43-.22.59-.48 1.01-.92 1.45-.44.44-.7-.86-.92-1.45-.17-.46-.354-1.26-.41-2.43C2.212 15.634 2.2 15.25 2.2 12s.012-3.584.07-4.85c.056-1.17.24-1.97.41-2.43.22-.59.48-1.01.92-1.45.44-.44.86-.7 1.45-.92.46-.17 1.26-.354 2.43-.41C8.416 2.212 8.8 2.2 12 2.2zm0-2.2C8.736 0 8.332.012 7.052.07 5.77.128 4.87.312 4.1.54c-.8.24-1.48.56-2.16 1.24-.68.68-1 .96-1.24 2.16-.228.77-.412 1.67-.47 2.95C.012 8.332 0 8.736 0 12c0 3.264.012 3.668.07 4.948.058 1.28.242 2.18.47 2.95.24.8.56 1.48 1.24 2.16.68.68.96 1 2.16 1.24.77.228 1.67.412 2.95.47C8.332 23.988 8.736 24 12 24s3.668-.012 4.948-.07c1.28-.058 2.18-.242 2.95-.47.8-.24 1.48-.56 2.16-1.24.68-.68 1-1 .24-2.16.228-.77.412-1.67.47-2.95.058-1.28.07-1.684.07-4.948 0-3.264-.012-3.668-.07-4.948-.058-1.28-.242-2.18-.47-2.95-.24-.8-.56-1.48-1.24-2.16-.68-.68-.96-1-2.16-1.24-.77-.228-1.67-.412-2.95-.47C15.668.012 15.264 0 12 0z" /></svg></a>
-              <a href="#" className="hover:text-blue-600"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.23 0H1.77C.792 0 0 .77 0 1.72v20.56C0 23.23.792 24 1.77 24h20.46c.978 0 1.77-.77 1.77-1.72V1.72C24 .77 23.208 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.67a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM20.45 20.45h-3.56v-5.6c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.69h-3.56V9h3.42v1.56h.05c.48-.91 1.65-1.87 3.4-1.87 3.63 0 4.3 2.39 4.3 5.5v6.26z" /></svg></a>
+              {settings.socialLinks?.facebook && <a href={settings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-facebook"></i></a>}
+              {settings.socialLinks?.instagram && <a href={settings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-instagram"></i></a>}
+              {settings.socialLinks?.whatsapp && <a href={settings.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-whatsapp"></i></a>}
+              {settings.socialLinks?.twitter && <a href={settings.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-twitter"></i></a>}
             </div>
           </div>
         </div>
-        <div className="text-center text-xs opacity-70 mt-8">© 2025 AKR & SONS. All rights reserved.</div>
+        <div className="text-center text-xs opacity-70 mt-8">© 2025 {settings.bannerHeading || "AKR & SONS"}. All rights reserved.</div>
       </footer>
     </div>
   )
@@ -402,28 +375,18 @@ export default function AkrSonsBikeStore() {
 
 function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideIndexes, handlePrev, handleNext, navigate }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start', skipSnaps: false });
-  const autoScrollInterval = useRef<any>(null);
-
-  // Auto-scroll logic
-  useEffect(() => {
-    if (!emblaApi) return;
-    autoScrollInterval.current = setInterval(() => {
-      if (emblaApi) emblaApi.scrollNext();
-    }, 3500);
-    return () => clearInterval(autoScrollInterval.current);
-  }, [emblaApi]);
-
+  // Remove auto-scroll logic
   return (
     <div className="relative">
-      <div className="overflow-hidden" ref={emblaRef}>
+      <div className="overflow-x-auto" ref={emblaRef}>
         <div className="flex">
           {bikes.map((bike) => {
-            // Use mock data for missing fields
-            const images = (selectedColors[bike._id]?.images || bike.colors?.[0]?.images || bike.images) ?? ['/images/placeholder.svg'];
-            const engine = bike.specs?.Engine || '150cc, 4-stroke, Air-cooled';
-            const power = bike.specs?.Power || '12.5 PS @ 8500 rpm';
-            const torque = bike.specs?.Torque || '11 Nm @ 6500 rpm';
-            const price = bike.price || 'Contact for price';
+            // Only show real data, no mock fallbacks
+            const images = (selectedColors[bike._id]?.images || bike.colors?.[0]?.images || bike.images);
+            const engine = bike.specs?.Engine || bike.specs?.Displacement;
+            const power = bike.specs?.Power;
+            const torque = bike.specs?.Torque;
+            const price = bike.price;
             return (
               <div
                 key={bike._id}
@@ -435,11 +398,6 @@ function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideInd
                   cover={
                     <div className="relative w-full h-56 rounded-xl overflow-hidden group">
                       {/* Vehicle Category Badge */}
-                      {bike.category && (
-                        <span className="absolute top-3 left-3 z-20 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full px-4 py-1 shadow-md" style={{letterSpacing: 0.5}}>
-                          {bike.category}
-                        </span>
-                      )}
                       {images && images.length > 0 ? (
                         images.map((img: string, idx: number) => (
                           <img
@@ -458,18 +416,18 @@ function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideInd
                           <span className="font-semibold text-base">No Image Available</span>
                         </div>
                       )}
-                      {/* Slideshow controls */}
+                      {/* Slideshow controls - keep manual arrows only */}
                       {images && images.length > 1 && (
                         <>
                           <button
                             onClick={e => { e.stopPropagation(); handlePrev(bike._id, images); }}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-green-500 hover:bg-green-600 text-white shadow transition"
                           >
                             <LeftOutlined />
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); handleNext(bike._id, images); }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-green-500 hover:bg-green-600 text-white shadow transition"
                           >
                             <RightOutlined />
                           </button>
@@ -481,7 +439,7 @@ function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideInd
                           <button
                             key={idx}
                             onClick={e => { e.stopPropagation(); setSlideIndexes(si => ({ ...si, [bike._id]: idx })); }}
-                            className={`w-2 h-2 rounded-full ${idx === (slideIndexes[bike._id] ?? 0) ? 'bg-blue-600' : 'bg-white/60'} border border-white transition`}
+                            className={`w-2 h-2 rounded-full ${idx === (slideIndexes[bike._id] ?? 0) ? 'bg-green-600' : 'bg-white/60'} border border-white transition`}
                           />
                         ))}
                       </div>
@@ -526,21 +484,21 @@ function EmblaVehicleCarousel({ bikes, selectedColors, setSlideIndexes, slideInd
                   </div>
                   {/* Price */}
                   <div style={{ fontWeight: 700, fontSize: 18, color: "#222", marginBottom: 8 }}>
-                    {price}
+                    {price ? `Rs ${Number(price).toLocaleString('en-IN')}/=` : ''}
                   </div>
-                  {/* Action Buttons */}
+                  {/* Action Buttons - green theme */}
                   <div className="flex gap-3 w-full mt-2">
                     <Button
                       icon={<EyeOutlined />}
                       onClick={() => navigate(`/akr-sons-bike-store/${bike._id}`)}
-                      className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition min-w-0"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-400 font-bold text-white rounded-xl hover:scale-105 transition min-w-0 border-none"
                     >
                       View Details
                     </Button>
                     <Button
                       icon={<CalendarOutlined />}
                       onClick={() => navigate('/prebook')}
-                      className="flex-1 bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition min-w-0"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-400 font-bold text-white rounded-xl hover:scale-105 transition min-w-0 border-none"
                     >
                       Pre-Book
                     </Button>

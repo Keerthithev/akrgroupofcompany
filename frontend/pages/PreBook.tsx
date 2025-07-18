@@ -32,23 +32,19 @@ export default function PreBook() {
   const [step, setStep] = useState(0); // 0: form, 1: confirm, 2: success
   const [bookingId, setBookingId] = useState('');
   const navigate = useNavigate();
+  const [settings, setSettings] = useState({ mode: 'online', bannerImage: '', bannerText: '' });
+
+  console.log('PreBook settings.mode:', settings.mode);
 
   useEffect(() => {
     async function fetchModels() {
       try {
-        const companiesRes = await fetch("http://localhost:5050/api/companies");
-        const companies = await companiesRes.json();
-        const akr = companies.find((c: any) => c.name === "AKR & SONS (PVT) LTD");
-        if (!akr) {
-          setModels([]);
-          return;
-        }
-        const vehiclesRes = await fetch(`http://localhost:5050/api/vehicles/company/${akr._id}`);
+        const vehiclesRes = await fetch("http://localhost:5050/api/vehicles");
         const vehiclesData = await vehiclesRes.json();
         if (Array.isArray(vehiclesData)) {
-          setModels(vehiclesData.map((v: any) => v.name));
+          setModels(vehiclesData.filter((v: any) => v.available !== false).map((v: any) => v.name));
         } else if (Array.isArray(vehiclesData.vehicles)) {
-          setModels(vehiclesData.vehicles.map((v: any) => v.name));
+          setModels(vehiclesData.vehicles.filter((v: any) => v.available !== false).map((v: any) => v.name));
         } else {
           setModels([]);
         }
@@ -57,6 +53,12 @@ export default function PreBook() {
       }
     }
     fetchModels();
+  }, []);
+
+  useEffect(() => {
+    fetch('http://localhost:5050/api/settings')
+      .then(res => res.json())
+      .then(data => setSettings(data));
   }, []);
 
   // Validation helpers
@@ -227,6 +229,16 @@ export default function PreBook() {
       </motion.div>
     </div>
   );
+
+  if (settings.mode === 'maintenance') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
+        {settings.bannerImage && <img src={settings.bannerImage} alt="Banner" className="max-h-48 mx-auto mb-4 rounded-xl shadow-lg" />}
+        <h2 className="text-3xl font-bold mb-2 text-center">Maintenance Mode</h2>
+        <p className="text-lg font-semibold mb-2 text-center">{settings.bannerText || 'The booking form is currently disabled for maintenance. Please check back soon.'}</p>
+      </div>
+    );
+  }
 
   return (
     <div>

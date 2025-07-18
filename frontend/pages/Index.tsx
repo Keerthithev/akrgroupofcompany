@@ -58,55 +58,6 @@ export default function Index() {
       icon: "bicycle",
       image: "/images/akr-sons.jpg",
       link: "/akr-sons-bike-store"
-    },
-    {
-      name: "AKR Multi Complex",
-      description: "A vibrant, all-in-one destination offering premium shopping, dining, entertainment, fitness, hospitality, and vehicle services — designed to bring families, guests, and businesses together under one roof.",
-      icon: "shop",
-      image: "/images/akr-multi-complex.jpg",
-      link: "/akr-multi-complex"
-    },
-    {
-      name: "AKR Construction",
-      description: "Your reliable source for premium construction materials — including sea sand, red soil, metal, gravel, and more — ensuring strong, durable, and high-quality results for every project.",
-      icon: "build",
-      image: "/images/akr-construction.jpg",
-      link: "/akr-construction"
-    },
-    {
-      name: "AKR Lanka Filling Station",
-      description: "Your dependable stop for high-quality fuel, petroleum products, and full automotive services — keeping you safe and moving forward with confidence.",
-      icon: "gas-station",
-      image: "/images/akr-fuel-station.jpg",
-      link: "/akr-lanka-filling-station"
-    },
-    {
-      name: "AKR Wine Store",
-      description: "A refined retail destination offering a curated selection of fine wines from around the world, crafted for true connoisseurs and enthusiasts alike.",
-      icon: "wine",
-      image: "/images/akr-wine-store.jpg",
-      link: "/akr-wine-store"
-    },
-    {
-      name: "AKR Farm",
-      description: "A forward-thinking agricultural initiative promoting sustainable, organic farming practices to provide fresh, healthy produce from our fields to your table.",
-      icon: "leaf",
-      image: "/images/akr-farm.jpg",
-      link: "/akr-farm"
-    },
-    {
-      name: "AKR's Amma Organization",
-      description: "A heartfelt social initiative dedicated to uplifting communities through charitable projects, education programs, and family-centered support.",
-      icon: "heart",
-      image: "/images/AKR AMMA.jpg",
-      link: "/akr-amma"
-    },
-    {
-      name: "AKR Easy Credit (Pvt) Ltd",
-      description: "Your trusted partner for flexible credit solutions and personal loans, empowering individuals and businesses with financial freedom and confidence.",
-      icon: "credit-card",
-      image: "/images/akr-easy-credit.jpg",
-      link: "/akr-easy-credit"
     }
   ];
 
@@ -319,7 +270,7 @@ export default function Index() {
                   <Button className="w-full bg-gradient-primary font-bold text-sm py-1.5 rounded-lg hover:scale-105 transition text-gray-900" onClick={() => window.location.href='/akr-sons-bike-store'}>
                     Book a Vehicle
                   </Button>
-                  <Button className="w-full bg-gradient-secondary font-bold text-sm py-1.5 rounded-lg hover:scale-105 transition text-emerald-900" onClick={() => window.location.href='/akr-multi-complex/rooms'}>
+                  <Button className="w-full bg-gradient-secondary font-bold text-sm py-1.5 rounded-lg hover:scale-105 transition text-emerald-900" onClick={() => window.location.href='/akr-sons-bike-store'}>
                     Book a Room
                   </Button>
                   <div className="w-full border-t border-gray-200 my-1" />
@@ -349,7 +300,7 @@ export default function Index() {
                   <Button className="w-full bg-gradient-primary font-bold text-base py-2 rounded-xl hover:scale-105 transition text-gray-900" onClick={() => window.location.href='/akr-sons-bike-store'}>
                     Book a Vehicle
                   </Button>
-                  <Button className="w-full bg-gradient-secondary font-bold text-base py-2 rounded-xl hover:scale-105 transition text-emerald-900" onClick={() => window.location.href='/akr-multi-complex/rooms'}>
+                  <Button className="w-full bg-gradient-secondary font-bold text-base py-2 rounded-xl hover:scale-105 transition text-emerald-900" onClick={() => window.location.href='/akr-sons-bike-store'}>
                     Book a Room
                   </Button>
                   <div className="w-full border-t border-gray-200 my-2" />

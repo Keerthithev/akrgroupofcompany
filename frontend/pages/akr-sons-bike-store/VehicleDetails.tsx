@@ -73,6 +73,14 @@ export default function VehicleDetails() {
   const y = useTransform(scrollYProgress, [0, 1], [0, -50]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
+  // Fetch global settings for footer and theme
+  const [settings, setSettings] = useState<any>({ socialLinks: {}, openingHours: [] });
+  useEffect(() => {
+    fetch('http://localhost:5050/api/settings')
+      .then(res => res.json())
+      .then(data => setSettings(data));
+  }, []);
+
   useEffect(() => {
     async function fetchVehicle() {
       setLoading(true);
@@ -222,7 +230,7 @@ export default function VehicleDetails() {
 
           {/* Hero Section */}
           <motion.section ref={heroRef} style={{ y, opacity }} className="relative pt-20 pb-12 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-200/40 via-emerald-100/40 to-green-200/40" />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid lg:grid-cols-2 gap-12 items-center relative">
                 {/* Vehicle Info (left) */}
@@ -232,33 +240,39 @@ export default function VehicleDetails() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8, delay: 0.2 }}
                 >
-                  <div>
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                      <Badge variant="secondary" className="mb-3 text-sm px-3 py-1">
-                        {vehicle.category}
-                      </Badge>
-                    </motion.div>
-                    <motion.h1
-                      className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4"
-                      initial={{ opacity: 0, y: 20 }}
+                  {/* Removed category badge for cleaner look */}
+                  <motion.h1
+                    className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    {vehicle.name}
+                  </motion.h1>
+                  {vehicle.description && (
+                    <motion.p
+                      className="text-base text-gray-700 mb-4"
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
+                      transition={{ delay: 0.45 }}
                     >
-                      {vehicle.name}
-                    </motion.h1>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                      className="flex items-center gap-4 mb-6"
-                    >
-                      {vehicle.price && <p className="text-3xl font-bold text-emerald-600">LKR {vehicle.price}</p>}
-                      <Badge variant="outline" className="text-green-600 border-green-600">
+                      {vehicle.description}
+                    </motion.p>
+                  )}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex items-center gap-4 mb-6"
+                  >
+                    {vehicle.price && <p className="text-3xl font-bold text-emerald-600">Rs {Number(vehicle.price).toLocaleString('en-IN')}/=</p>}
+                    <Badge variant="outline" className="text-green-600 border-green-600 bg-white/80">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         {vehicle.availability}
                       </Badge>
-                    </motion.div>
-                    {/* Download Brochure Button */}
+                  </motion.div>
+                  {/* Download Brochure Button */}
+                  {vehicle.brochure && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -266,64 +280,30 @@ export default function VehicleDetails() {
                       className="mb-6"
                     >
                       <a
-                        href="/PULSAR-NS400Z-BROCHURE.pdf"
+                        href={vehicle.brochure.replace('/upload/', '/upload/fl_attachment/')}
                         download
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-6 py-2 text-base shadow-lg hover:scale-105 transition"
                       >
                         <Download className="w-5 h-5" />
                         Download Brochure
                       </a>
                     </motion.div>
+                  )}
+                  {/* Technical Details Row */}
+                  <div className="flex items-center gap-8 bg-white/80 rounded-xl px-4 py-2 shadow border border-emerald-200 mb-4">
+                    <span className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
+                      <Gauge className="w-5 h-5 text-emerald-600" />
+                      Engine: <span className="font-bold">{vehicle.specs?.Engine || vehicle.specs?.Displacement || '-'}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
+                      <Zap className="w-5 h-5 text-emerald-600" />
+                      Power: <span className="font-bold">{vehicle.specs?.Power || '-'}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
+                      <TrendingUp className="w-5 h-5 text-emerald-600" />
+                      Torque: <span className="font-bold">{vehicle.specs?.Torque || '-'}</span>
+                    </span>
                   </div>
-                  {/* Quick Stats */}
-                  <motion.div
-                    variants={staggerContainer}
-                    initial="initial"
-                    animate="animate"
-                    className="grid grid-cols-3 gap-4"
-                  >
-                    {[
-                      { icon: Gauge, label: "Power", value: vehicle.specs?.Power },
-                      { icon: Zap, label: "Torque", value: vehicle.specs?.Torque },
-                      { icon: Fuel, label: "Mileage", value: vehicle.specs?.Mileage },
-                    ].map((stat, index) => (
-                      <motion.div
-                        key={index}
-                        variants={fadeInUp}
-                        whileHover={{ scale: 1.05 }}
-                        className="text-center p-4 bg-white rounded-xl shadow-sm border"
-                      >
-                        <stat.icon className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">{stat.label}</p>
-                        <p className="font-semibold text-gray-900">{stat.value}</p>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                  {/* Description */}
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-gray-700 leading-relaxed">{vehicle.description}</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                  {/* Action Buttons */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                    className="flex gap-4"
-                  >
-                    <Button
-                      onClick={() => navigate('/prebook')}
-                      className="w-full bg-gradient-primary font-bold text-gray-900 rounded-xl hover:scale-105 transition flex items-center"
-                    >
-                      <Calendar className="h-5 w-5 mr-2" />
-                      Pre-Book
-                    </Button>
-                  </motion.div>
                 </motion.div>
                 {/* Vehicle Images (right) */}
                 <motion.div
@@ -560,48 +540,51 @@ export default function VehicleDetails() {
                 <span className="text-sm text-white/80 mt-2">100% Genuine. Warranty Included.</span>
               </div>
               {/* Right column: offer text and Pre-Book button */}
-              <div className="w-full flex flex-col items-center text-center md:order-2 order-1">
-                <h2 className="text-3xl font-bold mb-2">Unleash the Power. Ride with Confidence.</h2>
-                <p className="text-lg mb-6 max-w-xl">Discover the perfect blend of performance, style, and reliability. Every ride is a new adventure with AKR & SONS.</p>
+              <div className="w-full flex flex-col items-center text-center md:order-2 order-1 bg-gradient-to-br from-emerald-400 via-blue-200 to-green-200 rounded-3xl p-8 shadow-xl border border-emerald-100">
+                <h2 className="text-3xl font-bold mb-2 text-emerald-900 drop-shadow">Unleash the Power. Ride with Confidence.</h2>
+                <p className="text-lg mb-6 max-w-xl text-emerald-800">Discover the perfect blend of performance, style, and reliability. Every ride is a new adventure with AKR & SONS.</p>
                 <div className="flex flex-wrap justify-center gap-3 mb-6">
-                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
-                    <CheckCircle className="h-4 w-4 mr-1" /> 2-Year Warranty
+                  <span className="inline-flex items-center bg-white text-emerald-600 px-3 py-1 rounded-full font-semibold text-sm border border-emerald-200 shadow-sm">
+                    <CheckCircle className="h-4 w-4 mr-1 text-emerald-400" /> 2-Year Warranty
                   </span>
-                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
-                    <Gauge className="h-4 w-4 mr-1" /> Best-in-Class Mileage
+                  <span className="inline-flex items-center bg-white text-emerald-600 px-3 py-1 rounded-full font-semibold text-sm border border-emerald-200 shadow-sm">
+                    <Gauge className="h-4 w-4 mr-1 text-emerald-400" /> Best-in-Class Mileage
                   </span>
-                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
-                    <Star className="h-4 w-4 mr-1" /> 24/7 Service Support
+                  <span className="inline-flex items-center bg-white text-emerald-700 px-3 py-1 rounded-full font-semibold text-sm border border-emerald-200 shadow-sm">
+                    <Star className="h-4 w-4 mr-1 text-emerald-400" /> 24/7 Service Support
                   </span>
-                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
-                    <Zap className="h-4 w-4 mr-1" /> Flexible Financing
+                  <span className="inline-flex items-center bg-white text-emerald-600 px-3 py-1 rounded-full font-semibold text-sm border border-emerald-200 shadow-sm">
+                    <Zap className="h-4 w-4 mr-1 text-emerald-400" /> Flexible Financing
                   </span>
-                  <span className="inline-flex items-center bg-white/20 text-white px-3 py-1 rounded-full font-semibold text-sm">
-                    <CheckCircle className="h-4 w-4 mr-1" /> First 2 Services Free
+                  <span className="inline-flex items-center bg-white text-emerald-600 px-3 py-1 rounded-full font-semibold text-sm border border-emerald-200 shadow-sm">
+                    <CheckCircle className="h-4 w-4 mr-1 text-emerald-400" /> First 2 Services Free
                   </span>
                 </div>
                 {/* New: Choose One Offer */}
                 <div className="mt-4 w-full max-w-3xl">
-                  <h3 className="text-xl font-bold mb-4 text-white text-center">Choose One of These Exclusive Offers</h3>
+                  <h3 className="text-xl font-bold mb-4 text-emerald-700 text-center drop-shadow">Choose One of These Exclusive Offers</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
-                      <span className="font-semibold text-lg text-white mb-1">Full Tank Petrol + Jacket + Helmet</span>
-                      <span className="text-sm text-white/80">Get a full tank of petrol, a stylish jacket, and a helmet with your new ride.</span>
+                    <div className="bg-white border border-emerald-200 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-emerald-700 mb-1">Full Tank Petrol + Jacket + Helmet</span>
+                      <span className="text-sm text-emerald-600">Get a full tank of petrol, a stylish jacket, and a helmet with your new ride.</span>
+                      <span className="text-xs text-emerald-500 font-semibold mt-2">Only for Ready Cash Payments</span>
                     </div>
-                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
-                      <span className="font-semibold text-lg text-white mb-1">15,000 LKR Discount</span>
-                      <span className="text-sm text-white/80">Enjoy an instant discount of 15,000 LKR on your purchase.</span>
+                    <div className="bg-white border border-emerald-200 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-emerald-700 mb-1">15,000 LKR Discount</span>
+                      <span className="text-sm text-emerald-600">Enjoy an instant discount of 15,000 LKR on your purchase.</span>
+                      <span className="text-xs text-emerald-500 font-semibold mt-2">Only for Ready Cash Payments</span>
                     </div>
-                    <div className="bg-white/20 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
-                      <span className="font-semibold text-lg text-white mb-1">Registration Fee Waived</span>
-                      <span className="text-sm text-white/80">We’ll cover your registration fee for a hassle-free start.</span>
+                    <div className="bg-white border border-emerald-200 rounded-xl p-4 flex flex-col items-center text-center shadow min-h-[120px]">
+                      <span className="font-semibold text-lg text-emerald-700 mb-1">Registration Fee Waived</span>
+                      <span className="text-sm text-emerald-600">We’ll cover your registration fee for a hassle-free start.</span>
+                      <span className="text-xs text-emerald-500 font-semibold mt-2">Only for Ready Cash Payments</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-center mt-8 w-full relative z-20">
                   <Button
                     onClick={() => navigate('/prebook')}
-                    className="bg-gradient-to-r from-emerald-500 to-green-500 text-white font-extrabold rounded-2xl px-10 py-4 text-xl shadow-2xl border-2 border-white hover:scale-105 transition"
+                    className="bg-gradient-to-r from-emerald-500 to-blue-600 text-white font-extrabold rounded-2xl px-10 py-4 text-xl shadow-2xl border-2 border-white hover:scale-105 transition"
                   >
                     Pre-Book
                   </Button>
@@ -620,40 +603,41 @@ export default function VehicleDetails() {
             >
               <div className="flex flex-col items-center justify-center">
                 <motion.h2
-                  className="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-primary"
+                  className="text-3xl font-extrabold text-emerald-800 mb-2 text-center"
                   initial={{ scale: 0.95, opacity: 0 }}
                   whileInView={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', bounce: 0.3, duration: 0.5 }}
                 >
                   Specifications & Features
                 </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl items-start">
+                <div className="border-b-4 border-emerald-400 w-16 mx-auto mb-8" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl items-start">
                   {['Engine', 'Brakes & Tyres', 'Electricals', 'Vehicle'].filter(heading => groupedSpecs[heading]).map((heading) => {
                     const specs = groupedSpecs[heading];
                     let icon: React.ReactNode = null;
-                    if (heading === 'Engine') icon = <Gauge className="w-6 h-6 text-emerald-600 mr-2" />;
-                    else if (heading === 'Brakes & Tyres') icon = <Star className="w-6 h-6 text-blue-600 mr-2" />;
-                    else if (heading === 'Electricals') icon = <Zap className="w-6 h-6 text-yellow-500 mr-2" />;
-                    else if (heading === 'Vehicle') icon = <Settings className="w-6 h-6 text-gray-700 mr-2" />;
+                    if (heading === 'Engine') icon = <Gauge className="w-7 h-7 text-emerald-500 mr-2" />;
+                    else if (heading === 'Brakes & Tyres') icon = <Star className="w-7 h-7 text-emerald-500 mr-2" />;
+                    else if (heading === 'Electricals') icon = <Zap className="w-7 h-7 text-emerald-500 mr-2" />;
+                    else if (heading === 'Vehicle') icon = <Settings className="w-7 h-7 text-emerald-700 mr-2" />;
                     else return null;
                     return (
                       <motion.div
                         key={heading}
-                        className="rounded-2xl bg-white/80 shadow p-5 border border-white/60 flex flex-col min-h-[220px] min-w-[160px]"
+                        className="bg-white rounded-2xl shadow-lg border-l-4 border-emerald-400 p-6 flex flex-col min-h-[220px]"
                         initial={{ y: 20, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
                         transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
                       >
-                        <div className="flex items-center mb-3">
+                        <div className="flex items-center mb-4">
                           {icon}
-                          <h3 className="text-lg font-bold text-emerald-800">{heading}</h3>
+                          <h3 className="text-xl font-bold text-emerald-800">{heading}</h3>
                         </div>
-                        <table className="w-full text-left text-xs">
+                        <table className="w-full text-left text-sm divide-y divide-emerald-50">
                           <tbody>
                             {(specs as { label: string; value: string }[]).map(spec => (
                               <tr key={spec.label}>
-                                <td className="py-1 pr-2 font-semibold text-gray-700 whitespace-nowrap align-top">{spec.label}</td>
-                                <td className="py-1 text-gray-900 font-bold align-top">{spec.value}</td>
+                                <td className="py-2 pr-2 text-gray-500 font-medium whitespace-nowrap align-top">{spec.label}</td>
+                                <td className="py-2 text-emerald-700 font-bold align-top">{spec.value}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -664,20 +648,20 @@ export default function VehicleDetails() {
                   {/* Features as a card matching specs style */}
                   {vehicle.features && vehicle.features.length > 0 && (
                     <motion.div
-                      className="rounded-2xl bg-white/80 shadow p-5 border border-white/60 flex flex-col min-h-[220px] min-w-[160px]"
+                      className="bg-white rounded-2xl shadow-lg border-l-4 border-emerald-400 p-6 flex flex-col min-h-[220px]"
                       initial={{ y: 20, opacity: 0 }}
                       whileInView={{ y: 0, opacity: 1 }}
                       transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
                     >
-                      <div className="flex items-center mb-3">
-                        <Star className="w-6 h-6 text-blue-600 mr-2" />
-                        <h3 className="text-lg font-bold text-emerald-800">Features</h3>
+                      <div className="flex items-center mb-4">
+                        <Star className="w-7 h-7 text-emerald-500 mr-2" />
+                        <h3 className="text-xl font-bold text-emerald-800">Features</h3>
                       </div>
-                      <div className="w-full text-xs flex flex-wrap gap-2">
+                      <div className="w-full flex flex-wrap gap-2 mt-2">
                         {vehicle.features.map((feature: string, index: number) => (
                           <span
                             key={index}
-                            className="inline-block bg-emerald-50 border border-emerald-200 rounded px-3 py-1 font-semibold text-gray-700 whitespace-pre-line max-w-full break-words"
+                            className="inline-block bg-emerald-100 text-emerald-700 rounded-full px-3 py-1 text-xs font-semibold mr-2 mb-2 border border-emerald-200"
                           >
                             {feature}
                           </span>
@@ -715,7 +699,7 @@ export default function VehicleDetails() {
                         whileInView={{ y: 0, opacity: 1 }}
                         transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
                       >
-                        <h3 className="text-xl font-bold mb-2 text-blue-700 text-center">{variant.name}</h3>
+                        <h3 className="text-xl font-bold mb-2 text-emerald-700 text-center">{variant.name}</h3>
                         <span className="text-lg font-bold text-emerald-700 mb-1">LKR {variant.price}</span>
                         <ul className="grid grid-cols-2 md:grid-cols-3 gap-2 w-full text-center">
                           {variant.features?.map((feature: string, fIndex: number) => (
@@ -744,7 +728,7 @@ export default function VehicleDetails() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-600" />
+                      <Users className="h-5 w-5 text-emerald-600" />
                       Customer Reviews
                     </CardTitle>
                   </CardHeader>
@@ -789,7 +773,7 @@ export default function VehicleDetails() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Camera className="h-5 w-5 text-blue-600" />
+                      <Camera className="h-5 w-5 text-emerald-600" />
                       Photo Gallery
                     </CardTitle>
                   </CardHeader>
@@ -827,7 +811,7 @@ export default function VehicleDetails() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Camera className="h-5 w-5 text-blue-600" />
+                      <Camera className="h-5 w-5 text-emerald-600" />
                       Photo Gallery
                     </CardTitle>
                   </CardHeader>
@@ -844,7 +828,7 @@ export default function VehicleDetails() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Info className="h-5 w-5 text-blue-600" />
+                      <Info className="h-5 w-5 text-emerald-600" />
                       Frequently Asked Questions
                     </CardTitle>
                   </CardHeader>
@@ -856,7 +840,7 @@ export default function VehicleDetails() {
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: index * 0.1 }}
-                        className="border-l-4 border-blue-600 pl-4"
+                        className="border-l-4 border-emerald-600 pl-4"
                       >
                         <h3 className="font-semibold text-gray-900 mb-2">Q: {faq.question}</h3>
                         <p className="text-gray-700">A: {faq.answer}</p>
@@ -914,7 +898,7 @@ export default function VehicleDetails() {
                   <Label htmlFor="message">Additional Message</Label>
                   <Textarea id="message" placeholder="Any specific requirements..." />
                 </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">Confirm Booking</Button>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">Confirm Booking</Button>
               </motion.div>
             </DialogContent>
           </Dialog>
@@ -953,12 +937,12 @@ export default function VehicleDetails() {
                 )}
               </motion.div>
               <div className="flex justify-center gap-2 mt-4">
-                {currentImages.map((_, index) => (
+                {currentImages.map((_, idx) => (
                   <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
                     className={`w-3 h-3 rounded-full transition-colors ${
-                      index === currentImageIndex ? "bg-blue-600" : "bg-gray-300"
+                      idx === currentImageIndex ? "bg-emerald-600" : "bg-gray-300"
                     }`}
                   />
                 ))}
@@ -966,36 +950,40 @@ export default function VehicleDetails() {
             </DialogContent>
           </Dialog>
         </div> {/* End of glass container */}
-      <footer className="bg-gradient-to-r from-emerald-900 to-green-800 text-white py-10 mt-12">
-        <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="bg-gradient-to-r from-green-700 to-emerald-500 text-white py-10 mt-12">
+        <div className="container mx-auto px-6 flex flex-col md:flex-row md:justify-between md:items-start gap-8">
           <div>
-            <img src="/images/image copy 2.png" alt="AKR Group Logo" className="h-10 mb-3" />
-            <div className="font-bold text-lg mb-2">AKR & SONS</div>
-            <p className="text-sm opacity-80">Your trusted partner for premium motorcycles and exceptional service.</p>
+            <img src="/images/image copy 2.png" alt="AKR Group Logo" className="h-16 w-16 rounded-full object-cover mb-3 mx-auto" style={{ background: 'transparent' }} />
+            <div className="font-bold text-lg mb-2 text-center">{settings.bannerHeading}</div>
+            <p className="text-sm opacity-80 text-center">{settings.bannerSubheading}</p>
           </div>
           <div>
-            <div className="font-semibold mb-2">Quick Links</div>
-            <ul className="space-y-1 text-sm">
-              <li><a href="/" className="hover:underline">Home</a></li>
-              <li><a href="/akr-sons-bike-store" className="hover:underline">Book Vehicle</a></li>
-              <li><a href="/akr-multi-complex/rooms" className="hover:underline">Book Room</a></li>
+            <div className="font-semibold mb-2">About Us</div>
+            <p className="text-sm opacity-80">We are committed to providing premium motorcycles, exceptional service, and a seamless booking experience for all our customers. Your satisfaction is our top priority.</p>
+          </div>
+          <div>
+            <div className="font-semibold mb-2">Opening Hours</div>
+            <ul className="text-sm opacity-80">
+              {(Array.isArray(settings.openingHours) ? settings.openingHours : [settings.openingHours]).filter(Boolean).map((line, idx) => (
+                <li key={idx}>{line}</li>
+              ))}
             </ul>
           </div>
           <div>
             <div className="font-semibold mb-2">Contact</div>
-            <p className="text-sm">akrfuture@gmail.com</p>
-            <p className="text-sm">0773111266</p>
-          </div>
-          <div>
-            <div className="font-semibold mb-2">Follow Us</div>
+            <p className="text-sm">{settings.email}</p>
+            <p className="text-sm">{settings.phone}</p>
+            <p className="text-sm">{settings.address}</p>
+            <div className="font-semibold mb-2 mt-4">Follow Us</div>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-blue-400"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.47.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04A4.28 4.28 0 0 0 16.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.7-.02-1.36-.21-1.94-.53v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.1 2.94 3.95 2.97A8.6 8.6 0 0 1 2 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 0 0 8.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0 0 22.46 6z" /></svg></a>
-              <a href="#" className="hover:text-pink-400"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.584.012 4.85.07 1.17.056 1.97.24 2.43.41.59.22 1.01.48 1.45.92.44.44.7.86.92 1.45.17.46.354 1.26.41 2.43.058 1.266.07 1.65.07 4.85s-.012 3.584-.07 4.85c-.056 1.17-.24 1.97-.41 2.43-.22.59-.48 1.01-.92 1.45-.44.44-.7-.86-.92-1.45-.17-.46-.354-1.26-.41-2.43C2.212 15.634 2.2 15.25 2.2 12s.012-3.584.07-4.85c.056-1.17.24-1.97.41-2.43.22-.59.48-1.01.92-1.45.44-.44.86-.7 1.45-.92.46-.17 1.26-.354 2.43-.41C8.416 2.212 8.8 2.2 12 2.2zm0-2.2C8.736 0 8.332.012 7.052.07 5.77.128 4.87.312 4.1.54c-.8.24-1.48.56-2.16 1.24-.68.68-1 .96-1.24 2.16-.228.77-.412 1.67-.47 2.95C.012 8.332 0 8.736 0 12c0 3.264.012 3.668.07 4.948.058 1.28.242 2.18.47 2.95.24.8.56 1.48 1.24 2.16.68.68.96 1 2.16 1.24.77.228 1.67.412 2.95.47C8.332 23.988 8.736 24 12 24s3.668-.012 4.948-.07c1.28-.058 2.18-.242 2.95-.47.8-.24 1.48-.56 2.16-1.24.68-.68 1-1 .24-2.16.228-.77.412-1.67.47-2.95.058-1.28.07-1.684.07-4.948 0-3.264-.012-3.668-.07-4.948-.058-1.28-.242-2.18-.47-2.95-.24-.8-.56-1.48-1.24-2.16-.68-.68-.96-1-2.16-1.24-.77-.228-1.67-.412-2.95-.47C15.668.012 15.264 0 12 0z" /></svg></a>
-              <a href="#" className="hover:text-blue-600"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.23 0H1.77C.792 0 0 .77 0 1.72v20.56C0 23.23.792 24 1.77 24h20.46c.978 0 1.77-.77 1.77-1.72V1.72C24 .77 23.208 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.67a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM20.45 20.45h-3.56v-5.6c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.69h-3.56V9h3.42v1.56h.05c.48-.91 1.65-1.87 3.4-1.87 3.63 0 4.3 2.39 4.3 5.5v6.26z" /></svg></a>
+              {settings.socialLinks?.facebook && <a href={settings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-facebook"></i></a>}
+              {settings.socialLinks?.instagram && <a href={settings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-instagram"></i></a>}
+              {settings.socialLinks?.whatsapp && <a href={settings.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-whatsapp"></i></a>}
+              {settings.socialLinks?.twitter && <a href={settings.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-200 text-2xl"><i className="fab fa-twitter"></i></a>}
             </div>
           </div>
         </div>
-        <div className="text-center text-xs opacity-70 mt-8">© 2025 AKR & SONS. All rights reserved.</div>
+        <div className="text-center text-xs opacity-70 mt-8">© 2025 {settings.bannerHeading || "AKR & SONS"}. All rights reserved.</div>
       </footer>
     </>
   );
