@@ -14,6 +14,8 @@ import Autoplay from "embla-carousel-autoplay";
 import { AdCompanyCard, FilmRollAdColumn } from "../components/CompanyCard";
 // Import icons
 import { Car, BedDouble, Phone, Mail, MessageCircle, ShieldCheck, Star, Users } from "lucide-react";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 
 const AKR_COMPANY_NAME = "AKR & SONS (PVT) LTD";
 
@@ -126,6 +128,15 @@ export default function Index() {
     return () => clearInterval(msgInterval);
   }, [messages.length]);
 
+  // Add a state for mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -227,7 +238,7 @@ export default function Index() {
       </nav>
 
       {/* Hero Section with Slideshow */}
-      <section id="home" className="pt-16 md:pt-20 relative overflow-hidden">
+      <section id="home" className="pt-16 md:pt-20 relative overflow-hidden min-h-screen">
         {/* Dynamic Moving Elements Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
           <div className="absolute inset-0">
@@ -343,12 +354,26 @@ export default function Index() {
             </p>
           </div>
           {/* Responsive Company Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {companies.map((company) => (
-              <div key={company.name} className="w-full max-w-[320px] mx-auto">
-                  <CompanyCard {...company} />
-                </div>
-              ))}
+          <div className="w-full">
+            {isMobile ? (
+              <Swiper slidesPerView={1} spaceBetween={16}>
+                {companies.map((company) => (
+                  <SwiperSlide key={company.name}>
+                    <div className="w-full max-w-[320px] mx-auto">
+                      <CompanyCard {...company} />
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {companies.map((company) => (
+                  <div key={company.name} className="w-full max-w-[320px] mx-auto">
+                    <CompanyCard {...company} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

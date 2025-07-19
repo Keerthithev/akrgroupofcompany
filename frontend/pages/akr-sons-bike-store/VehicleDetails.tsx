@@ -40,6 +40,8 @@ import { Skeleton } from "../../components/ui/skeleton";
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -312,30 +314,32 @@ export default function VehicleDetails() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8 }}
                 >
-                  <div className="relative aspect-[4/3] flex items-center justify-center">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentImageIndex}
-                        initial={{ opacity: 0, scale: 1.1 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.5 }}
-                        className="absolute inset-0"
-                      >
-                        <img
-                          src={currentImages[currentImageIndex] || "/hero-bg.jpg"}
-                          alt={vehicle.name}
-                          className="object-cover w-full h-full cursor-pointer"
-                          onClick={() => setShowImageGallery(true)}
-                        />
-                        <div
-                          className="absolute left-1/2 bottom-6 -translate-x-1/2 w-2/3 h-8 bg-black/20 rounded-full blur-md opacity-60 pointer-events-none"
-                          style={{ zIndex: 1 }}
-                        />
-                      </motion.div>
-                    </AnimatePresence>
-                    {currentImages.length > 1 && (
-                      <>
+                  {/* Replace the main image section with a Swiper carousel for mobile */}
+                  <div className="relative aspect-[4/3] flex items-center justify-center w-full">
+                    {currentImages.length > 1 ? (
+                      <Swiper slidesPerView={1} spaceBetween={8} className="w-full h-full">
+                        {currentImages.map((img, idx) => (
+                          <SwiperSlide key={img}>
+                            <img
+                              src={img || "/hero-bg.jpg"}
+                              alt={vehicle.name}
+                              className="object-cover w-full h-full cursor-pointer rounded-xl"
+                              onClick={() => setShowImageGallery(true)}
+                            />
+                          </SwiperSlide>
+                        ))}
+                      </Swiper>
+                    ) : (
+                      <img
+                        src={currentImages[0] || "/hero-bg.jpg"}
+                        alt={vehicle.name}
+                        className="object-cover w-full h-full cursor-pointer rounded-xl"
+                        onClick={() => setShowImageGallery(true)}
+                      />
+                    )}
+                  </div>
+                  {currentImages.length > 1 && (
+                    <>
                         <motion.div
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}

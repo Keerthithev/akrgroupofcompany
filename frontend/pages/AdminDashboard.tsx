@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Layout, Menu, Button, Modal, Table, Tag, message, Spin, Descriptions, Drawer, Row, Col, Card, Steps, Switch } from "antd";
-import { CarOutlined, BookOutlined, UserOutlined, SettingOutlined } from "@ant-design/icons";
+import { CarOutlined, BookOutlined, UserOutlined, SettingOutlined, MenuOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 const AKR_COMPANY_NAME = "AKR & SONS (PVT) LTD";
@@ -1114,17 +1114,48 @@ export default function AdminDashboard() {
     return data.secure_url;
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const menuItems = [
+    { key: 'overview', icon: <SettingOutlined />, label: 'Overview' },
+    { key: 'vehicles', icon: <CarOutlined />, label: 'Vehicles' },
+    { key: 'prebookings', icon: <BookOutlined />, label: 'Prebookings' },
+    { key: 'customers', icon: <UserOutlined />, label: 'Customers' },
+    { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
+  ];
+
   return (
-    <Layout className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-100 flex">
-      <Layout.Sider
-        className="w-72 glass-card shadow-2xl border-r border-white/20 flex-col justify-between min-h-screen hidden md:flex"
-        width={288}
-        breakpoint="md"
-        collapsedWidth={0}
-      >
-        {renderSidebar}
-      </Layout.Sider>
-      <Layout className="flex-1 flex flex-col min-h-screen">
+    <Layout className="min-h-screen">
+      {/* Sidebar for desktop, drawer for mobile */}
+      <div className="md:w-64 w-0 md:block hidden bg-white border-r border-gray-200 min-h-screen">
+        <Menu
+          mode="inline"
+          selectedKeys={[akrTab]}
+          onClick={({ key }) => setAkrTab(key as any)}
+          items={menuItems}
+          className="h-full pt-8"
+        />
+      </div>
+      {/* Mobile sidebar toggle */}
+      <div className="md:hidden flex items-center p-2 bg-white border-b border-gray-200">
+        <button onClick={() => setSidebarOpen(true)} className="text-2xl p-2"><MenuOutlined /></button>
+        <span className="ml-4 font-bold text-lg">Admin Dashboard</span>
+      </div>
+      {/* Mobile sidebar drawer */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setSidebarOpen(false)}>
+          <div className="absolute left-0 top-0 w-64 h-full bg-white shadow-lg p-4" onClick={e => e.stopPropagation()}>
+            <button className="mb-4 text-lg" onClick={() => setSidebarOpen(false)}>Close</button>
+            <Menu
+              mode="inline"
+              selectedKeys={[akrTab]}
+              onClick={({ key }) => { setAkrTab(key as any); setSidebarOpen(false); }}
+              items={menuItems}
+            />
+          </div>
+        </div>
+      )}
+      {/* Main content area */}
+      <Layout.Content className="flex-1 p-2 sm:p-4 md:p-8 grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
         <Layout.Header className="glass-card sticky top-0 z-30 flex items-center justify-between px-8 py-5 border-b border-white/10 shadow-md">
           <span className="text-2xl font-bold gradient-text">Admin Dashboard</span>
           <div className="flex items-center gap-4">
@@ -1141,253 +1172,252 @@ export default function AdminDashboard() {
             {/* Logout button removed from header */}
           </div>
         </Layout.Header>
-        <Layout.Content className="flex-1 p-4 md:p-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {akrTab === 'vehicles' && (
-            <div className="col-span-full">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                <div className="flex gap-2 w-full md:w-auto">
-                  <input
-                    type="text"
-                    placeholder="Search by name, category, or type..."
-                    value={vehicleSearch}
-                    onChange={e => setVehicleSearch(e.target.value)}
-                    className="border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 shadow w-full md:w-64"
+        {akrTab === 'vehicles' && (
+          <div className="col-span-full">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div className="flex gap-2 w-full md:w-auto">
+                <input
+                  type="text"
+                  placeholder="Search by name, category, or type..."
+                  value={vehicleSearch}
+                  onChange={e => setVehicleSearch(e.target.value)}
+                  className="border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 shadow w-full md:w-64"
+                />
+                <Button onClick={() => exportVehiclesToCSV(filteredVehicles)} type="primary">Export CSV</Button>
+          </div>
+              <div>
+                <Button type={vehicleView === 'grid' ? 'primary' : 'default'} onClick={() => setVehicleView('grid')}>Grid</Button>
+                <Button type={vehicleView === 'list' ? 'primary' : 'default'} onClick={() => setVehicleView('list')} style={{ marginLeft: 8 }}>List</Button>
+                <Button type="primary" onClick={() => setAddModalOpen(true)} style={{ marginLeft: 16 }}>
+                  Add Vehicle
+                        </Button>
+                      </div>
+                    </div>
+            {loading ? <Spin /> : error ? <div className="text-red-500">{error}</div> : (
+              vehicleView === 'grid' ? (
+                <Row gutter={[16, 16]}>
+                  {filteredVehicles.length === 0 ? (
+                    <Col span={24}><div className="text-gray-500">No vehicles found.</div></Col>
+                  ) : filteredVehicles.map((vehicle: any) => (
+                    <Col xs={24} sm={12} md={8} lg={6} key={vehicle._id}>
+                      <Card
+                        hoverable
+                        cover={vehicle.colors && vehicle.colors[0]?.images && vehicle.colors[0].images[0] ? (
+                          <img alt={vehicle.name} src={vehicle.colors[0].images[0]} style={{ height: 180, objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ height: 180, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No Image</div>
+                        )}
+                        onClick={() => openDetailsDrawer(vehicle)}
+                        style={{ marginBottom: 16 }}
+                      >
+                        <Card.Meta
+                          title={<span>{vehicle.name} <span style={{ fontSize: 12, color: '#888' }}>({vehicle.vehicleType})</span></span>}
+                          description={<>
+                            <div>Category: {vehicle.category}</div>
+                            <div>Price: LKR {vehicle.price}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>{vehicle.description?.slice(0, 40)}...</div>
+                          </>}
+                        />
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ) : (
+                <Table
+                  dataSource={filteredVehicles}
+                  columns={[
+                    {
+                      title: '',
+                      key: 'icon',
+                      render: () => <CarOutlined style={{ fontSize: 20, color: '#10b981' }} />,
+                      width: 40
+                    },
+                    {
+                      title: 'Image',
+                      dataIndex: 'colors',
+                      key: 'image',
+                      render: (colors: any[]) => colors && colors[0]?.images && colors[0].images[0] ? (
+                        <img src={colors[0].images[0]} alt="vehicle" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} />
+                      ) : <span style={{ color: '#aaa' }}>No Image</span>,
+                      width: 60
+                    },
+                    { title: 'Name', dataIndex: 'name', key: 'name' },
+                    { title: 'Type', dataIndex: 'vehicleType', key: 'vehicleType' },
+                    { title: 'Category', dataIndex: 'category', key: 'category' },
+                    { title: 'Price', dataIndex: 'price', key: 'price' },
+                    {
+                      title: 'Available',
+                      dataIndex: 'available',
+                      key: 'available',
+                      align: 'center',
+                      render: (available: boolean, record: any) => (
+                        <Switch
+                          checked={available !== false}
+                          checkedChildren="Yes"
+                          unCheckedChildren="No"
+                          onChange={async (checked) => {
+                            try {
+                              await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${record._id}/availability`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ available: checked })
+                              });
+                              setVehicles(vehicles => vehicles.map(v => v._id === record._id ? { ...v, available: checked } : v));
+                              message.success(`Vehicle marked as ${checked ? 'available' : 'not available'}`);
+                            } catch {
+                              message.error('Failed to update availability');
+                            }
+                          }}
+                          size="small"
                   />
-                  <Button onClick={() => exportVehiclesToCSV(filteredVehicles)} type="primary">Export CSV</Button>
-            </div>
-                <div>
-                  <Button type={vehicleView === 'grid' ? 'primary' : 'default'} onClick={() => setVehicleView('grid')}>Grid</Button>
-                  <Button type={vehicleView === 'list' ? 'primary' : 'default'} onClick={() => setVehicleView('list')} style={{ marginLeft: 8 }}>List</Button>
-                  <Button type="primary" onClick={() => setAddModalOpen(true)} style={{ marginLeft: 16 }}>
-                    Add Vehicle
-                          </Button>
+                      ),
+                      width: 100
+                    },
+                    {
+                      title: 'View',
+                      key: 'actions',
+                      render: (_: any, record: any) => (
+                        <Button type="link" onClick={() => openDetailsDrawer(record)}>View</Button>
+                      ),
+                      width: 80
+                    }
+                  ]}
+                  rowKey="_id"
+                  pagination={false}
+                  className="rounded-xl overflow-hidden shadow-lg bg-white w-full"
+                />
+              )
+            )}
+                <Modal
+              title="Add Vehicle"
+              open={addModalOpen}
+              onCancel={() => setAddModalOpen(false)}
+                  footer={null}
+              destroyOnClose
+              width={700}
+            >
+                    <form
+                className="space-y-4"
+                onSubmit={e => {
+                        e.preventDefault();
+                  handleAddVehicle();
+                      }}
+                      autoComplete="off"
+                    >
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          {ADD_STEPS.map((label, idx) => (
+                            <div key={label} className={`flex-1 flex flex-col items-center ${addStep === idx ? 'font-bold text-emerald-700' : 'text-gray-400'}`}> 
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${addStep === idx ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}>{idx + 1}</div>
+                              <span className="text-xs">{label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="h-1 w-full bg-gray-200 rounded-full">
+                          <div className="h-1 bg-emerald-600 rounded-full transition-all" style={{ width: `${((addStep + 1) / ADD_STEPS.length) * 100}%` }} />
                         </div>
                       </div>
-              {loading ? <Spin /> : error ? <div className="text-red-500">{error}</div> : (
-                vehicleView === 'grid' ? (
-                  <Row gutter={[16, 16]}>
-                    {filteredVehicles.length === 0 ? (
-                      <Col span={24}><div className="text-gray-500">No vehicles found.</div></Col>
-                    ) : filteredVehicles.map((vehicle: any) => (
-                      <Col xs={24} sm={12} md={8} lg={6} key={vehicle._id}>
-                        <Card
-                          hoverable
-                          cover={vehicle.colors && vehicle.colors[0]?.images && vehicle.colors[0].images[0] ? (
-                            <img alt={vehicle.name} src={vehicle.colors[0].images[0]} style={{ height: 180, objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ height: 180, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No Image</div>
-                          )}
-                          onClick={() => openDetailsDrawer(vehicle)}
-                          style={{ marginBottom: 16 }}
-                        >
-                          <Card.Meta
-                            title={<span>{vehicle.name} <span style={{ fontSize: 12, color: '#888' }}>({vehicle.vehicleType})</span></span>}
-                            description={<>
-                              <div>Category: {vehicle.category}</div>
-                              <div>Price: LKR {vehicle.price}</div>
-                              <div style={{ fontSize: 12, color: '#666' }}>{vehicle.description?.slice(0, 40)}...</div>
-                            </>}
+                      {addStep === 0 && (
+                        <>
+                          <label className="block font-medium mb-1">Vehicle Type</label>
+                          <select
+                            className="border px-3 py-2 rounded w-full mb-3"
+                  name="vehicleType"
+                            value={vehicleForm.vehicleType}
+                  onChange={handleAddVehicleChange}
+                          >
+                            <option value="">Select a vehicle type</option>
+                  <option value="Motorcycle">Motorcycle</option>
+                  <option value="Car">Car</option>
+                  <option value="Three Wheeler">Three Wheeler</option>
+                  <option value="Truck">Truck</option>
+                  <option value="Bus">Bus</option>
+                  <option value="Van">Van</option>
+                  <option value="SUV">SUV</option>
+                  <option value="Other">Other</option>
+                          </select>
+                          <label className="block font-medium mb-1">Name</label>
+                          <input
+                            type="text"
+                  name="name"
+                            className="border px-3 py-2 rounded w-full mb-3"
+                            value={vehicleForm.name}
+                  onChange={handleAddVehicleChange}
                           />
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
-                ) : (
-                  <Table
-                    dataSource={filteredVehicles}
-                    columns={[
-                      {
-                        title: '',
-                        key: 'icon',
-                        render: () => <CarOutlined style={{ fontSize: 20, color: '#10b981' }} />,
-                        width: 40
-                      },
-                      {
-                        title: 'Image',
-                        dataIndex: 'colors',
-                        key: 'image',
-                        render: (colors: any[]) => colors && colors[0]?.images && colors[0].images[0] ? (
-                          <img src={colors[0].images[0]} alt="vehicle" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} />
-                        ) : <span style={{ color: '#aaa' }}>No Image</span>,
-                        width: 60
-                      },
-                      { title: 'Name', dataIndex: 'name', key: 'name' },
-                      { title: 'Type', dataIndex: 'vehicleType', key: 'vehicleType' },
-                      { title: 'Category', dataIndex: 'category', key: 'category' },
-                      { title: 'Price', dataIndex: 'price', key: 'price' },
-                      {
-                        title: 'Available',
-                        dataIndex: 'available',
-                        key: 'available',
-                        align: 'center',
-                        render: (available: boolean, record: any) => (
-                          <Switch
-                            checked={available !== false}
-                            checkedChildren="Yes"
-                            unCheckedChildren="No"
-                            onChange={async (checked) => {
+                          <label className="block font-medium mb-1">Category</label>
+                          <input
+                            type="text"
+                  name="category"
+                            className="border px-3 py-2 rounded w-full mb-3"
+                            value={vehicleForm.category}
+                  onChange={handleAddVehicleChange}
+                          />
+                          <label className="block font-medium mb-1">Price (LKR)</label>
+                          <input
+                            type="number"
+                  name="price"
+                            className="border px-3 py-2 rounded w-full mb-3"
+                            value={vehicleForm.price}
+                  onChange={handleAddVehicleChange}
+                          />
+                          <label className="block font-medium mb-1">Description</label>
+                          <textarea
+                  name="description"
+                            className="border px-3 py-2 rounded w-full mb-3"
+                            value={vehicleForm.description}
+                  onChange={handleAddVehicleChange}
+                          />
+                        </>
+                      )}
+                      {addStep === 1 && (
+                        <>
+                        <FeatureInput value={vehicleForm.features} onChange={handleFeatureChange} />
+                <GroupedSpecsInput value={vehicleForm.specs} onChange={handleSpecsChange} />
+                        </>
+                      )}
+                      {addStep === 2 && (
+                          <ColorInput value={vehicleForm.colors} onChange={handleColorsChange} />
+                      )}
+                      {addStep === 3 && (
+                          <VariantInput value={vehicleForm.variants} onChange={handleVariantChange} />
+                      )}
+                      {addStep === 4 && (
+                          <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
+                      )}
+                      {addStep === 4 && (
+                        <>
+                          <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
+                          <label className="block font-medium mb-1 mt-4">Brochure (PDF)</label>
+                          {vehicleForm.brochure && (
+                            <div className="mb-2"><a href={vehicleForm.brochure} target="_blank" rel="noopener noreferrer" className="text-emerald-700 underline">View current brochure</a></div>
+                          )}
+                          <input type="file" accept="application/pdf" onChange={async e => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setBrochureUploading(true);
                               try {
-                                await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${record._id}/availability`, {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ available: checked })
-                                });
-                                setVehicles(vehicles => vehicles.map(v => v._id === record._id ? { ...v, available: checked } : v));
-                                message.success(`Vehicle marked as ${checked ? 'available' : 'not available'}`);
+                                const url = await uploadBrochurePdfToCloudinary(file);
+                                setVehicleForm(f => { console.log('Setting brochure URL:', url); return { ...f, brochure: url }; });
+                                message.success('Brochure uploaded!');
                               } catch {
-                                message.error('Failed to update availability');
+                                message.error('Failed to upload brochure PDF');
+                              } finally {
+                                setBrochureUploading(false);
                               }
-                            }}
-                            size="small"
-                    />
-                        ),
-                        width: 100
-                      },
-                      {
-                        title: 'View',
-                        key: 'actions',
-                        render: (_: any, record: any) => (
-                          <Button type="link" onClick={() => openDetailsDrawer(record)}>View</Button>
-                        ),
-                        width: 80
-                      }
-                    ]}
-                    rowKey="_id"
-                    pagination={false}
-                    className="rounded-xl overflow-hidden shadow-lg bg-white w-full"
-                  />
-                )
-              )}
-                  <Modal
-                title="Add Vehicle"
-                open={addModalOpen}
-                onCancel={() => setAddModalOpen(false)}
-                    footer={null}
-                destroyOnClose
-                width={700}
-              >
-                      <form
-                  className="space-y-4"
-                  onSubmit={e => {
-                          e.preventDefault();
-                    handleAddVehicle();
-                        }}
-                        autoComplete="off"
-                      >
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            {ADD_STEPS.map((label, idx) => (
-                              <div key={label} className={`flex-1 flex flex-col items-center ${addStep === idx ? 'font-bold text-emerald-700' : 'text-gray-400'}`}> 
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${addStep === idx ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}>{idx + 1}</div>
-                                <span className="text-xs">{label}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="h-1 w-full bg-gray-200 rounded-full">
-                            <div className="h-1 bg-emerald-600 rounded-full transition-all" style={{ width: `${((addStep + 1) / ADD_STEPS.length) * 100}%` }} />
-                          </div>
-                        </div>
-                        {addStep === 0 && (
-                          <>
-                            <label className="block font-medium mb-1">Vehicle Type</label>
-                            <select
-                              className="border px-3 py-2 rounded w-full mb-3"
-                        name="vehicleType"
-                              value={vehicleForm.vehicleType}
-                        onChange={handleAddVehicleChange}
-                            >
-                              <option value="">Select a vehicle type</option>
-                        <option value="Motorcycle">Motorcycle</option>
-                        <option value="Car">Car</option>
-                        <option value="Three Wheeler">Three Wheeler</option>
-                        <option value="Truck">Truck</option>
-                        <option value="Bus">Bus</option>
-                        <option value="Van">Van</option>
-                        <option value="SUV">SUV</option>
-                        <option value="Other">Other</option>
-                            </select>
-                            <label className="block font-medium mb-1">Name</label>
-                            <input
-                              type="text"
-                        name="name"
-                              className="border px-3 py-2 rounded w-full mb-3"
-                              value={vehicleForm.name}
-                        onChange={handleAddVehicleChange}
-                            />
-                            <label className="block font-medium mb-1">Category</label>
-                            <input
-                              type="text"
-                        name="category"
-                              className="border px-3 py-2 rounded w-full mb-3"
-                              value={vehicleForm.category}
-                        onChange={handleAddVehicleChange}
-                            />
-                            <label className="block font-medium mb-1">Price (LKR)</label>
-                            <input
-                              type="number"
-                        name="price"
-                              className="border px-3 py-2 rounded w-full mb-3"
-                              value={vehicleForm.price}
-                        onChange={handleAddVehicleChange}
-                            />
-                            <label className="block font-medium mb-1">Description</label>
-                            <textarea
-                        name="description"
-                              className="border px-3 py-2 rounded w-full mb-3"
-                              value={vehicleForm.description}
-                        onChange={handleAddVehicleChange}
-                            />
-                          </>
-                        )}
-                        {addStep === 1 && (
-                          <>
-                            <FeatureInput value={vehicleForm.features} onChange={handleFeatureChange} />
-                      <GroupedSpecsInput value={vehicleForm.specs} onChange={handleSpecsChange} />
-                          </>
-                        )}
-                        {addStep === 2 && (
-                            <ColorInput value={vehicleForm.colors} onChange={handleColorsChange} />
-                        )}
-                        {addStep === 3 && (
-                            <VariantInput value={vehicleForm.variants} onChange={handleVariantChange} />
-                        )}
-                        {addStep === 4 && (
-                            <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
-                        )}
-                        {addStep === 4 && (
-                          <>
-                            <FaqsInput value={vehicleForm.faqs} onChange={handleFaqsChange} />
-                            <label className="block font-medium mb-1 mt-4">Brochure (PDF)</label>
-                            {vehicleForm.brochure && (
-                              <div className="mb-2"><a href={vehicleForm.brochure} target="_blank" rel="noopener noreferrer" className="text-emerald-700 underline">View current brochure</a></div>
-                            )}
-                            <input type="file" accept="application/pdf" onChange={async e => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setBrochureUploading(true);
-                                try {
-                                  const url = await uploadBrochurePdfToCloudinary(file);
-                                  setVehicleForm(f => { console.log('Setting brochure URL:', url); return { ...f, brochure: url }; });
-                                  message.success('Brochure uploaded!');
-                                } catch {
-                                  message.error('Failed to upload brochure PDF');
-                                } finally {
-                                  setBrochureUploading(false);
-                                }
-                              }
-                            }} />
-                            {brochureUploading && <div className="text-xs text-blue-600 mt-1">Uploading brochure...</div>}
-                            {vehicleForm.brochure && <div className="text-xs text-gray-600 mt-1">Brochure uploaded</div>}
-                          </>
-                        )}
-                  {addVehicleError && <div className="text-xs text-red-500 mt-2">{addVehicleError}</div>}
-                        <div className="flex justify-between mt-6">
-                        {addStep > 0 && <Button type="default" onClick={() => setAddStep(addStep - 1)}>Back</Button>}
-                        {addStep < ADD_STEPS.length - 1 && <Button type="primary" onClick={() => setAddStep(addStep + 1)}>Next</Button>}
-                    {addStep === ADD_STEPS.length - 1 && <Button type="primary" htmlType="submit" loading={addVehicleLoading || brochureUploading} disabled={addVehicleLoading || brochureUploading} block size="large">{addVehicleLoading || brochureUploading ? "Adding..." : "Add Vehicle"}</Button>}
-                        </div>
-                      </form>
-                  </Modal>
+                            }
+                          }} />
+                          {brochureUploading && <div className="text-xs text-blue-600 mt-1">Uploading brochure...</div>}
+                          {vehicleForm.brochure && <div className="text-xs text-gray-600 mt-1">Brochure uploaded</div>}
+                        </>
+                      )}
+              {addVehicleError && <div className="text-xs text-red-500 mt-2">{addVehicleError}</div>}
+                      <div className="flex justify-between mt-6">
+                      {addStep > 0 && <Button type="default" onClick={() => setAddStep(addStep - 1)}>Back</Button>}
+                      {addStep < ADD_STEPS.length - 1 && <Button type="primary" onClick={() => setAddStep(addStep + 1)}>Next</Button>}
+                  {addStep === ADD_STEPS.length - 1 && <Button type="primary" htmlType="submit" loading={addVehicleLoading || brochureUploading} disabled={addVehicleLoading || brochureUploading} block size="large">{addVehicleLoading || brochureUploading ? "Adding..." : "Add Vehicle"}</Button>}
+                      </div>
+                    </form>
+                </Modal>
       {/* Vehicle Details Drawer */}
       <Drawer
                 title={detailsVehicle?.name || 'Vehicle Details'}

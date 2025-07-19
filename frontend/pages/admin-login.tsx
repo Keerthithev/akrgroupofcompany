@@ -42,15 +42,15 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-4">
-      <div className="glass-card max-w-xs w-full p-6 rounded-xl shadow-lg">
-        <h2 className="text-center text-2xl font-bold gradient-text mb-2">Admin Login</h2>
-        <p className="text-center mb-6 text-gray-700 text-base">Enter your admin credentials to access the dashboard.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-2 sm:px-4">
+      <div className="glass-card max-w-xs w-full p-4 sm:p-6 rounded-xl shadow-lg">
+        <h2 className="text-center text-2xl sm:text-3xl font-bold gradient-text mb-2">Admin Login</h2>
+        <p className="text-center mb-6 text-gray-700 text-base sm:text-lg">Enter your admin credentials to access the dashboard.</p>
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <input
             type="text"
             placeholder="Email or Username"
-            className="w-full border rounded px-3 py-2 text-sm"
+            className="w-full border rounded px-3 py-2 text-sm sm:text-base"
             value={adminEmail}
             onChange={e => setAdminEmail(e.target.value)}
             autoFocus
@@ -59,7 +59,7 @@ export default function AdminLogin() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full border rounded px-3 py-2 text-sm"
+            className="w-full border rounded px-3 py-2 text-sm sm:text-base"
             value={adminPassword}
             onChange={e => setAdminPassword(e.target.value)}
             required

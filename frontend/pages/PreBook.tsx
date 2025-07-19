@@ -124,7 +124,7 @@ export default function PreBook() {
 
   // Step 0: Booking Form
   const bookingForm = (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-2 py-6 sm:px-4 sm:py-12">
       <StepsIndicator />
       <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-lg">
         <Card className="rounded-2xl bg-white/30 backdrop-blur-md border border-white/30 shadow-lg">
@@ -177,7 +177,7 @@ export default function PreBook() {
                 </Label>
               </div>
               {error && <div className="text-red-600 text-sm font-medium">{error}</div>}
-              <Button type="submit" className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-8 py-3 text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Submitting...' : 'Continue'}</Button>
+              <Button type="submit" className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-4 py-3 text-base sm:text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Submitting...' : 'Continue'}</Button>
             </form>
           </CardContent>
         </Card>
@@ -187,7 +187,7 @@ export default function PreBook() {
 
   // Step 1: Confirmation
   const confirmStep = (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-2 py-6 sm:px-4 sm:py-12">
       <StepsIndicator />
       <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-lg">
         <Card className="rounded-2xl bg-white/30 backdrop-blur-md border border-white/30 shadow-lg">
@@ -208,7 +208,7 @@ export default function PreBook() {
             {error && <div className="text-red-600 text-sm font-medium mb-2">{error}</div>}
             <div className="flex gap-4">
               <Button type="outline" className="flex-1" onClick={() => setStep(0)}>Back</Button>
-              <Button onClick={handleConfirm} className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-8 py-3 text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Booking...' : 'Confirm & Book'}</Button>
+              <Button onClick={handleConfirm} className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl px-4 py-3 text-base sm:text-lg shadow-lg hover:scale-105 transition" disabled={loading}>{loading ? 'Booking...' : 'Confirm & Book'}</Button>
             </div>
           </CardContent>
         </Card>
@@ -232,7 +232,7 @@ export default function PreBook() {
 
   if (settings.mode === 'maintenance') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-4 py-12">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-emerald-200/40 via-blue-200/40 to-green-200/40 backdrop-blur-xl rounded-3xl border border-white/40 shadow-2xl px-2 py-6 sm:px-4 sm:py-12">
         {settings.bannerImage && <img src={settings.bannerImage} alt="Banner" className="max-h-48 mx-auto mb-4 rounded-xl shadow-lg" />}
         <h2 className="text-3xl font-bold mb-2 text-center">Maintenance Mode</h2>
         <p className="text-lg font-semibold mb-2 text-center">{settings.bannerText || 'The booking form is currently disabled for maintenance. Please check back soon.'}</p>

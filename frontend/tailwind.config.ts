@@ -6,8 +6,7 @@ export default {
 		"./index.html",
 		"./pages/**/*.{js,ts,jsx,tsx}",
 		"./components/**/*.{js,ts,jsx,tsx}",
-		// add more if you have other folders with Tailwind classes
-	  ],
+	],
 	prefix: "",
 	theme: {
 		container: {
