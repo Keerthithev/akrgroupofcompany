@@ -19,9 +19,13 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const allowedOrigins = [
+  'https://akrsonspvtltd.netlify.app',
+  'http://localhost:8080', // your local frontend
+];
 app.use(cors({
-  origin: ["http://localhost:8080", "http://localhost:3000"],
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true, // if you use cookies/auth
 }));
 app.use(cookieParser());
 
