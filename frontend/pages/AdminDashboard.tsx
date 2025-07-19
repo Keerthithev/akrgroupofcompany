@@ -1606,7 +1606,7 @@ export default function AdminDashboard() {
                       columns={preBookingColumns}
                       rowKey="_id"
                       pagination={{ pageSize: 8 }}
-                      className="rounded-xl overflow-hidden shadow-lg bg-white w-full"
+                      className="rounded-xl overflow-hidden shadow-lg bg-white w-full min-w-max"
                     />
                   </div>
                 )}
@@ -1672,10 +1672,13 @@ export default function AdminDashboard() {
                       key: 'actions',
                       align: 'center',
                       render: (_, record) => (
-                        <Button type="link" onClick={() => {
-                          setSelectedCustomer(record);
-                          setSelectedPurchase(record.latestPurchase);
-                        }}>View</Button>
+                        <>
+                          <Button type="link" onClick={() => {
+                            setSelectedCustomer(record);
+                            setSelectedPurchase(record.latestPurchase);
+                          }}>View</Button>
+                          <Button type="link" danger onClick={() => handleDeleteCustomer(record._id)}>Delete</Button>
+                        </>
                       )
                     }
                   ]}
