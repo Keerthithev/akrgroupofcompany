@@ -290,7 +290,7 @@ export default function VehicleDetails() {
                     </motion.div>
                   )}
                   {/* Technical Details Row */}
-                  <div className="flex items-center gap-8 bg-white/80 rounded-xl px-4 py-2 shadow border border-emerald-200 mb-4">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 bg-white/80 rounded-xl px-4 py-2 shadow border border-emerald-200 mb-4">
                     <span className="flex items-center gap-2 text-emerald-700 font-semibold text-base">
                       <Gauge className="w-5 h-5 text-emerald-600" />
                       Engine: <span className="font-bold">{vehicle.specs?.Engine || vehicle.specs?.Displacement || '-'}</span>
