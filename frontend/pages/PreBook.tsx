@@ -39,7 +39,7 @@ export default function PreBook() {
   useEffect(() => {
     async function fetchModels() {
       try {
-        const vehiclesRes = await fetch("http://localhost:5050/api/vehicles");
+        const vehiclesRes = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles`);
         const vehiclesData = await vehiclesRes.json();
         if (Array.isArray(vehiclesData)) {
           setModels(vehiclesData.filter((v: any) => v.available !== false).map((v: any) => v.name));
@@ -56,7 +56,7 @@ export default function PreBook() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:5050/api/settings')
+    fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
       .then(res => res.json())
       .then(data => setSettings(data));
   }, []);
@@ -89,7 +89,7 @@ export default function PreBook() {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5050/api/prebookings', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/prebookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

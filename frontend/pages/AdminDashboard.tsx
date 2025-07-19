@@ -393,7 +393,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (akrTab === 'settings') {
       setSettingsLoading(true);
-      fetch('http://localhost:5050/api/settings')
+      fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
         .then(res => res.json())
         .then(data => setSettings(data))
         .finally(() => setSettingsLoading(false));
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
       }
       bannerImageUrls = urls;
     }
-    await fetch('http://localhost:5050/api/settings', {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...settings, bannerImages: bannerImageUrls, bannerHeading: settings.bannerHeading, bannerSubheading: settings.bannerSubheading, socialLinks: settings.socialLinks, openingHours: settings.openingHours })
@@ -469,7 +469,7 @@ export default function AdminDashboard() {
   const deleteVehicle = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return;
     try {
-      const res = await fetch(`http://localhost:5050/api/vehicles/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${id}`, { method: 'DELETE' });
       if (res.ok) {
         message.success('Vehicle deleted');
         if (selectedCompany) fetchVehicles(selectedCompany._id);
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
         galleryImages: galleryImageUrls.length > 0 ? galleryImageUrls : editVehicleData.galleryImages || [],
         brochure: editVehicleData.brochure || ""
       };
-      const res = await fetch(`http://localhost:5050/api/vehicles/${editVehicleData._id}`,
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${editVehicleData._id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -547,7 +547,7 @@ export default function AdminDashboard() {
 
   // Add fetchVehicles function
   const fetchVehicles = (companyId: string) => {
-    fetch(`http://localhost:5050/api/vehicles/company/${companyId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/company/${companyId}`)
       .then(res => res.json())
       .then(setVehicles)
       .catch(() => setVehicles([]));
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
 
   // On mount, fetch companies and set selectedCompany to AKR & SONS, then fetch vehicles
   useEffect(() => {
-    fetch("http://localhost:5050/api/companies")
+    fetch(`${import.meta.env.VITE_API_URL}/api/companies`)
       .then(res => res.json())
       .then(data => {
         setCompanies(data);
@@ -595,7 +595,7 @@ export default function AdminDashboard() {
         company: selectedCompany?._id,
         brochure: vehicleForm.brochure || ""
       };
-      const res = await fetch(`http://localhost:5050/api/vehicles/company/${selectedCompany?._id}`,
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/company/${selectedCompany?._id}`,
         {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -663,7 +663,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setPreBookingLoading(true);
-    fetch("http://localhost:5050/api/prebookings")
+    fetch(`${import.meta.env.VITE_API_URL}/api/prebookings`)
       .then(res => {
         if (!res.ok) throw new Error("Status " + res.status + ": " + res.statusText);
         return res.json();
@@ -771,14 +771,14 @@ export default function AdminDashboard() {
             setStatusUpdating(true);
               const newStatus = e.target.value;
             try {
-              const res = await fetch(`http://localhost:5050/api/prebookings/${record._id}`, {
+              const res = await fetch(`${import.meta.env.VITE_API_URL}/api/prebookings/${record._id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: newStatus })
               });
               if (res.ok) {
                   // Await refetch and update state before showing message
-                  const bookingsRes = await fetch("http://localhost:5050/api/prebookings");
+                  const bookingsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/prebookings`);
                   const bookingsData = await bookingsRes.json();
                   setPreBookings(bookingsData);
                   if (preBookingStatus !== 'All' && newStatus !== preBookingStatus) {
@@ -908,7 +908,7 @@ export default function AdminDashboard() {
 
   const fetchCustomers = () => {
     setCustomerLoading(true);
-    fetch("http://localhost:5050/api/customers/raw")
+    fetch(`${import.meta.env.VITE_API_URL}/api/customers/raw`)
       .then(res => res.json())
       .then(data => {
         setRawCustomerData(data);
@@ -996,7 +996,7 @@ export default function AdminDashboard() {
       if (forceNewCustomer) {
         formToSend.email = customerForm.email + "." + Date.now(); // Make email unique
       }
-      const res = await fetch("http://localhost:5050/api/customers", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formToSend)
@@ -1023,7 +1023,7 @@ export default function AdminDashboard() {
     if (showDuplicatePrompt) return;
     setCustomerLoading(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/customers/${editingCustomer._id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/customers/${editingCustomer._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(customerForm)
@@ -1044,7 +1044,7 @@ export default function AdminDashboard() {
     if (!window.confirm('Are you sure you want to delete this customer?')) return;
     setCustomerLoading(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/customers/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/customers/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       fetchCustomers();
       message.success("Customer deleted");
@@ -1227,7 +1227,7 @@ export default function AdminDashboard() {
                             unCheckedChildren="No"
                             onChange={async (checked) => {
                               try {
-                                await fetch(`http://localhost:5050/api/vehicles/${record._id}/availability`, {
+                                await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${record._id}/availability`, {
                                   method: 'PATCH',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ available: checked })
@@ -1423,7 +1423,7 @@ export default function AdminDashboard() {
                         unCheckedChildren="No"
                         onChange={async (checked) => {
                           try {
-                            await fetch(`http://localhost:5050/api/vehicles/${detailsVehicle._id}/availability`, {
+                            await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${detailsVehicle._id}/availability`, {
                               method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ available: checked })

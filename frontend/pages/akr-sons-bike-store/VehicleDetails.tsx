@@ -76,7 +76,7 @@ export default function VehicleDetails() {
   // Fetch global settings for footer and theme
   const [settings, setSettings] = useState<any>({ socialLinks: {}, openingHours: [] });
   useEffect(() => {
-    fetch('http://localhost:5050/api/settings')
+    fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
       .then(res => res.json())
       .then(data => setSettings(data));
   }, []);
@@ -85,7 +85,7 @@ export default function VehicleDetails() {
     async function fetchVehicle() {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5050/api/vehicles/${id}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles/${id}`);
         if (!res.ok) throw new Error("Vehicle not found");
         const data = await res.json();
         setVehicle(data);
