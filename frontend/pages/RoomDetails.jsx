@@ -12,7 +12,7 @@ const RoomDetails = () => {
   const [imgIdx, setImgIdx] = useState(0);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   useEffect(() => {
-    axios.get(`/api/rooms/${id}`)
+    api.get(`/api/rooms/${id}`)
       .then(res => {
         setRoom(res.data);
         setError(null);

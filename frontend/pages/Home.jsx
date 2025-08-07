@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import api from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 import { 
   FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFacebook, FaInstagram, FaTwitter, 
@@ -114,7 +114,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("/api/settings").then(res => setSettings(res.data));
+    api.get("/api/settings").then(res => setSettings(res.data));
   }, []);
 
   useEffect(() => {

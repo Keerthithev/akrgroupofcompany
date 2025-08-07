@@ -51,7 +51,7 @@ const WineStore = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get wine store images from the wineStoreSection
       const wineStoreImages = res.data.wineStoreSection?.images || [];
       setBanners(wineStoreImages.length > 0 ? wineStoreImages : []);

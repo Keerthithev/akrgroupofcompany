@@ -51,7 +51,7 @@ const AkrConstruction = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get construction images from the constructionSection
       const constructionImages = res.data.constructionSection?.images || [];
       setBanners(constructionImages.length > 0 ? constructionImages : []);

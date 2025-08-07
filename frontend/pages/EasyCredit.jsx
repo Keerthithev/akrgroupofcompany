@@ -51,7 +51,7 @@ const EasyCredit = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get easy credit images from the easyCreditSection
       const easyCreditImages = res.data.easyCreditSection?.images || [];
       setBanners(easyCreditImages.length > 0 ? easyCreditImages : []);

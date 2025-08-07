@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import { FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaSearch, FaFilter, FaSyncAlt, FaSortAmountDown, FaShoppingCart, FaTag, FaBed, FaCalendarAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom'; // Added for navigation
 
@@ -285,7 +285,7 @@ const Shopping = () => {
   }, [showRealProducts]);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       setShowRealProducts(res.data.showRealProducts !== false);
       // Use shopping section images from services array
       const shoppingService = res.data.services?.find(s => s.name === 'Shopping');
@@ -303,7 +303,7 @@ const Shopping = () => {
   useEffect(() => {
     if (showRealProducts) {
       setLoading(true);
-      axios.get('/api/products').then(res => {
+      api.get('/api/products').then(res => {
         setProducts(res.data);
         setLoading(false);
       });

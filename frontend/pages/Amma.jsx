@@ -51,7 +51,7 @@ const Amma = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get amma images from the ammaSection
       const ammaImages = res.data.ammaSection?.images || [];
       setBanners(ammaImages.length > 0 ? ammaImages : []);

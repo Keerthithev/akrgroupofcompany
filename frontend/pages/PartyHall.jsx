@@ -51,7 +51,7 @@ const PartyHall = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get party hall images from the services array
       const partyHallService = res.data.services?.find(s => s.name === 'Party Hall');
       const partyHallImages = partyHallService?.images || [];

@@ -18,7 +18,7 @@ import {
   EditOutlined,
   DownloadOutlined
 } from '@ant-design/icons';
-import axios from "axios";
+import api from "../lib/axios";
 import { DatePicker, Select } from 'antd';
 
 const { Sider, Content, Header } = Layout;
@@ -91,7 +91,7 @@ function CustomerDetailsSection({ selected }) {
     if (selected === 'customer-details') {
       setLoading(true);
       // Fetch admins for dropdown
-      axios.get('/api/admin', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } })
+      api.get('/api/admin', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } })
         .then(res => setAdmins(res.data))
         .catch(() => setAdmins([]));
     }
@@ -104,7 +104,7 @@ function CustomerDetailsSection({ selected }) {
       if (search) params.search = search;
       if (date) params.date = date.format('YYYY-MM-DD');
       if (admin) params.admin = admin;
-      axios.get('/api/bookings', { params, headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } })
+      api.get('/api/bookings', { params, headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } })
         .then(res => setBookings(res.data))
         .finally(() => setLoading(false));
     }
@@ -112,18 +112,18 @@ function CustomerDetailsSection({ selected }) {
 
   const handleAddCustomer = async (bookingId) => {
     if (!newCustomer.name) return message.error('Name is required');
-    await axios.put(`/api/bookings/${bookingId}/add-customer`, newCustomer, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+    await api.put(`/api/bookings/${bookingId}/add-customer`, newCustomer, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     setNewCustomer({ name: '', email: '', phone: '', address: '', age: '', relationship: '' });
     setAddingToBookingId(null);
     // Refresh bookings
-    const res = await axios.get('/api/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+    const res = await api.get('/api/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     setBookings(res.data);
     message.success('Customer added');
   };
 
   const handleDeleteCustomer = async (bookingId, customerIndex) => {
-    await axios.put(`/api/bookings/${bookingId}/remove-customer`, { index: customerIndex }, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-    const res = await axios.get('/api/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+    await api.put(`/api/bookings/${bookingId}/remove-customer`, { index: customerIndex }, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+    const res = await api.get('/api/bookings', { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     setBookings(res.data);
     message.success('Customer removed');
   };
@@ -352,7 +352,7 @@ const AdminDashboard = () => {
   const fetchBookings = async () => {
     setBookingLoading(true);
     try {
-      const response = await axios.get('/api/bookings', {
+      const response = await api.get('/api/bookings', {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
       setBookings(response.data);
@@ -367,7 +367,7 @@ const AdminDashboard = () => {
   const handleConfirmBooking = async (bookingId) => {
     try {
       // Update booking status to confirmed
-      await axios.patch(`/api/bookings/${bookingId}/status`, 
+      await api.patch(`/api/bookings/${bookingId}/status`, 
         { status: 'Confirmed' },
         { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
       );
@@ -375,7 +375,7 @@ const AdminDashboard = () => {
       // Send confirmation email
       const booking = bookings.find(b => b._id === bookingId);
       if (booking) {
-        await axios.post('/api/bookings/send-confirmation', {
+        await api.post('/api/bookings/send-confirmation', {
           bookingId: booking._id,
           customerEmail: booking.customerEmail,
           customerName: booking.customerName
@@ -393,7 +393,7 @@ const AdminDashboard = () => {
   const handleCancelBooking = async (bookingId) => {
     try {
       // Update booking status to cancelled
-      await axios.patch(`/api/bookings/${bookingId}/status`, 
+      await api.patch(`/api/bookings/${bookingId}/status`, 
         { status: 'Cancelled' },
         { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
       );
@@ -401,7 +401,7 @@ const AdminDashboard = () => {
       // Send cancellation email
       const booking = bookings.find(b => b._id === bookingId);
       if (booking) {
-        await axios.post('/api/bookings/send-cancellation', {
+        await api.post('/api/bookings/send-cancellation', {
           bookingId: booking._id,
           customerEmail: booking.customerEmail,
           customerName: booking.customerName
@@ -430,7 +430,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (selected === 'hotel-management') {
-      axios.get('/api/rooms').then(res => setRooms(res.data));
+      api.get('/api/rooms').then(res => setRooms(res.data));
     }
     if (selected.startsWith('bookings-')) {
       const status = selected.replace('bookings-', '');
@@ -442,7 +442,7 @@ const AdminDashboard = () => {
   // Fetch settings on mount
   useEffect(() => {
     const fetchSettings = async () => {
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     };
     fetchSettings();
@@ -524,7 +524,7 @@ const AdminDashboard = () => {
   // Fetch products when Shopping section is selected
   useEffect(() => {
     if (selected === 'shopping') {
-      axios.get('/api/products').then(res => setProducts(res.data));
+      api.get('/api/products').then(res => setProducts(res.data));
     }
   }, [selected]);
 
@@ -596,13 +596,13 @@ const AdminDashboard = () => {
         const idx = updated.services.findIndex(s => s.name === serviceName);
         if (idx !== -1) updated.services[idx].description = descEdit[sectionKey];
       }
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
       setDescEdit({ ...descEdit, [sectionKey]: undefined });
       message.success('Section updated!');
       // Refresh settings
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     } catch (err) {
       if (handleApiError(err)) return;
@@ -621,13 +621,13 @@ const AdminDashboard = () => {
         updated.services[idx].images = updated.services[idx].images || [];
         updated.services[idx].images.push(url);
       }
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
       message.success('Image added!');
       setUploadedUrl("");
       // Refresh settings
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     } catch (err) {
       if (handleApiError(err)) return;
@@ -645,12 +645,12 @@ const AdminDashboard = () => {
       if (idx !== -1) {
         updated.services[idx].images = updated.services[idx].images.filter(img => img !== url);
       }
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
       message.success('Image removed!');
       // Refresh settings
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     } catch (err) {
       if (handleApiError(err)) return;
@@ -825,12 +825,12 @@ const AdminDashboard = () => {
       const updated = { ...settings };
       updated.banners = updated.banners || [];
       updated.banners.push(url);
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
       message.success('Banner added!');
       setUploadedUrl("");
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     } catch (err) {
       if (handleApiError(err)) return;
@@ -842,11 +842,11 @@ const AdminDashboard = () => {
     try {
       const updated = { ...settings };
       updated.banners = updated.banners.filter(img => img !== url);
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
       message.success('Banner removed!');
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
     } catch (err) {
       if (handleApiError(err)) return;
@@ -861,10 +861,10 @@ const AdminDashboard = () => {
       const updated = { ...settings };
       updated.banners = updated.banners || [];
       updated.banners.push(...urls);
-      await axios.put('/api/settings', updated, {
+      await api.put('/api/settings', updated, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
       });
-      const res = await axios.get('/api/settings');
+      const res = await api.get('/api/settings');
       setSettings(res.data);
       setUploadedUrl("");
     } catch (err) {
@@ -905,7 +905,7 @@ const AdminDashboard = () => {
     const saveWithRetry = async (retryCount = 0) => {
       try {
         // First, get the latest settings to avoid conflicts
-        const latestSettings = await axios.get('/api/settings');
+        const latestSettings = await api.get('/api/settings');
         const currentSettings = latestSettings.data;
         
         const updated = { ...currentSettings };
@@ -915,11 +915,11 @@ const AdminDashboard = () => {
         updated.homepageSubheadingColor = multiComplexSubheadingColor;
         updated.homepageLogo = logoUrl;
         updated.showRealProducts = showRealProducts;
-        await axios.put('/api/settings', updated, {
+        await api.put('/api/settings', updated, {
           headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
         });
         message.success('Multi Complex homepage fields updated!');
-        const res = await axios.get('/api/settings');
+        const res = await api.get('/api/settings');
         setSettings(res.data);
       } catch (err) {
         if (err.response?.status === 409 && retryCount < 3) {
@@ -943,7 +943,7 @@ const AdminDashboard = () => {
     const saveWithRetry = async (retryCount = 0) => {
       try {
         // First, get the latest settings to avoid conflicts
-        const latestSettings = await axios.get('/api/settings');
+        const latestSettings = await api.get('/api/settings');
         const currentSettings = latestSettings.data;
         
         const updated = { ...currentSettings };
@@ -952,11 +952,11 @@ const AdminDashboard = () => {
         updated.akrGroupHeadingColor = akrGroupHeadingColor;
         updated.akrGroupSubheadingColor = akrGroupSubheadingColor;
         updated.akrGroupBanners = akrGroupBanners;
-        await axios.put('/api/settings', updated, {
+        await api.put('/api/settings', updated, {
           headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
         });
         message.success('AKR Group homepage fields updated!');
-        const res = await axios.get('/api/settings');
+        const res = await api.get('/api/settings');
         setSettings(res.data);
       } catch (err) {
         if (err.response?.status === 409 && retryCount < 3) {
@@ -991,7 +991,7 @@ const AdminDashboard = () => {
         });
         
         // First, get the latest settings to avoid conflicts
-        const latestSettings = await axios.get('/api/settings');
+        const latestSettings = await api.get('/api/settings');
         const currentSettings = latestSettings.data;
         
         const updated = { ...currentSettings };
@@ -1014,11 +1014,11 @@ const AdminDashboard = () => {
         
         console.log('Sending updated settings:', updated);
         
-        await axios.put('/api/settings', updated, {
+        await api.put('/api/settings', updated, {
           headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
         });
         message.success('Hotel section saved successfully!');
-        const res = await axios.get('/api/settings');
+        const res = await api.get('/api/settings');
         setSettings(res.data);
         console.log('Settings refreshed after save:', res.data);
       } catch (err) {
@@ -1041,18 +1041,18 @@ const AdminDashboard = () => {
   const handleProductSave = async (values) => {
     if (productModal.editing) {
       // Edit
-      await axios.put(`/api/products/${productModal.editing._id}`, values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+      await api.put(`/api/products/${productModal.editing._id}`, values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     } else {
       // Add
-      await axios.post('/api/products', values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+      await api.post('/api/products', values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     }
-    const res = await axios.get('/api/products');
+    const res = await api.get('/api/products');
     setProducts(res.data);
     setProductModal({ open: false, editing: null });
     productForm.resetFields();
   };
   const handleProductDelete = async (id) => {
-    await axios.delete(`/api/products/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+    await api.delete(`/api/products/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     setProducts(products.filter(p => p._id !== id));
   };
   const handleProductImageUpload = async (file) => {
@@ -1082,12 +1082,12 @@ const AdminDashboard = () => {
           onChange={async (checked) => {
             setShowRealProducts(checked);
             const updated = { ...settings, showRealProducts: checked };
-            await axios.put('/api/settings', updated, {
+            await api.put('/api/settings', updated, {
               headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
             });
             message.success(`Shopping page will now show ${checked ? 'real' : 'mock'} products.`);
             // Optionally, refresh settings
-            const res = await axios.get('/api/settings');
+            const res = await api.get('/api/settings');
             setSettings(res.data);
           }}
         />
@@ -1131,8 +1131,8 @@ const AdminDashboard = () => {
         </div>
         <Button type="primary" onClick={async () => {
           const updated = { ...settings, shoppingHeading, shoppingSubheading, shoppingHeadingColor, shoppingSubheadingColor };
-          await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-          const res = await axios.get('/api/settings');
+          await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+          const res = await api.get('/api/settings');
           setSettings(res.data);
           message.success('Shopping page heading and subheading updated!');
         }}>Save Shopping Heading & Subheading</Button>
@@ -1153,8 +1153,8 @@ const AdminDashboard = () => {
         />
         <Button type="primary" onClick={async () => {
           const updated = { ...settings, shoppingSpecialOffer, shoppingSpecialOfferLink };
-          await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-          const res = await axios.get('/api/settings');
+          await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+          const res = await api.get('/api/settings');
           setSettings(res.data);
           message.success('Special offer updated!');
         }}>Save Special Offer</Button>
@@ -1176,8 +1176,8 @@ const AdminDashboard = () => {
                     style={{ position: 'absolute', top: 4, right: 4 }}
                     onClick={async () => {
                       const updated = { ...settings, shoppingBanners: settings.shoppingBanners.filter(b => b !== img) };
-                      await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-                      const res = await axios.get('/api/settings');
+                      await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+                      const res = await api.get('/api/settings');
                       setSettings(res.data);
                       message.success('Shopping banner removed!');
                     }}
@@ -1202,8 +1202,8 @@ const AdminDashboard = () => {
               const data = await res.json();
               if (data.secure_url) {
                 const updated = { ...settings, shoppingBanners: [...(settings.shoppingBanners || []), data.secure_url] };
-                await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-                const refreshed = await axios.get('/api/settings');
+                await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+                const refreshed = await api.get('/api/settings');
                 setSettings(refreshed.data);
                 message.success('Shopping banner uploaded!');
               } else {
@@ -1361,11 +1361,11 @@ const AdminDashboard = () => {
       category: productFormData.category,
     };
     if (productModal.editing) {
-      await axios.put(`/api/products/${productModal.editing._id}`, values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+      await api.put(`/api/products/${productModal.editing._id}`, values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     } else {
-      await axios.post('/api/products', values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+      await api.post('/api/products', values, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
     }
-    const res = await axios.get('/api/products');
+    const res = await api.get('/api/products');
     setProducts(res.data);
     setProductModal({ open: false, editing: null });
     setProductFormData({ name: '', description: '', price: '', image: '', category: '' });
@@ -1388,11 +1388,11 @@ const AdminDashboard = () => {
         images: roomFormData.images,
       };
       if (editingRoomId) {
-        await axios.put(`/api/rooms/${editingRoomId}`, payload, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+        await api.put(`/api/rooms/${editingRoomId}`, payload, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
       } else {
-        await axios.post('/api/rooms', payload, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+        await api.post('/api/rooms', payload, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
       }
-      const res = await axios.get('/api/rooms');
+      const res = await api.get('/api/rooms');
       setRooms(res.data);
       setRoomFormData({ name: '', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
       setRoomDrawerOpen(false);
@@ -1429,8 +1429,8 @@ const AdminDashboard = () => {
   };
   const handleDeleteRoom = async (roomId) => {
     try {
-      await axios.delete(`/api/rooms/${roomId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-      const res = await axios.get('/api/rooms');
+      await api.delete(`/api/rooms/${roomId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+      const res = await api.get('/api/rooms');
       setRooms(res.data);
       message.success('Room deleted!');
     } catch (err) {
@@ -1529,7 +1529,7 @@ const AdminDashboard = () => {
                               const hotelService = updated.services.find(s => s.name === 'Hotel & Room Booking');
                               if (hotelService) {
                                 hotelService.images = hotelService.images.filter(i => i !== img);
-                                await axios.put('/api/settings', updated, {
+                                await api.put('/api/settings', updated, {
                                   headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
                                 });
                               }
@@ -1556,7 +1556,7 @@ const AdminDashboard = () => {
                       if (hotelService) {
                         hotelService.images = hotelService.images || [];
                         hotelService.images.push(data.secure_url);
-                        await axios.put('/api/settings', updated, {
+                        await api.put('/api/settings', updated, {
                           headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` },
                         });
                       }
@@ -1806,8 +1806,8 @@ const AdminDashboard = () => {
                         showRealGymAmenities: checked,
                       }
                     };
-                    await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-                    const res = await axios.get('/api/settings');
+                    await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+                    const res = await api.get('/api/settings');
                     setSettings(res.data);
                   }}
                   style={{ marginLeft: 8 }}
@@ -1945,8 +1945,8 @@ const AdminDashboard = () => {
                       specialOfferLink: gymSpecialOfferLink,
                     }
                   };
-                  await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-                  const res = await axios.get('/api/settings');
+                  await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+                  const res = await api.get('/api/settings');
                   setSettings(res.data);
                   message.success('Gym section updated!');
                 }}>Save Special Offer</Button>
@@ -2071,8 +2071,8 @@ const AdminDashboard = () => {
                     showRealGymAmenities,
                   }
                 };
-                await axios.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
-                const res = await axios.get('/api/settings');
+                await api.put('/api/settings', updated, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
+                const res = await api.get('/api/settings');
                 setSettings(res.data);
                 message.success('Gym section updated!');
               }}>Save Gym Section</Button>

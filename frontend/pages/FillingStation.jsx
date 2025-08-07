@@ -51,7 +51,7 @@ const FillingStation = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get filling station images from the fillingStationSection
       const fillingStationImages = res.data.fillingStationSection?.images || [];
       setBanners(fillingStationImages.length > 0 ? fillingStationImages : []);

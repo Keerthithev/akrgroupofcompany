@@ -51,7 +51,7 @@ const Theater = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get theater service images from the services array
       const theaterService = res.data.services?.find(s => s.name === 'Theatre');
       const theaterImages = theaterService?.images || [];

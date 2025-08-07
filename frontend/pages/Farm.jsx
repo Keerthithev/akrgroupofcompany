@@ -51,7 +51,7 @@ const Farm = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get farm images from the farmSection
       const farmImages = res.data.farmSection?.images || [];
       setBanners(farmImages.length > 0 ? farmImages : []);

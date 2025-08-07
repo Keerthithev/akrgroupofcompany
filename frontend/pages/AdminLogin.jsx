@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/axios";
 import { Form, Input, Button, Typography, message } from "antd";
 
 const { Title } = Typography;
@@ -10,7 +10,7 @@ const AdminLogin = () => {
 
   const onFinish = async (values) => {
     try {
-      const res = await axios.post("/api/admin/login", values);
+      const res = await api.post("/api/admin/login", values);
       localStorage.setItem("adminToken", res.data.token);
       navigate("/multicomplex/admin/dashboard");
     } catch (err) {

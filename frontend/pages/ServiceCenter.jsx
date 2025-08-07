@@ -51,7 +51,7 @@ const ServiceCenter = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get service center images from the services array
       const serviceCenterService = res.data.services?.find(s => s.name === 'Service Center');
       const serviceCenterImages = serviceCenterService?.images || [];

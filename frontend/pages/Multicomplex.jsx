@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../lib/axios";
 import { 
   FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFacebook, FaInstagram, FaTwitter,
   FaBed, FaShoppingCart, FaTruck, FaGasPump, FaWineGlass, FaSeedling, FaHeart, FaCreditCard,
@@ -14,7 +14,7 @@ const Multicomplex = () => {
   const slideInterval = useRef(null);
 
   useEffect(() => {
-    axios.get("/api/settings").then(res => setSettings(res.data));
+    api.get("/api/settings").then(res => setSettings(res.data));
   }, []);
 
   useEffect(() => {

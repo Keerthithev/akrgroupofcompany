@@ -51,7 +51,7 @@ const Gym = () => {
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    axios.get('/api/settings').then(res => {
+    api.get('/api/settings').then(res => {
       // Get gym images from the gymSection
       const gymImages = res.data.gymSection?.images || [];
       setBanners(gymImages.length > 0 ? gymImages : []);

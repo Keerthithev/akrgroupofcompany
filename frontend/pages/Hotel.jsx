@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import axios from "axios";
+import api from "../lib/axios";
 import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock } from 'react-icons/fa';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -100,7 +100,7 @@ const Hotel = () => {
   }, [hotelInfo]);
 
   useEffect(() => {
-    axios.get("/api/settings").then(res => {
+    api.get("/api/settings").then(res => {
       const h = res.data.hotelSection || {};
       setHotelInfo({
         heading: h.heading || 'Welcome to AKR Hotel & Room Booking',
@@ -123,7 +123,7 @@ const Hotel = () => {
       });
       setHomepageLogo(res.data.homepageLogo || "");
     });
-    axios.get("/api/rooms").then(res => setRooms(res.data));
+    api.get("/api/rooms").then(res => setRooms(res.data));
   }, []);
 
   const handleBookNow = (room) => {
