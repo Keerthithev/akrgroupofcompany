@@ -14,13 +14,22 @@
 [[headers]]
   for = "/assets/*.css"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "no-cache, no-store, must-revalidate, max-age=0"
     Pragma = "no-cache"
     Expires = "0"
+    Vary = "User-Agent"
 
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "no-cache, no-store, must-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Expires = "0"
+    Vary = "User-Agent"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate, max-age=0"
     Pragma = "no-cache"
     Expires = "0" 

@@ -1,4 +1,5 @@
-/* Build timestamp: $(date) - Cache busting for Netlify deployment */
+/* Build timestamp: $(date) - Cache busting for Netlify deployment - Mobile optimized */
+/* Version: 1.0.1 - Force mobile cache clear */
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
 @tailwind base;
 @tailwind components;
