@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../lib/axios';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaBed, FaCalendarAlt } from 'react-icons/fa';
 
 const FARM_LOGO = '/images/image copy 2.png'; // AKR Farm logo
@@ -16,7 +17,7 @@ const Footer = ({ homepageLogo }) => (
           />
         )}
         <div className="text-lg font-bold mb-2">AKR Farm</div>
-        <div className="text-sm opacity-90 mb-2">A forward-thinking agricultural initiative promoting sustainable, organic farming practices.</div>
+        <div className="text-sm opacity-90 mb-2">Sustainable farming practices and fresh produce in Mannar.</div>
         <div className="flex gap-3 mt-2">
           <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-green-200"><FaFacebook size={22} /></a>
           <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-green-200"><FaInstagram size={22} /></a>
@@ -49,6 +50,7 @@ const Farm = () => {
   const [banners, setBanners] = useState([]);
   const [homepageLogo, setHomepageLogo] = useState("");
   const [slideIndex, setSlideIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.get('/api/settings').then(res => {
@@ -56,6 +58,10 @@ const Farm = () => {
       const farmImages = res.data.farmSection?.images || [];
       setBanners(farmImages.length > 0 ? farmImages : []);
       setHomepageLogo(res.data.homepageLogo || "");
+      setLoading(false);
+    }).catch(error => {
+      console.error('Error loading farm data:', error);
+      setLoading(false);
     });
   }, []);
 
@@ -66,6 +72,8 @@ const Farm = () => {
     }, 4000);
     return () => clearInterval(interval);
   }, [banners]);
+
+  if (loading) return <LoadingSpinner fullScreen={true} text="Loading farm experience..." />;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +90,7 @@ const Farm = () => {
               />
               <div>
                 <div className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">AKR FARM</div>
-                <div className="text-xs sm:text-sm text-gray-600">Sustainable Organic Agriculture</div>
+                <div className="text-xs sm:text-sm text-gray-600">Sustainable Agriculture & Fresh Produce</div>
               </div>
             </div>
             {/* CTA Button */}
@@ -98,145 +106,83 @@ const Farm = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
+      <section className="relative bg-gradient-to-r from-green-700 to-green-400 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          {[
-            '/images/akr-farm.jpg'
-          ].map((img, i) => (
+          {banners.length > 0 ? (
+            banners.map((img, i) => (
+              <img
+                key={img}
+                src={img}
+                alt="Farm Background"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}
+              />
+            ))
+          ) : (
             <img
-              key={img}
-              src={img}
-              alt="AKR Farm"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}
+              src={FARM_LOGO}
+              alt="Farm Background"
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
             />
-          ))}
-          <div className="absolute inset-0 bg-black/60"></div>
+          )}
+          <div className="absolute inset-0 bg-black/50"></div>
         </div>
-
         {/* Hero Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32">
-          <div className="text-center text-white">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-              AKR Farm
-            </h1>
-            <p className="text-lg md:text-xl lg:text-2xl text-gray-200 mb-8 max-w-4xl mx-auto">
-              A forward-thinking agricultural initiative promoting sustainable, organic farming practices.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Our Farm Products
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              Fresh, organic produce and sustainable farming solutions for a better future.
-            </p>
-          </div>
-
-          {/* Coming Soon Message */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-8 md:p-12 text-center mb-12">
-            <div className="text-6xl mb-6">🌱</div>
-            <h3 className="text-2xl md:text-3xl font-bold text-green-800 mb-4">
-              Services Coming Soon!
-            </h3>
-            <p className="text-lg md:text-xl text-green-700 mb-6 max-w-2xl mx-auto">
-              We're currently setting up our farm services. Our team is working hard to bring you fresh, organic produce and sustainable farming solutions.
-            </p>
-            <div className="bg-white rounded-xl p-6 md:p-8 shadow-lg">
-              <h4 className="text-xl font-semibold text-gray-900 mb-4">Want to know more?</h4>
-              <p className="text-gray-600 mb-6">
-                Contact us for information about our upcoming farm products and services.
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div className="text-white">
+              <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 text-green-200">
+                AKR Farm
+              </h1>
+              <p className="text-lg md:text-xl text-gray-200 mb-8 leading-relaxed">
+                Experience sustainable farming practices and fresh, organic produce from our farm in Mannar. We are committed to providing high-quality agricultural products while preserving the environment.
               </p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <div className="flex items-center space-x-3 text-lg">
-                  <FaPhoneAlt className="w-6 h-6 text-green-600" />
-                  <span className="font-semibold">0773111266</span>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <span className="hidden sm:inline-block bg-yellow-400 text-yellow-900 font-bold px-8 py-4 rounded-full shadow-lg text-lg animate-bounce cursor-default">
+                  Coming Soon
+                </span>
+              </div>
+            </div>
+            {/* Right Content - Farm Images */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative group">
+                  <img
+                    src={banners.length > 0 ? banners[0] : FARM_LOGO}
+                    alt="Farm 1"
+                    className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg"></div>
                 </div>
-                <div className="flex items-center space-x-3 text-lg">
-                  <FaEnvelope className="w-6 h-6 text-green-600" />
-                  <span className="font-semibold">akrfuture@gmail.com</span>
+                <div className="relative group">
+                  <img
+                    src={banners.length > 1 ? banners[1] : FARM_LOGO}
+                    alt="Farm 2"
+                    className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg"></div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {[
-              {
-                title: "Organic Vegetables",
-                description: "Fresh, pesticide-free vegetables grown using sustainable methods.",
-                icon: "🥬"
-              },
-              {
-                title: "Fresh Fruits",
-                description: "Seasonal fruits harvested at peak ripeness for maximum flavor.",
-                icon: "🍎"
-              },
-              {
-                title: "Herbs & Spices",
-                description: "Aromatic herbs and spices for culinary and medicinal use.",
-                icon: "🌿"
-              },
-              {
-                title: "Farming Consultation",
-                description: "Expert advice on sustainable farming practices and techniques.",
-                icon: "👨‍🌾"
-              }
-            ].map((service, index) => (
-              <div key={index} className="bg-gray-50 p-6 rounded-xl shadow-lg text-center opacity-75">
-                <div className="text-4xl mb-4">{service.icon}</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{service.title}</h3>
-                <p className="text-gray-600 text-sm">{service.description}</p>
-                <div className="mt-4">
-                  <span className="hidden sm:inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
-                    Coming Soon
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Why Choose AKR Farm?
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              We provide fresh, organic produce with sustainable farming practices.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {[
-              "Organic produce",
-              "Sustainable farming",
-              "Fresh from farm",
-              "Expert consultation",
-              "Quality assurance",
-              "Environmental friendly"
-            ].map((feature, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-4 h-4 bg-green-600 rounded-full"></div>
-                  </div>
-                  <span className="text-gray-900 font-medium">{feature}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Coming Soon message */}
+      <div className="flex flex-col items-center justify-center py-24">
+        <h2 className="text-3xl font-bold text-green-700 mb-2">Farm Experience Coming Soon</h2>
+        <p className="text-lg text-gray-600 mb-4">We are working hard to bring you fresh farm produce and sustainable agriculture services. Stay tuned!</p>
+        <div className="text-center text-gray-600">
+          <p className="mb-2">Featuring:</p>
+          <ul className="text-sm space-y-1">
+            <li>• Organic vegetables and fruits</li>
+            <li>• Sustainable farming practices</li>
+            <li>• Fresh dairy products</li>
+            <li>• Farm-to-table experience</li>
+          </ul>
         </div>
-      </section>
+      </div>
 
       {/* Footer */}
       <Footer homepageLogo={homepageLogo} />

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../lib/axios";
 import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { 
   FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFacebook, FaInstagram, FaTwitter, 
   FaBed, FaShoppingCart, FaTruck, FaGasPump, FaWineGlass, FaSeedling, FaHeart, FaCreditCard,
@@ -135,7 +136,7 @@ const Home = () => {
     }
   };
 
-  if (!settings) return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  if (!settings) return <LoadingSpinner fullScreen={true} text="Loading AKR Group..." />;
 
   return (
     <div className="min-h-screen bg-gray-50">

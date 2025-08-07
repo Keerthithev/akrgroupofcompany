@@ -4,6 +4,7 @@ import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, F
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const MEALS = [
   'Self catering',
@@ -71,6 +72,7 @@ const Footer = ({ homepageLogo }) => (
 
 const Hotel = () => {
   const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [hotelInfo, setHotelInfo] = useState({
     heading: '',
     subheading: '',
@@ -100,8 +102,11 @@ const Hotel = () => {
   }, [hotelInfo]);
 
   useEffect(() => {
-    api.get("/api/settings").then(res => {
-      const h = res.data.hotelSection || {};
+    Promise.all([
+      api.get("/api/settings"),
+      api.get("/api/rooms")
+    ]).then(([settingsRes, roomsRes]) => {
+      const h = settingsRes.data.hotelSection || {};
       setHotelInfo({
         heading: h.heading || 'Welcome to AKR Hotel & Room Booking',
         subheading: h.subheading || 'Experience comfort, convenience, and luxury in the heart of Mannar.',
@@ -121,9 +126,13 @@ const Hotel = () => {
         specialOffer: h.specialOffer || '',
         specialOfferLink: h.specialOfferLink || '',
       });
-      setHomepageLogo(res.data.homepageLogo || "");
+      setHomepageLogo(settingsRes.data.homepageLogo || "");
+      setRooms(roomsRes.data);
+      setLoading(false);
+    }).catch(error => {
+      console.error('Error loading hotel data:', error);
+      setLoading(false);
     });
-    api.get("/api/rooms").then(res => setRooms(res.data));
   }, []);
 
   const handleBookNow = (room) => {
@@ -140,6 +149,8 @@ const Hotel = () => {
       return matchesPrice && matchesAmenities;
     });
   }, [rooms, priceRange, selectedAmenities]);
+
+  if (loading) return <LoadingSpinner fullScreen={true} text="Loading hotel experience..." />;
 
   return (
     <div className="min-h-screen bg-gray-50">

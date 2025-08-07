@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import api from '../lib/axios';
 import { FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaSearch, FaFilter, FaSyncAlt, FaSortAmountDown, FaShoppingCart, FaTag, FaBed, FaCalendarAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom'; // Added for navigation
+import LoadingSpinner from '../components/LoadingSpinner';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const features = [
   {
@@ -360,6 +362,8 @@ const Shopping = () => {
       </div>
     );
   };
+
+  if (loading) return <LoadingSpinner fullScreen={true} text="Loading shopping experience..." />;
 
   return (
     <div className="min-h-screen bg-gray-50">
