@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendarAlt, FaTimes, FaBed, FaCalculator } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../lib/axios';
 
 const BookingModal = ({ isOpen, onClose, room }) => {
   const [checkInDate, setCheckInDate] = useState(null);
