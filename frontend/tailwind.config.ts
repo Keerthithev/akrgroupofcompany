@@ -29,6 +29,11 @@ export default {
 		'to-pink-700',
 		'from-indigo-500',
 		'to-indigo-700',
+		'from-gray-900',
+		'via-gray-800',
+		'to-gray-900',
+		'bg-gradient-to-r',
+		'bg-gradient-to-br',
 	],
 	prefix: "",
 	theme: {
