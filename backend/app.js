@@ -23,7 +23,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'https://akrsonspvtltd.netlify.app',
+  'https://comfy-hotteok-35dfd8.netlify.app',
   'http://localhost:8080', // your local frontend
+  'https://akr.lk',
 ];
 app.use(cors({
   origin: allowedOrigins,
