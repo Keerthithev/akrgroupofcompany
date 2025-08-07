@@ -11,6 +11,7 @@
   to = "/assets/:splat"
   status = 200
   force = true
+  headers = {Content-Type = "text/css"}
 
 [[redirects]]
   from = "/*"
