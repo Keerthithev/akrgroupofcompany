@@ -55,14 +55,17 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))',
 					glow: 'hsl(var(--card-glow))'
-				}
+				},
+				'akr-green-1': '#11998e',
+				'akr-green-2': '#38ef7d',
 			},
 			backgroundImage: {
 				'gradient-cosmic': 'var(--gradient-cosmic)',
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-secondary': 'var(--gradient-secondary)',
 				'gradient-accent': 'var(--gradient-accent)',
-				'gradient-glass': 'var(--gradient-glass)'
+				'gradient-glass': 'var(--gradient-glass)',
+				'akr-green-gradient': 'linear-gradient(90deg, #11998e 0%, #38ef7d 100%)',
 			},
 			boxShadow: {
 				'cosmic': 'var(--shadow-cosmic)',

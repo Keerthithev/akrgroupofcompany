@@ -1,0 +1,99 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+const mongoose = require('mongoose');
+const Room = require('../models/Room');
+
+async function main() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    
+    // Clear existing rooms
+    await Room.deleteMany({});
+    
+    const rooms = [
+      {
+        name: 'Deluxe Double Room',
+        type: 'Double',
+        beds: '1 double bed',
+        maxGuests: 2,
+        size: 35,
+        description: 'Spacious room with modern amenities and city view',
+        images: ['/images/hotel.jpg'],
+        price: 5000,
+        discountedPrice: 4500,
+        breakfastIncluded: true,
+        breakfastPrice: 500,
+        cancellationPolicy: 'Free cancellation up to 24 hours before check-in',
+        view: 'City',
+        capacity: 2,
+        amenities: ['WiFi', 'AC', 'TV', 'Mini Bar', 'Room Service', 'Free Breakfast'],
+        isAvailable: true
+      },
+      {
+        name: 'Twin Room',
+        type: 'Twin',
+        beds: '2 single beds',
+        maxGuests: 2,
+        size: 30,
+        description: 'Comfortable twin room perfect for business travelers',
+        images: ['/images/hotel.jpg'],
+        price: 4500,
+        discountedPrice: 4000,
+        breakfastIncluded: false,
+        breakfastPrice: 500,
+        cancellationPolicy: 'Free cancellation up to 24 hours before check-in',
+        view: 'Garden',
+        capacity: 2,
+        amenities: ['WiFi', 'AC', 'TV', 'Work Desk'],
+        isAvailable: true
+      },
+      {
+        name: 'Suite',
+        type: 'Suite',
+        beds: '1 king bed + 1 sofa bed',
+        maxGuests: 4,
+        size: 50,
+        description: 'Luxury suite with separate living area and premium amenities',
+        images: ['/images/hotel.jpg'],
+        price: 8000,
+        discountedPrice: 7200,
+        breakfastIncluded: true,
+        breakfastPrice: 0,
+        cancellationPolicy: 'Free cancellation up to 48 hours before check-in',
+        view: 'City',
+        capacity: 4,
+        amenities: ['WiFi', 'AC', 'TV', 'Mini Bar', 'Room Service', 'Free Breakfast', 'Living Room', 'Balcony'],
+        isAvailable: true
+      },
+      {
+        name: 'Single Room',
+        type: 'Single',
+        beds: '1 single bed',
+        maxGuests: 1,
+        size: 25,
+        description: 'Compact and comfortable single room',
+        images: ['/images/hotel.jpg'],
+        price: 3500,
+        discountedPrice: 3000,
+        breakfastIncluded: false,
+        breakfastPrice: 500,
+        cancellationPolicy: 'Free cancellation up to 24 hours before check-in',
+        view: 'Garden',
+        capacity: 1,
+        amenities: ['WiFi', 'AC', 'TV'],
+        isAvailable: true
+      }
+    ];
+    
+    await Room.insertMany(rooms);
+    console.log('Rooms seeded successfully!');
+    await mongoose.disconnect();
+  } catch (error) {
+    console.error('Error seeding rooms:', error);
+    await mongoose.disconnect();
+  }
+}
+
+main(); 

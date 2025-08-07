@@ -1,42 +1,67 @@
-import { Toaster } from "./components/ui/toaster";
-import { Toaster as Sonner } from "./components/ui/sonner";
-import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
-import Index from "./pages/Index";
-import AkrSonsBikeStore from "./pages/AkrSonsBikeStore";
-import NotFound from "./pages/NotFound";
-
+import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
-import VehicleDetails from "./pages/akr-sons-bike-store/VehicleDetails";
-import PreBook from "./pages/PreBook";
-import Terms from "./pages/terms";
+import AdminLogin from "./pages/AdminLogin";
+import Shopping from "./pages/Shopping";
+import Gym from "./pages/Gym";
+import Theater from "./pages/Theater";
+import ServiceCenter from "./pages/ServiceCenter";
+import PartyHall from "./pages/PartyHall";
+import Hotel from "./pages/Hotel";
+import RoomDetails from "./pages/RoomDetails";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 
-import AdminLogin from "./pages/admin-login";
+// AKR Group Company Pages
+import AkrSons from "./pages/AkrSons";
+import AkrConstruction from "./pages/AkrConstruction";
+import Multicomplex from "./pages/Multicomplex";
+import FillingStation from "./pages/FillingStation";
+import WineStore from "./pages/WineStore";
+import Farm from "./pages/Farm";
+import Amma from "./pages/Amma";
+import EasyCredit from "./pages/EasyCredit";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AkrSonsBikeStore />} />
-          <Route path="/akr-sons-bike-store" element={<AkrSonsBikeStore />} />
-          <Route path="/akr-sons-bike-store/:id" element={<VehicleDetails />} />
-
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/prebook" element={<PreBook />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <BrowserRouter >
+      <Routes>
+        <Route path="/" element={<Home />} />
+        
+        {/* AKR Group Company Pages */}
+        <Route path="/akr-sons" element={<AkrSons />} />
+        <Route path="/construction" element={<AkrConstruction />} />
+        <Route path="/multicomplex" element={<Multicomplex />} />
+        <Route path="/filling-station" element={<FillingStation />} />
+        <Route path="/wine-store" element={<WineStore />} />
+        <Route path="/farm" element={<Farm />} />
+        <Route path="/amma" element={<Amma />} />
+        <Route path="/easy-credit" element={<EasyCredit />} />
+        
+        {/* Existing Service Pages */}
+        <Route path="/shopping" element={<Shopping />} />
+        <Route path="/gym" element={<Gym />} />
+        <Route path="/theater" element={<Theater />} />
+        <Route path="/servicecenter" element={<ServiceCenter />} />
+        <Route path="/partyhall" element={<PartyHall />} />
+        <Route path="/hotel" element={<Hotel />} />
+        <Route path="/hotel/room/:id" element={<RoomDetails />} />
+        
+        {/* Admin Routes */}
+        <Route path="/multicomplex/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/multicomplex/admin-login" element={<AdminLogin />} />
+        
+        {/* Payment Routes */}
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+      </Routes>
+    </BrowserRouter>
+    <Toaster />
   </QueryClientProvider>
 );
 
