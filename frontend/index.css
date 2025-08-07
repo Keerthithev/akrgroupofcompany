@@ -1,3 +1,4 @@
+/* Build timestamp: $(date) - Cache busting for Netlify deployment */
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
 @tailwind base;
 @tailwind components;
