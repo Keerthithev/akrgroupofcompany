@@ -26,6 +26,8 @@ import WineStore from "./pages/WineStore";
 import Farm from "./pages/Farm";
 import Amma from "./pages/Amma";
 import EasyCredit from "./pages/EasyCredit";
+import AboutUs from "./pages/AboutUs";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -58,10 +60,17 @@ const App = () => (
         {/* Admin Routes */}
         <Route path="/multicomplex/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/multicomplex/admin-login" element={<AdminLogin />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         
         {/* Payment Routes */}
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
+        
+        {/* Information Pages */}
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
       <ScrollToTopButton />
     </BrowserRouter>

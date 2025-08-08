@@ -12,7 +12,7 @@ const AdminLogin = () => {
     try {
       const res = await api.post("/api/admin/login", values);
       localStorage.setItem("adminToken", res.data.token);
-      navigate("/multicomplex/admin/dashboard");
+      navigate("/admin/dashboard");
     } catch (err) {
       message.error(err.response?.data?.error || "Login failed");
     }
