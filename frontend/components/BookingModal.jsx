@@ -38,7 +38,7 @@ const BookingModal = ({ isOpen, onClose, room }) => {
 
   const fetchUnavailableDates = async () => {
     try {
-      const response = await api.get(`http://localhost:8080/api/bookings/unavailable-dates/${room._id}`);
+      const response = await api.get(`/api/bookings/unavailable-dates/${room._id}`);
       // Convert date strings to Date objects for the date picker
       const dates = response.data.unavailableDates.map(dateString => new Date(dateString));
       setUnavailableDates(dates);
@@ -122,7 +122,7 @@ const BookingModal = ({ isOpen, onClose, room }) => {
       };
 
       // Create booking in database
-      const response = await api.post('http://localhost:8080/api/bookings', bookingData);
+      const response = await api.post('/api/bookings', bookingData);
       const booking = response.data.booking;
       
       // Send "we will contact soon" email
@@ -154,7 +154,7 @@ const BookingModal = ({ isOpen, onClose, room }) => {
   // Send "we will contact soon" email
   const sendContactSoonEmail = async (booking) => {
     try {
-      await api.post('http://localhost:8080/api/bookings/send-contact-soon', {
+      await api.post('/api/bookings/send-contact-soon', {
         bookingId: booking._id,
         customerEmail: userDetails.customerEmail,
         customerName: userDetails.customerName
