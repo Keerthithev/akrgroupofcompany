@@ -227,7 +227,7 @@ const AkrConstruction = () => {
               variants={fadeInUp}
               className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto"
             >
-              Your reliable source for premium construction materials — including sea sand, red soil, metal, gravel, and more — ensuring strong, durable, and high-quality results for every project.
+              Your reliable source for premium construction materials — including river sand, red soil, metal, gravel, and all essential building materials — providing quality materials for construction projects across Sri Lanka.
             </motion.p>
           </motion.div>
         </div>
@@ -267,15 +267,15 @@ const AkrConstruction = () => {
               </p>
               
               <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6">
-                From foundation to finishing, we ensure strong, durable, and high-quality results for every project with our carefully sourced materials and reliable delivery service.
+                We specialize in providing high-quality construction materials sourced from reliable Sri Lankan suppliers, ensuring you get the best materials for your construction projects.
             </p>
               
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {[
                   { icon: FaHardHat, label: "Premium Materials", color: "text-orange-600" },
                   { icon: FaShieldAlt, label: "Quality Assurance", color: "text-yellow-600" },
-                  { icon: FaTruck, label: "Reliable Delivery", color: "text-green-600" },
-                  { icon: FaUsers, label: "Expert Support", color: "text-blue-600" }
+                  { icon: FaTruck, label: "Material Delivery", color: "text-green-600" },
+                  { icon: FaCheckCircle, label: "Quality Tested", color: "text-blue-600" }
                 ].map((item, index) => (
                   <motion.div 
                     key={index}
@@ -291,7 +291,7 @@ const AkrConstruction = () => {
                     <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.label}</span>
                   </motion.div>
                 ))}
-              </div>
+          </div>
             </motion.div>
 
             <motion.div 
@@ -325,8 +325,8 @@ const AkrConstruction = () => {
             {[
               {
                 icon: "🏖️",
-                title: "Sea Sand",
-                description: "High-quality sea sand for construction projects and concrete mixing",
+                title: "River Sand",
+                description: "High-quality river sand for construction projects and concrete mixing",
                 gradient: "from-blue-500 to-blue-600",
                 bgGradient: "from-blue-50 to-blue-100",
                 borderColor: "border-blue-200"
@@ -376,7 +376,223 @@ const AkrConstruction = () => {
         </div>
       </motion.section>
 
-      {/* Services Section */}
+      {/* Construction Materials Gallery */}
+      <motion.section 
+        className="py-8 sm:py-12 bg-gradient-to-br from-gray-50 to-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-8 sm:mb-12"
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              Our Premium Materials
+            </h3>
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
+              High-quality construction materials ready for your projects
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-30px" }}
+          >
+            {/* Material Piles Image */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-yellow-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/d.jpg"
+                alt="Construction Materials - Red Soil, Gravel, and Sand Piles"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Premium Materials</h4>
+                <p className="text-white/90 text-sm">Red soil, gravel, and sand piles</p>
+                </div>
+            </motion.div>
+
+            {/* Orange Dump Truck Image */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-yellow-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/c.jpg"
+                alt="Orange Dump Truck Unloading Construction Materials"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Professional Delivery</h4>
+                <p className="text-white/90 text-sm">Reliable truck delivery service</p>
+                </div>
+            </motion.div>
+
+            {/* Yellow Dump Truck Image */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-yellow-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/b.jpg"
+                alt="Yellow Dump Truck with Gravel Materials"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Quality Gravel</h4>
+                <p className="text-white/90 text-sm">Premium gravel and aggregates</p>
+              </div>
+            </motion.div>
+          </motion.div>
+            </div>
+      </motion.section>
+
+      {/* Available Materials Section */}
+      <motion.section 
+        className="py-8 sm:py-12 bg-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-8 sm:mb-12"
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              Complete Range of Construction Materials
+            </h3>
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
+              All essential building materials available for your construction projects in Sri Lanka
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-30px" }}
+          >
+            {[
+              {
+                icon: "🏖️",
+                title: "River Sand",
+                description: "High-quality river sand for concrete mixing and construction",
+                uses: ["Concrete mixing", "Plastering", "Brick laying", "Foundation work"]
+              },
+              {
+                icon: "🌱",
+                title: "Red Soil",
+                description: "Premium red soil for landscaping and construction",
+                uses: ["Landscaping", "Gardening", "Road construction", "Filling"]
+              },
+              {
+                icon: "🪨",
+                title: "Metal & Gravel",
+                description: "Construction aggregates for building and road projects",
+                uses: ["Concrete production", "Road construction", "Drainage", "Foundation"]
+              },
+              {
+                icon: "🏗️",
+                title: "Crushed Stone",
+                description: "Various sizes of crushed stone for different applications",
+                uses: ["Concrete aggregate", "Road base", "Drainage", "Landscaping"]
+              },
+              {
+                icon: "🌊",
+                title: "Fine Sand",
+                description: "Fine sand for plastering and finishing work",
+                uses: ["Plastering", "Tile laying", "Finishing work", "Mortar mixing"]
+              },
+              {
+                icon: "🛣️",
+                title: "Road Base Material",
+                description: "Specialized materials for road construction projects",
+                uses: ["Road construction", "Highway projects", "Parking areas", "Heavy duty surfaces"]
+              }
+            ].map((material, index) => (
+              <motion.div
+                key={index}
+                variants={fadeInUp}
+                className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300 group"
+                whileHover={{ 
+                  scale: 1.02,
+                  transition: { duration: 0.2 }
+                }}
+              >
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-md">
+                    <span className="text-lg sm:text-xl">{material.icon}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-gray-900">{material.title}</h4>
+                    <p className="text-xs sm:text-sm text-gray-600">{material.description}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h5 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Common Uses:</h5>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    {material.uses.map((use, useIndex) => (
+                      <li key={useIndex} className="flex items-center space-x-2">
+                        <div className="w-1 h-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full"></div>
+                        <span>{use}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div 
+            className="mt-8 sm:mt-12 text-center"
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl p-4 sm:p-6">
+              <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-2">
+                🏗️ All Materials Available in Sri Lanka
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                We source all our construction materials from reliable Sri Lankan suppliers, ensuring quality, 
+                availability, and competitive pricing for all your building and construction needs.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Material Services Section */}
       <motion.section 
         className="py-8 sm:py-12 bg-gradient-to-br from-gray-50 to-white"
         initial={{ opacity: 0 }}
@@ -394,10 +610,10 @@ const AkrConstruction = () => {
               viewport={{ once: true }}
             >
               <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-3">
-                Our Services
+                Material Supply Services
               </h3>
               <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-                Comprehensive construction material solutions for all your building and development needs
+                Professional material supply and delivery services for construction projects
               </p>
             </motion.div>
             
@@ -412,26 +628,26 @@ const AkrConstruction = () => {
                 {
                   icon: "🏗️",
                   title: "Construction Materials",
-                  description: "Complete range of high-quality materials for all construction projects",
-                  features: ["Sea sand", "Red soil", "Metal & gravel", "Quality tested"]
+                  description: "Complete range of high-quality Sri Lankan materials for all construction projects",
+                  features: ["River sand", "Red soil", "Metal & gravel", "Quality tested"]
                 },
                 {
                   icon: "🚛",
-                title: "Delivery Service",
-                  description: "Reliable and timely delivery to your construction site or project location",
+                title: "Material Delivery",
+                  description: "Reliable delivery of construction materials to your project site",
                   features: ["On-time delivery", "Bulk supply", "Site delivery", "Flexible scheduling"]
                 },
                 {
-                  icon: "🔧",
-                  title: "Expert Consultation",
-                  description: "Professional advice on material selection and project requirements",
-                  features: ["Material selection", "Quantity estimation", "Project planning", "Technical support"]
+                  icon: "📋",
+                  title: "Material Information",
+                  description: "Detailed information about material specifications and applications",
+                  features: ["Material details", "Usage guidelines", "Quality standards", "Application advice"]
                 },
                 {
                   icon: "✅",
                   title: "Quality Assurance",
-                  description: "Rigorous quality control ensuring materials meet industry standards",
-                  features: ["Quality testing", "Certified materials", "Durability guarantee", "Performance standards"]
+                  description: "Quality control ensuring materials meet construction standards",
+                  features: ["Quality testing", "Certified materials", "Durability standards", "Performance quality"]
               }
             ].map((service, index) => (
                 <motion.div
@@ -485,13 +701,13 @@ const AkrConstruction = () => {
               viewport={{ once: true }}
             >
               <motion.div variants={fadeInLeft}>
-                <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 sm:mb-6">Contact AKR Construction</h3>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 sm:mb-6">Contact for Materials</h3>
                 <div className="space-y-3 sm:space-y-4">
-                  {[
-                    { icon: FaClock, title: "Business Hours", info: "Mon - Sat: 8:00 AM - 6:00 PM", subtitle: "Sunday: 9:00 AM - 4:00 PM" },
-                    { icon: FaMapMarkerAlt, title: "Location", info: "Main Street, Murunkan", subtitle: "Mannar - Easy access for material pickup and delivery" },
-                    { icon: FaPhoneAlt, title: "Get Quote", info: "Phone: 0773111266", subtitle: "Call for pricing and material availability" }
-                  ].map((item, index) => (
+                                      {[
+                      { icon: FaClock, title: "Business Hours", info: "Mon - Sat: 8:00 AM - 6:00 PM", subtitle: "Sunday: 9:00 AM - 4:00 PM" },
+                      { icon: FaMapMarkerAlt, title: "Location", info: "Main Street, Murunkan", subtitle: "Mannar - Easy access for material pickup and delivery" },
+                      { icon: FaPhoneAlt, title: "Material Quote", info: "Phone: 0773111266", subtitle: "Call for pricing and material availability" }
+                    ].map((item, index) => (
                     <motion.div 
                       key={index}
                       className="flex items-start space-x-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"

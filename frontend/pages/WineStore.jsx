@@ -106,7 +106,7 @@ const WineStore = () => {
         const response = await api.get("/api/settings");
         const settings = response.data;
         const wineStoreImages = settings.wineStoreSection?.images || [];
-        setBanners(wineStoreImages.length > 0 ? wineStoreImages : []);
+      setBanners(wineStoreImages.length > 0 ? wineStoreImages : []);
         setHomepageLogo(settings.homepageLogo || "");
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -142,11 +142,11 @@ const WineStore = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={WINE_STORE_LOGO}
-                  alt="AKR Wine Store Logo"
+              <img
+                src={WINE_STORE_LOGO}
+                alt="AKR Wine Store Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -227,7 +227,7 @@ const WineStore = () => {
               variants={fadeInUp}
               className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto"
             >
-              A refined retail destination offering a curated selection of fine wines from around the world, crafted for true connoisseurs and enthusiasts alike.
+              A premium destination offering an extensive collection of Sri Lankan and international alcohol brands, including fine wines, spirits, arrack, whisky, gin, rum, and beer — catering to connoisseurs and enthusiasts alike.
             </motion.p>
           </motion.div>
         </div>
@@ -255,27 +255,27 @@ const WineStore = () => {
               <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-100 to-red-100 rounded-full mb-4">
                 <FaCheckCircle className="w-3 h-3 text-purple-600 mr-2" />
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">Curated Selection & Expert Consultation</span>
-              </div>
-              
+          </div>
+
               <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
-                Crafted for 
-                <span className="bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent"> True Connoisseurs</span>
+                Premium Collection of 
+                <span className="bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent"> Sri Lankan & International Brands</span>
               </h2>
               
               <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-4">
-                We specialize in offering a carefully curated selection of fine wines from renowned vineyards and regions around the world. Our collection represents the pinnacle of winemaking excellence, sourced from the most prestigious wine-producing regions.
+                We specialize in offering an extensive collection of premium alcohol brands, including authentic Sri Lankan arrack, international spirits, fine wines, and craft beers. Our selection features both traditional local favorites and prestigious international brands.
               </p>
               
               <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6">
-                Whether you're a seasoned connoisseur or an enthusiastic beginner, our expert team provides personalized recommendations and guidance to help you discover wines that perfectly match your taste and occasion.
+                From traditional Ceylon Arrack to premium international spirits, our collection caters to all preferences and occasions, ensuring you find the perfect choice for your taste and celebration.
               </p>
               
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {[
-                  { icon: FaWineGlass, label: "Fine Wines", color: "text-purple-600" },
-                  { icon: FaGlobe, label: "Global Selection", color: "text-red-600" },
-                  { icon: FaStar, label: "Premium Quality", color: "text-yellow-600" },
-                  { icon: FaUsers, label: "Expert Guidance", color: "text-blue-600" }
+                  { icon: FaWineGlass, label: "Premium Spirits", color: "text-purple-600" },
+                  { icon: FaGlobe, label: "Local & International", color: "text-red-600" },
+                  { icon: FaStar, label: "Authentic Brands", color: "text-yellow-600" },
+                  { icon: FaUsers, label: "Wide Selection", color: "text-blue-600" }
                 ].map((item, index) => (
                   <motion.div 
                     key={index}
@@ -287,7 +287,7 @@ const WineStore = () => {
                   >
                     <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center`}>
                       <item.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${item.color}`} />
-                    </div>
+                </div>
                     <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.label}</span>
                   </motion.div>
                 ))}
@@ -305,7 +305,7 @@ const WineStore = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-red-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
                 <img
-                  src="/images/akr-wine-store.jpg"
+                  src="/images/akr-wine-store2.jpg"
                   alt="AKR Wine Store"
                   className="relative w-full h-64 sm:h-80 md:h-96 object-cover rounded-2xl shadow-xl"
                 />
@@ -324,28 +324,28 @@ const WineStore = () => {
           >
             {[
               {
-                icon: "🍷",
-                title: "Fine Wines",
-                description: "Premium wines from renowned vineyards worldwide",
-                gradient: "from-purple-500 to-purple-600",
-                bgGradient: "from-purple-50 to-purple-100",
-                borderColor: "border-purple-200"
-              },
-              {
                 icon: "🥃",
-                title: "Premium Spirits",
-                description: "High-quality spirits and liqueurs for connoisseurs",
-                gradient: "from-red-500 to-red-600",
-                bgGradient: "from-red-50 to-red-100",
-                borderColor: "border-red-200"
+                title: "Sri Lankan Arrack",
+                description: "Authentic traditional arrack varieties and premium selections",
+                gradient: "from-amber-500 to-orange-600",
+                bgGradient: "from-amber-50 to-orange-100",
+                borderColor: "border-amber-200"
               },
               {
-                icon: "👨‍💼",
-                title: "Expert Consultation",
-                description: "Professional wine recommendations and pairing advice",
-                gradient: "from-yellow-500 to-yellow-600",
-                bgGradient: "from-yellow-50 to-yellow-100",
+                icon: "🍺",
+                title: "Beer Collection",
+                description: "Local and international beer brands for every taste",
+                gradient: "from-yellow-500 to-orange-600",
+                bgGradient: "from-yellow-50 to-orange-100",
                 borderColor: "border-yellow-200"
+              },
+              {
+                icon: "🍸",
+                title: "Premium Spirits",
+                description: "Whisky, gin, rum and international spirit brands",
+                gradient: "from-purple-500 to-blue-600",
+                bgGradient: "from-purple-50 to-blue-100",
+                borderColor: "border-purple-200"
               }
             ].map((feature, index) => (
               <motion.div
@@ -376,6 +376,280 @@ const WineStore = () => {
         </div>
       </motion.section>
 
+      {/* Alcohol Brands Collection */}
+      <motion.section 
+        className="py-8 sm:py-12 bg-gradient-to-br from-gray-50 to-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-8 sm:mb-12"
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              Premium Alcohol Brands Collection
+            </h3>
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
+              Extensive selection of Sri Lankan and international alcohol brands
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-30px" }}
+          >
+            {/* Sri Lankan Arrack */}
+            <motion.div
+              variants={fadeInUp}
+              className="bg-gradient-to-br from-amber-50 to-orange-100 p-6 rounded-xl border border-amber-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-xl">🥃</span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-amber-800">Sri Lankan Arrack</h4>
+                  <p className="text-sm text-amber-700">Traditional & Premium Varieties</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-amber-800 font-semibold">Available Brands:</div>
+                <div className="grid grid-cols-1 gap-1 text-xs text-amber-700">
+                  <div>• Ceylon Arrack</div>
+                  <div>• Extra Special Arrack</div>
+                  <div>• Old Reserve Arrack</div>
+                  <div>• VSOA</div>
+                  <div>• Double Distilled Arrack</div>
+                  <div>• Blue Label Arrack</div>
+                  <div>• Coconut Arrack</div>
+                  <div>• Mendis Coconut Arrack</div>
+                  <div>• Sri Lankan Coconut Arrack</div>
+                  <div>• Batavia Arrack</div>
+                  <div>• Indonesian Arrack</div>
+                  <div>• Arrack Gold</div>
+                  <div>• Magic Arrack</div>
+                  <div>• Old Arrack Colombo</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Whisky & Spirits */}
+            <motion.div
+              variants={fadeInUp}
+              className="bg-gradient-to-br from-brown-50 to-amber-100 p-6 rounded-xl border border-brown-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-brown-500 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-xl">🥃</span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-brown-800">Whisky & Premium Spirits</h4>
+                  <p className="text-sm text-brown-700">International & Local Brands</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-brown-800 font-semibold">Available Brands:</div>
+                <div className="grid grid-cols-1 gap-1 text-xs text-brown-700">
+                  <div>• Old Keg Whisky</div>
+                  <div>• Rockland VX</div>
+                  <div>• Blenders Choice</div>
+                  <div>• Island Rum</div>
+                  <div>• London Spice Dry Gin</div>
+                  <div>• Indian Goa Coconut Feni</div>
+                  <div>• Lambanog</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Beer Collection */}
+            <motion.div
+              variants={fadeInUp}
+              className="bg-gradient-to-br from-yellow-50 to-orange-100 p-6 rounded-xl border border-yellow-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-xl">🍺</span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-yellow-800">Beer Collection</h4>
+                  <p className="text-sm text-yellow-700">Local & International Beers</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-yellow-800 font-semibold">Available Brands:</div>
+                <div className="grid grid-cols-1 gap-1 text-xs text-yellow-700">
+                  <div>• Lion Lager</div>
+                  <div>• Lion Stout</div>
+                  <div>• Lion Strong</div>
+                  <div>• Three Coins Beer</div>
+                  <div>• King's Lager</div>
+                  <div>• King's Pilsner</div>
+                  <div>• King's Stout</div>
+                  <div>• Bison Super Strong</div>
+                  <div>• Carlsberg</div>
+                  <div>• Carlsberg Special Brew</div>
+                  <div>• Corona</div>
+                  <div>• GB Beer</div>
+                  <div>• Three Coins Irish Dark</div>
+                  <div>• Grand Blonde</div>
+                  <div>• Sando Power Strong Beer</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Gin & Special Spirits */}
+            <motion.div
+              variants={fadeInUp}
+              className="bg-gradient-to-br from-blue-50 to-purple-100 p-6 rounded-xl border border-blue-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-xl">🍸</span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-blue-800">Gin & Special Spirits</h4>
+                  <p className="text-sm text-blue-700">Premium & Craft Varieties</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-blue-800 font-semibold">Available Brands:</div>
+                <div className="grid grid-cols-1 gap-1 text-xs text-blue-700">
+                  <div>• Colombo No.7 Gin</div>
+                  <div>• London Spice Dry Gin</div>
+                  <div>• Island Rum</div>
+                  <div>• Premium International Spirits</div>
+                  <div>• Fine Wines Collection</div>
+                  <div>• Craft Spirits</div>
+                </div>
+          </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Alcohol Products Gallery */}
+      <motion.section 
+        className="py-8 sm:py-12 bg-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-8 sm:mb-12"
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              Premium Alcohol Products
+            </h3>
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
+              Professional selection of authentic brands and premium spirits
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-30px" }}
+          >
+            {/* Arrack Collection */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/sri-lankan-arrack-bottles.jpg"
+                alt="Authentic Sri Lankan Arrack Collection - DCL Distilled Arrack, Old Arrack, Extra Special, VSO, Premium Varieties"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Authentic Sri Lankan Arrack</h4>
+                <p className="text-white/90 text-sm">DCL Premium Varieties & Traditional Collection</p>
+              </div>
+            </motion.div>
+
+            {/* Whisky & Spirits */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-brown-400 to-amber-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/premium-spirits-collection.jpg"
+                alt="Premium International Spirits Collection - Bourbon Whiskey, Rum, Gin, Brandy, Agave Spirits, Craft Spirits"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Premium International Spirits</h4>
+                <p className="text-white/90 text-sm">Bourbon, Rum, Gin, Brandy & Craft Spirits</p>
+              </div>
+            </motion.div>
+
+            {/* Beer Collection */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/international-beer-collection.jpg"
+                alt="Premium International Beer Collection - Guinness, Asahi, Leffe, Bombardier, Craft Beers, Stouts, Ales"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Premium International Beers</h4>
+                <p className="text-white/90 text-sm">Craft Beers, Stouts, Ales & International Brands</p>
+              </div>
+            </motion.div>
+
+            {/* Beer Celebration */}
+            <motion.div
+              variants={fadeInUp}
+              className="relative group"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+              <img
+                src="/images/beer-mugs-clinking.jpg"
+                alt="Dynamic Beer Celebration - Golden Beer Mugs Clinking with Dramatic Splash and Foam"
+                className="relative w-full h-64 sm:h-80 object-cover rounded-2xl shadow-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h4 className="text-white font-bold text-lg mb-1">Beer Celebration</h4>
+                <p className="text-white/90 text-sm">Golden Beer Mugs with Dramatic Splash</p>
+              </div>
+            </motion.div>
+          </motion.div>
+          </div>
+      </motion.section>
+
       {/* Services Section */}
       <motion.section 
         className="py-8 sm:py-12 bg-gradient-to-br from-gray-50 to-white"
@@ -394,10 +668,10 @@ const WineStore = () => {
               viewport={{ once: true }}
             >
               <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-3">
-                Our Wine Collection
+                Our Alcohol Collection
               </h3>
               <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-                Curated selection of fine wines and premium spirits for true connoisseurs
+                Comprehensive selection of premium alcohol brands and spirits for all preferences
               </p>
             </motion.div>
             
@@ -535,7 +809,7 @@ const WineStore = () => {
                       <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{benefit.description}</p>
                     </motion.div>
                   ))}
-                </div>
+              </div>
               </motion.div>
             </motion.div>
           </div>
