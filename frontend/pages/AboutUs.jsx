@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import MobileNavigation from "../components/MobileNavigation";
 import { 
   Row, Col, Card, Typography, Space, Divider, Avatar, 
   Layout, theme, ConfigProvider, Timeline, Statistic
@@ -133,7 +134,32 @@ const AboutUs = () => {
       }}
     >
       <Layout className="min-h-screen">
-        <Content className="pt-0">
+        {/* Mobile Header */}
+        <Header className="bg-white shadow-lg border-b border-gray-200 fixed w-full z-50 px-4 lg:px-8 lg:hidden">
+          <div className="max-w-7xl mx-auto flex items-center justify-between h-18 md:h-22">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center space-x-3 sm:space-x-4"
+            >
+              <img
+                src="/images/image copy 2.png"
+                alt="AKR Group Logo"
+                className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-green-500"
+              />
+              <div>
+                <div className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900">AKR GROUP OF COMPANIES</div>
+                <div className="text-xs sm:text-sm text-gray-600">Excellence in every venture</div>
+              </div>
+            </motion.div>
+            
+            {/* Mobile Navigation */}
+            <MobileNavigation />
+          </div>
+        </Header>
+
+        <Content className="pt-16 lg:pt-0">
           {/* Page Title Section */}
           <motion.section 
             className="py-12 sm:py-16 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100"
@@ -167,41 +193,104 @@ const AboutUs = () => {
                 variants={fadeInUp}
               >
                 <Title level={2} className="mb-4 text-gray-900">
-                  Mission & Vision
+                  Our Mission & Vision
                 </Title>
                 <Paragraph className="text-lg text-gray-600 max-w-3xl mx-auto">
                   Our guiding principles that drive our commitment to excellence and community service.
                 </Paragraph>
               </motion.div>
               
-              <Row gutter={[32, 32]}>
+              <Row gutter={[32, 32]} className="mb-16">
                 <Col xs={24} lg={12}>
                   <motion.div variants={fadeInUp}>
-                    <div className="h-full p-8 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-lg shadow-lg">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-6">
-                        <BulbOutlined className="text-2xl text-white" />
+                    <div className="h-full p-6 sm:p-8 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg shadow-lg">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 border border-blue-300 rounded-full mb-6">
+                        <BulbOutlined className="text-2xl text-blue-600" />
                       </div>
-                      <Title level={3} className="text-white mb-6">
-                        Our Mission
+                      <Title level={3} className="text-blue-800 mb-6">
+                        Mission
                       </Title>
-                      <Paragraph className="text-green-100 text-lg leading-relaxed">
-                        To deliver exceptional services with integrity, innovation, and community impact. We strive to be the most trusted business group in Sri Lanka, fostering sustainable progress and empowering communities through our diverse portfolio of businesses.
+                      <Paragraph className="text-blue-700 text-base sm:text-lg leading-relaxed">
+                        To deliver exceptional products and services across diverse industries, while setting new standards in quality, innovation, and customer care — all driven by a deep commitment to uplifting communities and empowering lives.
                       </Paragraph>
                     </div>
                   </motion.div>
                 </Col>
                 <Col xs={24} lg={12}>
                   <motion.div variants={fadeInUp}>
-                    <div className="h-full p-8 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg shadow-lg">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-6">
-                        <StarOutlined className="text-2xl text-white" />
+                    <div className="h-full p-6 sm:p-8 bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg shadow-lg">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 border border-green-300 rounded-full mb-6">
+                        <StarOutlined className="text-2xl text-green-600" />
                       </div>
-                      <Title level={3} className="text-white mb-6">
-                        Our Vision
+                      <Title level={3} className="text-green-800 mb-6">
+                        Vision
                       </Title>
-                      <Paragraph className="text-blue-100 text-lg leading-relaxed">
-                        To be Sri Lanka's most trusted business group, fostering sustainable progress and creating lasting positive impact in the communities we serve. We envision a future where AKR Group continues to lead by example in business excellence and social responsibility.
+                      <Paragraph className="text-green-700 text-base sm:text-lg leading-relaxed">
+                        To become Sri Lanka's most trusted and admired business group, recognized for our unwavering dedication to excellence, sustainable growth, and a meaningful impact on every community we serve.
                       </Paragraph>
+                    </div>
+                  </motion.div>
+                </Col>
+              </Row>
+
+              {/* Values */}
+              <Row gutter={[32, 32]}>
+                <Col xs={24}>
+                  <motion.div variants={fadeInUp}>
+                    <div className="p-6 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg shadow-lg">
+                      <Title level={3} className="text-gray-800 mb-8 text-center">
+                        Values
+                      </Title>
+                      <Row gutter={[24, 24]}>
+                        <Col xs={24} md={12}>
+                          <div className="flex items-start mb-6">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                            <div>
+                              <Title level={5} className="text-gray-800 mb-2">
+                                Integrity & Transparency
+                              </Title>
+                              <Paragraph className="text-gray-700 text-sm sm:text-base leading-relaxed mb-0">
+                                We build trust through honesty and openness in everything we do.
+                              </Paragraph>
+                            </div>
+                          </div>
+                          <div className="flex items-start mb-6">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                            <div>
+                              <Title level={5} className="text-gray-800 mb-2">
+                                Excellence in Service
+                              </Title>
+                              <Paragraph className="text-gray-700 text-sm sm:text-base leading-relaxed mb-0">
+                                We go beyond expectations, delivering value at every touchpoint.
+                              </Paragraph>
+                            </div>
+                          </div>
+                        </Col>
+                        <Col xs={24} md={12}>
+                          <div className="flex items-start mb-6">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                            <div>
+                              <Title level={5} className="text-gray-800 mb-2">
+                                Community Development
+                              </Title>
+                              <Paragraph className="text-gray-700 text-sm sm:text-base leading-relaxed mb-0">
+                                We believe in giving back and nurturing strong, resilient communities.
+                              </Paragraph>
+                            </div>
+                          </div>
+                          <div className="flex items-start mb-6">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                            <div>
+                              <Title level={5} className="text-gray-800 mb-2">
+                                Sustainable Growth
+                              </Title>
+                              <Paragraph className="text-gray-700 text-sm sm:text-base leading-relaxed mb-0">
+                                We grow responsibly, with a focus on long-term impact and environmental stewardship.
+                              </Paragraph>
+                            </div>
+                          </div>
+                        </Col>
+                      </Row>
                     </div>
                   </motion.div>
                 </Col>

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../lib/axios";
 import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
+import MobileNavigation from "../components/MobileNavigation";
 import { motion } from "framer-motion";
 import { 
   Carousel, Row, Col, Card, Button, Typography, Space, Divider, 
@@ -192,26 +193,7 @@ const Home = () => {
     }
   ];
 
-  const mobileMenuItems = [
-    {
-      key: 'companies',
-      icon: <BuildOutlined />,
-      label: 'Our Companies',
-      onClick: () => document.getElementById('companies-section')?.scrollIntoView({ behavior: 'smooth' })
-    },
-    {
-      key: 'story',
-      icon: <InfoCircleOutlined />,
-      label: 'Our Story',
-      onClick: () => document.getElementById('story-section')?.scrollIntoView({ behavior: 'smooth' })
-    },
-    {
-      key: 'about',
-      icon: <InfoCircleOutlined />,
-      label: 'About Us',
-      onClick: () => navigate('/about')
-    }
-  ];
+
 
   if (!settings) return <LoadingSpinner fullScreen={true} text="Loading AKR Group..." />;
 
@@ -260,32 +242,7 @@ const Home = () => {
             </motion.div>
 
             {/* Mobile Menu Button */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="md:hidden"
-            >
-              <Dropdown
-                menu={{
-                  items: mobileMenuItems,
-                  onClick: ({ key }) => {
-                    const item = mobileMenuItems.find(item => item.key === key);
-                    if (item) {
-                      item.onClick();
-                    }
-                  }
-                }}
-                placement="bottomRight"
-                trigger={['click']}
-              >
-                <Button
-                  type="text"
-                  icon={<MenuOutlined />}
-                  className="text-green-600"
-                />
-              </Dropdown>
-            </motion.div>
+            <MobileNavigation />
           </div>
         </Header>
 
@@ -366,15 +323,15 @@ const Home = () => {
                       alt="AKR Group Banner"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/80"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/70"></div>
                   </div>
                 ))}
               </Carousel>
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-green-800 via-green-700 to-green-900"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900"></div>
             )}
             {/* Professional overlay for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30"></div>
           </div>
 
           {/* Hero Content */}
@@ -391,11 +348,11 @@ const Home = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.8, delay: 0.1 }}
-                  className="mb-6"
+                  className="mb-8"
                 >
-                  <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                    <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                    <span className="text-sm font-medium text-white/90">Established 1978</span>
+                  <div className="inline-flex items-center px-6 py-3 bg-white/15 backdrop-blur-md rounded-full border border-white/25 shadow-lg">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-sm font-semibold text-white tracking-wide">Established 1978</span>
                   </div>
                 </motion.div>
 
@@ -404,14 +361,14 @@ const Home = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.2, delay: 0.3 }}
-                  className="mb-8 sm:mb-10"
+                  className="mb-10 sm:mb-12"
                 >
                   <Title 
                     level={1} 
                     className="text-white mb-6 sm:mb-8 !text-4xl sm:!text-5xl md:!text-6xl lg:!text-7xl xl:!text-8xl font-bold leading-tight tracking-tight drop-shadow-2xl"
                     style={{ color: settings.akrGroupHeadingColor || '#fff' }}
                   >
-                    {settings.akrGroupHeading || 'Welcome to AKR Group'}
+                    {settings.akrGroupHeading || 'AKR Group of Companies'}
                   </Title>
                 </motion.div>
 
@@ -420,13 +377,13 @@ const Home = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.2, delay: 0.5 }}
-                  className="mb-10 sm:mb-12 md:mb-16"
+                  className="mb-12 sm:mb-16 md:mb-20"
                 >
                   <Paragraph 
-                    className="text-gray-100 mb-6 sm:mb-8 text-lg sm:text-xl md:text-2xl lg:text-3xl leading-relaxed max-w-5xl mx-auto font-light drop-shadow-lg"
+                    className="text-gray-100 mb-6 sm:mb-8 text-lg sm:text-xl md:text-2xl lg:text-3xl leading-relaxed max-w-4xl mx-auto font-light drop-shadow-lg"
                     style={{ color: settings.akrGroupSubheadingColor || '#f3f4f6' }}
                   >
-                    {settings.akrGroupSubheading || 'Discover our diverse portfolio of businesses, each committed to excellence and innovation. Experience the legacy of trust and community service since 1978.'}
+                    {settings.akrGroupSubheading || 'A legacy of excellence spanning over four decades, delivering quality services across diverse industries while building stronger communities.'}
                   </Paragraph>
                 </motion.div>
                 
@@ -435,22 +392,22 @@ const Home = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.2, delay: 0.7 }}
-                  className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center items-center mb-16"
+                  className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 justify-center items-center mb-16"
                 >
                   <Button 
                     type="primary" 
                     size="large"
                     onClick={() => document.getElementById('companies-section')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="h-14 sm:h-16 px-10 sm:px-12 text-lg sm:text-xl font-bold shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 transition-all duration-300 border-0"
+                    className="h-12 sm:h-14 md:h-16 px-8 sm:px-12 md:px-16 text-base sm:text-lg md:text-xl font-bold shadow-2xl hover:shadow-3xl transform hover:-translate-y-1 transition-all duration-300 border-0 w-full sm:w-auto"
                     style={{ background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)', borderColor: '#52c41a' }}
                   >
-                    Explore Our Companies
+                    Explore
                   </Button>
                   <Button 
                     size="large"
                     ghost
                     onClick={() => document.getElementById('story-section')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="h-14 sm:h-16 px-10 sm:px-12 text-lg sm:text-xl font-bold border-2 border-white/30 hover:bg-white hover:text-gray-900 hover:border-white transform hover:-translate-y-2 transition-all duration-300 backdrop-blur-sm"
+                    className="h-12 sm:h-14 md:h-16 px-8 sm:px-12 md:px-16 text-base sm:text-lg md:text-xl font-bold border-2 border-white/40 hover:bg-white/10 hover:border-white/60 transform hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm w-full sm:w-auto"
                   >
                     Our Legacy
                   </Button>
@@ -556,10 +513,35 @@ const Home = () => {
           </div>
         </motion.section>
 
+        {/* Our Portfolio Section */}
+        <motion.section 
+          className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-white"
+          initial="initial"
+          whileInView="animate"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div 
+              className="text-center"
+              variants={fadeInUp}
+            >
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-8 sm:p-12 shadow-lg">
+                <Title level={2} className="mb-6 text-slate-800">
+                  Our Portfolio
+                </Title>
+                <Paragraph className="text-lg sm:text-xl text-slate-700 leading-relaxed max-w-5xl mx-auto">
+                  Discover the diverse portfolio of companies that make up the AKR Group family. Each division reflects our unwavering commitment to excellence, innovation, and community impact — driving progress across industries while staying rooted in our core values. Together, they form a vibrant ecosystem dedicated to serving people, empowering growth, and building a stronger future.
+                </Paragraph>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
+
         {/* AKR Group Story Section */}
         <motion.section 
           id="story-section" 
-          className="py-16 bg-white"
+          className="py-16 sm:py-20 bg-white"
           initial="initial"
           whileInView="animate"
           viewport={{ once: true }}
@@ -570,29 +552,166 @@ const Home = () => {
               className="text-center mb-16"
               variants={fadeInUp}
             >
-              <Title level={2} className="mb-4">
-                Our Legacy
+              <Title level={2} className="mb-6 text-gray-900">
+                The Story of AKR Group
               </Title>
-              <Paragraph className="text-lg text-gray-600 max-w-4xl mx-auto">
-                AKR Group's legacy began in 1978 with Mr. Anton, a humble bus driver who later transformed Sri Lanka's northern region with his entrepreneurial spirit.
+              <Title level={3} className="mb-8 text-green-600 font-light">
+                From Humble Beginnings to Regional Leadership
+              </Title>
+              <Paragraph className="text-lg text-gray-600 max-w-4xl mx-auto leading-relaxed">
+                The story of AKR Group is more than a business journey — it is a legacy of vision, resilience, and a deep commitment to uplift the community.
               </Paragraph>
             </motion.div>
 
             <Row gutter={[48, 48]} align="middle" className="mb-16">
               <Col xs={24} lg={12}>
                 <motion.div variants={fadeInUp}>
-                  <Title level={3} className="mb-6">
-                    A Family Legacy
+                  <Title level={3} className="mb-6 text-gray-900">
+                    The Beginning (1978-1990)
                   </Title>
                   <Paragraph className="text-lg text-gray-700 leading-relaxed mb-6">
-                    From mobile fuel sales to today's diverse ventures, the group reflects decades of resilience, innovation, and commitment to uplifting communities. Now led by Mr. Rojar Stalin, AKR continues to thrive under visionary leadership rooted in integrity and service to society.
+                    In 1978, Mr. Anton began his professional life as a bus driver with the Sri Lanka Transport Board. With unyielding determination and a dream to build something greater, he ventured abroad in 1984. After returning to Sri Lanka in 1989, he set his sights on transforming the regional commercial landscape.
                   </Paragraph>
-                  <Card className="bg-green-50 border-l-4 border-green-500">
-                    <Paragraph className="font-semibold text-green-800 mb-2">
-                      Our Guiding Principle
+                  <Paragraph className="text-lg text-gray-700 leading-relaxed mb-6">
+                    In 1990, he founded AKA, initially focusing on transport services and innovative mobile fuel sales using containers. Beyond business, Mr. Anton remained devoted to public welfare, launching initiatives to improve community well-being.
+                  </Paragraph>
+                </motion.div>
+              </Col>
+              
+              <Col xs={24} lg={12}>
+                <motion.div variants={scaleIn}>
+                  <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 h-full">
+                    <Title level={4} className="text-gray-800 mb-6">
+                      The Evolution to AKR
+                    </Title>
+                    <Paragraph className="text-gray-700 text-lg leading-relaxed mb-6">
+                      This relentless spirit of progress soon led to the rebranding of AKA as AKR, marking a pivotal phase of growth with the launch of the AKR Filling Station and AKR Wine Store, further expanding the company's commercial reach and impact.
                     </Paragraph>
-                    <Paragraph className="text-green-700 italic">
-                      "Eradicate poverty, empower through knowledge."
+                    
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <Title level={5} className="text-green-800 mb-3">
+                        Our Guiding Principle
+                      </Title>
+                      <Paragraph className="text-green-700 italic text-lg mb-0">
+                        "Eradicate poverty, empower through knowledge."
+                      </Paragraph>
+                    </div>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+            {/* Family Legacy */}
+            <Row gutter={[48, 48]} align="middle" className="mb-16">
+              <Col xs={24} lg={12}>
+                <motion.div variants={fadeInUp}>
+                  <Title level={3} className="mb-6 text-gray-900">
+                    Our Family Legacy
+                  </Title>
+                  <Paragraph className="text-lg text-gray-700 leading-relaxed mb-6">
+                    AKR's strength lies in its roots — a family legacy built on integrity, hard work, and visionary leadership.
+                  </Paragraph>
+                  <Paragraph className="text-lg text-gray-700 leading-relaxed mb-6">
+                    As the torchbearer of this legacy, Mr. Rojar Stalin, Mr. Anton's son, took over the leadership and propelled the company into a new era. His forward-thinking mindset and commitment to community development have driven AKR to new heights while staying true to the values instilled by his father.
+                  </Paragraph>
+                  <Paragraph className="text-lg text-gray-700 leading-relaxed">
+                    Together, the family's collective dedication continues to guide AKR's mission: empowering communities, fostering economic growth, and creating sustainable value for future generations.
+                  </Paragraph>
+                </motion.div>
+              </Col>
+              
+              <Col xs={24} lg={12}>
+                <motion.div variants={scaleIn}>
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 h-full">
+                    <Title level={4} className="text-blue-800 mb-6">
+                      AKR Today: A Pillar of Progress
+                    </Title>
+                    <Paragraph className="text-blue-700 text-lg leading-relaxed mb-6">
+                      Today, AKR Group stands as a leading, integrated commercial powerhouse in Sri Lanka's Northern Province. Our diverse range of divisions reflects our commitment to serving a wide spectrum of community and customer needs:
+                    </Paragraph>
+                    <div className="grid grid-cols-1 gap-2 text-blue-700">
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR & Sons (Pvt) Ltd</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Multi Complex</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Construction</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Lanka Filling Station</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Wine Store</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Farm</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR's Amma Organization</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span>AKR Easy Credit (Pvt) Ltd</span>
+                      </div>
+                    </div>
+                    <Paragraph className="text-blue-700 text-lg leading-relaxed mt-6">
+                      With each endeavor, we aim to set new standards of quality, reliability, and innovation.
+                    </Paragraph>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+            {/* AKR Family Portrait */}
+            <motion.div 
+              className="mb-16 flex justify-center"
+              variants={fadeInUp}
+            >
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-100 max-w-2xl">
+                <img
+                  src="/images/image copy.png"
+                  alt="AKR Group Family"
+                  className="w-full h-auto max-h-[400px] object-contain"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <Title level={4} className="text-white mb-1 drop-shadow-lg text-lg sm:text-xl font-bold">
+                    The AKR Family
+                  </Title>
+                  <Paragraph className="text-white/95 drop-shadow-lg text-sm sm:text-base font-medium mb-0">
+                    United in vision, committed to excellence
+                  </Paragraph>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Our Guiding Principle */}
+            <Row gutter={[48, 48]} align="middle" className="mb-16">
+              <Col xs={24} lg={12}>
+                <motion.div variants={fadeInUp}>
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 h-full">
+                    <Title level={4} className="text-green-800 mb-6">
+                      Our Guiding Principle
+                    </Title>
+                    <div className="text-center mb-6 bg-green-100 rounded-lg p-4 border border-green-300">
+                      <Paragraph className="text-green-800 text-2xl font-bold italic leading-relaxed mb-0">
+                        "Eradicate poverty, empower through knowledge."
+                      </Paragraph>
+                    </div>
+                    <Paragraph className="text-green-700 text-lg leading-relaxed mb-4">
+                      This ethos reflects our unwavering dedication to community development, education, and creating opportunities for growth.
+                    </Paragraph>
+                    <Paragraph className="text-green-700 text-lg leading-relaxed">
+                      Through various public service initiatives and regional development projects, we strive to make a meaningful impact — transforming lives and building a future where every individual can thrive.
                     </Paragraph>
                   </Card>
                 </motion.div>
@@ -600,70 +719,272 @@ const Home = () => {
               
               <Col xs={24} lg={12}>
                 <motion.div variants={scaleIn}>
-                  <Card className="bg-gradient-to-br from-green-500 to-green-700 text-white">
-                    <Title level={4} className="text-white mb-6">
-                      Mission & Vision
+                  <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 h-full">
+                    <Title level={4} className="text-slate-800 mb-6">
+                      Our Pride & Promise
                     </Title>
-                    <Space direction="vertical" size="large" className="w-full">
-                      <div>
-                        <Title level={5} className="text-white mb-3">
-                          Mission
-                        </Title>
-                        <Paragraph className="text-green-100">
-                          Deliver exceptional services with integrity, innovation, and community impact.
-                        </Paragraph>
-                      </div>
-                      <div>
-                        <Title level={5} className="text-white mb-3">
-                          Vision
-                        </Title>
-                        <Paragraph className="text-green-100">
-                          Be Sri Lanka's most trusted business group, fostering sustainable progress.
-                        </Paragraph>
-                      </div>
-                    </Space>
+                    <Paragraph className="text-slate-700 text-lg leading-relaxed mb-4">
+                      From humble beginnings to becoming a beacon of progress, AKR Group's journey embodies the spirit of resilience and shared success.
+                    </Paragraph>
+                    <Paragraph className="text-slate-700 text-lg leading-relaxed mb-6">
+                      We take immense pride in our history and even greater pride in the future we continue to build — together with our family, our employees, and the communities we serve.
+                    </Paragraph>
+                    <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 text-center">
+                      <Paragraph className="text-slate-800 text-xl font-semibold italic mb-0">
+                        Join us as we continue to write this extraordinary story, one chapter at a time.
+                      </Paragraph>
+                    </div>
                   </Card>
                 </motion.div>
               </Col>
             </Row>
 
-            {/* Core Values */}
-            <div className="text-center">
-              <motion.div variants={fadeInUp}>
-                <Title level={3} className="mb-12">
-                  Our Core Values
-                </Title>
-              </motion.div>
-              <Row gutter={[24, 24]}>
-                {CORE_VALUES.map((value, index) => {
-                  const IconComponent = value.icon;
-                  return (
-                    <Col xs={24} sm={12} lg={6} key={index}>
-                      <motion.div
-                        variants={scaleIn}
-                        whileHover={{ y: -5 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Card className="text-center h-full hover:shadow-lg transition-shadow">
+            {/* Mission & Vision */}
+            <motion.div 
+              className="text-center mb-12"
+              variants={fadeInUp}
+            >
+              <Title level={2} className="mb-6 text-gray-900">
+                Our Mission & Vision
+              </Title>
+            </motion.div>
+            
+            <Row gutter={[32, 32]} className="mb-16">
+              <Col xs={24} lg={12}>
+                <motion.div variants={fadeInUp}>
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 h-full">
+                    <Title level={3} className="text-blue-800 mb-6">
+                      Mission
+                    </Title>
+                    <Paragraph className="text-blue-700 text-lg leading-relaxed">
+                      To deliver exceptional products and services across diverse industries, while setting new standards in quality, innovation, and customer care — all driven by a deep commitment to uplifting communities and empowering lives.
+                    </Paragraph>
+                  </Card>
+                </motion.div>
+              </Col>
+              
+              <Col xs={24} lg={12}>
+                <motion.div variants={scaleIn}>
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 h-full">
+                    <Title level={3} className="text-green-800 mb-6">
+                      Vision
+                    </Title>
+                    <Paragraph className="text-green-700 text-lg leading-relaxed">
+                      To become Sri Lanka's most trusted and admired business group, recognized for our unwavering dedication to excellence, sustainable growth, and a meaningful impact on every community we serve.
+                    </Paragraph>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+            {/* Values */}
+            <Row gutter={[32, 32]}>
+              <Col xs={24}>
+                <motion.div variants={fadeInUp}>
+                  <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200">
+                    <Title level={3} className="text-gray-800 mb-8 text-center">
+                      Values
+                    </Title>
+                    <Row gutter={[24, 24]}>
+                      <Col xs={24} md={12}>
+                        <div className="flex items-start mb-6">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                          <div>
+                            <Title level={5} className="text-gray-800 mb-2">
+                              Integrity & Transparency
+                            </Title>
+                            <Paragraph className="text-gray-700 text-base leading-relaxed mb-0">
+                              We build trust through honesty and openness in everything we do.
+                            </Paragraph>
+                          </div>
+                        </div>
+                        <div className="flex items-start mb-6">
+                          <div className="w-3 h-3 bg-green-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                          <div>
+                            <Title level={5} className="text-gray-800 mb-2">
+                              Excellence in Service
+                            </Title>
+                            <Paragraph className="text-gray-700 text-base leading-relaxed mb-0">
+                              We go beyond expectations, delivering value at every touchpoint.
+                            </Paragraph>
+                          </div>
+                        </div>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <div className="flex items-start mb-6">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                          <div>
+                            <Title level={5} className="text-gray-800 mb-2">
+                              Community Development
+                            </Title>
+                            <Paragraph className="text-gray-700 text-base leading-relaxed mb-0">
+                              We believe in giving back and nurturing strong, resilient communities.
+                            </Paragraph>
+                          </div>
+                        </div>
+                        <div className="flex items-start mb-6">
+                          <div className="w-3 h-3 bg-green-500 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                          <div>
+                            <Title level={5} className="text-gray-800 mb-2">
+                              Sustainable Growth
+                            </Title>
+                            <Paragraph className="text-gray-700 text-base leading-relaxed mb-0">
+                              We grow responsibly, with a focus on long-term impact and environmental stewardship.
+                            </Paragraph>
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+            {/* Leadership Team */}
+            <motion.div 
+              className="text-center mb-12"
+              variants={fadeInUp}
+            >
+              <Title level={2} className="mb-6 text-gray-900">
+                Our Leadership Team
+              </Title>
+            </motion.div>
+            
+            <Row gutter={[32, 32]} className="mb-16">
+              {/* Founder */}
+              <Col xs={24} lg={12}>
+                <motion.div variants={fadeInUp}>
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 h-full">
+                    <div className="text-center">
+                      <Avatar 
+                        size={80} 
+                        icon={<UserOutlined />} 
+                        className="mb-4 bg-gradient-to-r from-purple-500 to-purple-600"
+                        style={{ color: 'white' }}
+                      />
+                      <Title level={3} className="text-purple-800 mb-2">
+                        Founder of AKR
+                      </Title>
+                      <Title level={4} className="text-purple-700 mb-3">
+                        S. Anton
+                      </Title>
+                    </div>
+                  </Card>
+                </motion.div>
+              </Col>
+              
+              {/* CEO */}
+              <Col xs={24} lg={12}>
+                <motion.div variants={scaleIn}>
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 h-full">
+                    <div className="text-center">
+                      <Avatar 
+                        size={80} 
+                        icon={<UserOutlined />} 
+                        className="mb-4 bg-gradient-to-r from-blue-500 to-blue-600"
+                        style={{ color: 'white' }}
+                      />
+                      <Title level={3} className="text-blue-800 mb-2">
+                        CEO of AKR
+                      </Title>
+                      <Title level={4} className="text-blue-700 mb-3">
+                        Anton Rojar Stalin
+                      </Title>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <PhoneOutlined className="text-blue-600" />
+                          <a href="tel:0773111266" className="text-blue-700 hover:text-blue-800 underline">
+                            0773111266
+                          </a>
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <MailOutlined className="text-blue-600" />
+                          <a href="mailto:antonrojarstalin@gmail.com" className="text-blue-700 hover:text-blue-800 underline">
+                            antonrojarstalin@gmail.com
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+            {/* Directors Board */}
+            <Row gutter={[32, 32]} className="mb-16">
+              <Col xs={24}>
+                <motion.div variants={fadeInUp}>
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
+                    <Title level={3} className="text-green-800 mb-8 text-center">
+                      Directors Board
+                    </Title>
+                    <Row gutter={[24, 24]}>
+                      <Col xs={24} md={8}>
+                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
                           <Avatar 
-                            size={64} 
-                            icon={<IconComponent />} 
-                            className="mb-4 bg-green-100 text-green-600"
-                            style={{ backgroundColor: value.color + '20', color: value.color }}
+                            size={60} 
+                            icon={<UserOutlined />} 
+                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
+                            style={{ color: 'white' }}
                           />
-                          <Title level={4} className="mb-3">
-                            {value.title}
+                          <Title level={5} className="text-green-800 mb-2">
+                            1. ANTON FLOREDA GAMINI
                           </Title>
-                          <Paragraph className="text-gray-600">
-                            {value.description}
-                          </Paragraph>
-                        </Card>
-                      </motion.div>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </div>
+                          <div className="flex items-center justify-center gap-2">
+                            <MailOutlined className="text-green-600" />
+                            <a href="mailto:antonfloridagamini@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
+                              antonfloridagamini@gmail.com
+                            </a>
+                          </div>
+                        </div>
+                      </Col>
+                      
+                      <Col xs={24} md={8}>
+                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
+                          <Avatar 
+                            size={60} 
+                            icon={<UserOutlined />} 
+                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
+                            style={{ color: 'white' }}
+                          />
+                          <Title level={5} className="text-green-800 mb-2">
+                            2. Anton Andrew Rajan
+                          </Title>
+                          <div className="flex items-center justify-center gap-2">
+                            <MailOutlined className="text-green-600" />
+                            <a href="mailto:antonandrewrajan29@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
+                              antonandrewrajan29@gmail.com
+                            </a>
+                          </div>
+                        </div>
+                      </Col>
+                      
+                      <Col xs={24} md={8}>
+                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
+                          <Avatar 
+                            size={60} 
+                            icon={<UserOutlined />} 
+                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
+                            style={{ color: 'white' }}
+                          />
+                          <Title level={5} className="text-green-800 mb-2">
+                            3. Anton Anbu Rajan
+                          </Title>
+                          <div className="flex items-center justify-center gap-2">
+                            <MailOutlined className="text-green-600" />
+                            <a href="mailto:antonanburajan14@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
+                              antonanburajan14@gmail.com
+                            </a>
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </motion.div>
+              </Col>
+            </Row>
+
+
           </div>
         </motion.section>
 

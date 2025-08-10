@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import MobileNavigation from "../components/MobileNavigation";
 import { 
   Row, Col, Card, Typography, Space, Divider, Avatar, 
   Layout, theme, ConfigProvider, Collapse, List
@@ -117,7 +118,32 @@ const PrivacyPolicy = () => {
       }}
     >
       <Layout className="min-h-screen">
-        <Content className="pt-0">
+        {/* Mobile Header */}
+        <Header className="bg-white shadow-lg border-b border-gray-200 fixed w-full z-50 px-4 lg:px-8 lg:hidden">
+          <div className="max-w-7xl mx-auto flex items-center justify-between h-18 md:h-22">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center space-x-3 sm:space-x-4"
+            >
+              <img
+                src="/images/image copy 2.png"
+                alt="AKR Group Logo"
+                className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-green-500"
+              />
+              <div>
+                <div className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900">AKR GROUP OF COMPANIES</div>
+                <div className="text-xs sm:text-sm text-gray-600">Excellence in every venture</div>
+              </div>
+            </motion.div>
+            
+            {/* Mobile Navigation */}
+            <MobileNavigation />
+          </div>
+        </Header>
+
+        <Content className="pt-16 lg:pt-0">
           {/* Page Title Section */}
           <motion.section 
             className="py-12 sm:py-16 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import api from "../lib/axios";
+import MobileNavigation from "../components/MobileNavigation";
 import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock } from 'react-icons/fa';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -179,11 +180,16 @@ const Hotel = () => {
             {/* CTA Button */}
             <button 
               onClick={() => document.getElementById('rooms-section')?.scrollIntoView({ behavior: 'smooth' })}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center space-x-2"
+              className="hidden md:flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 items-center space-x-2"
             >
               <FaBed className="w-4 h-4" />
-              <span className="hidden sm:inline">Book Now</span>
+              <span>Book Now</span>
             </button>
+
+            {/* Mobile Navigation */}
+            <div className="md:hidden">
+              <MobileNavigation />
+            </div>
           </div>
         </div>
       </header>

@@ -1,8 +1,58 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../lib/axios';
-import { FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaBed, FaCalendarAlt } from 'react-icons/fa';
+import MobileNavigation from '../components/MobileNavigation';
+import { motion, useInView } from 'framer-motion';
+import { 
+  FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, 
+  FaBed, FaCalendarAlt, FaWineGlass, FaStar, FaLeaf, FaArrowRight, FaGift, 
+  FaCheckCircle, FaGlobe, FaCogs, FaUsers, FaHeart
+} from 'react-icons/fa';
 
 const WINE_STORE_LOGO = '/images/image copy 2.png'; // AKR Wine Store logo
+
+// Optimized Animation variants
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const fadeInLeft = {
+  hidden: { opacity: 0, x: -30 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const fadeInRight = {
+  hidden: { opacity: 0, x: 30 },
+  visible: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const scaleOnHover = {
+  scale: 1.02,
+  transition: { duration: 0.2, ease: "easeInOut" }
+};
 
 const Footer = ({ homepageLogo }) => (
   <footer className="bg-gradient-to-r from-green-700 to-green-400 text-white pt-10 pb-6 mt-16" id="contact">
@@ -48,195 +98,449 @@ const Footer = ({ homepageLogo }) => (
 const WineStore = () => {
   const [banners, setBanners] = useState([]);
   const [homepageLogo, setHomepageLogo] = useState("");
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/api/settings').then(res => {
-      // Get wine store images from the wineStoreSection
-      const wineStoreImages = res.data.wineStoreSection?.images || [];
-      setBanners(wineStoreImages.length > 0 ? wineStoreImages : []);
-      setHomepageLogo(res.data.homepageLogo || "");
-    });
+    const fetchData = async () => {
+      try {
+        const response = await api.get("/api/settings");
+        const settings = response.data;
+        const wineStoreImages = settings.wineStoreSection?.images || [];
+        setBanners(wineStoreImages.length > 0 ? wineStoreImages : []);
+        setHomepageLogo(settings.homepageLogo || "");
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (banners.length === 0) return;
-    const interval = setInterval(() => {
-      setSlideIndex(idx => (idx + 1) % banners.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [banners]);
+  if (loading) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Professional Header */}
-      <header className="bg-white shadow-lg border-b border-gray-200">
+      <motion.header 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="bg-white/98 backdrop-blur-md shadow-lg border-b border-gray-100 sticky top-0 z-50"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+          <div className="flex items-center justify-between h-14 md:h-16">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-4">
-              <img
-                src={WINE_STORE_LOGO}
-                alt="AKR Wine Store Logo"
-                className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-green-500"
-              />
-              <div>
-                <div className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">AKR WINE STORE</div>
-                <div className="text-xs sm:text-sm text-gray-600">Premium Wine & Spirits Collection</div>
-              </div>
-            </div>
-            {/* CTA Button */}
-            <button 
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center space-x-2"
-              disabled
+            <motion.div 
+              className="flex items-center space-x-3"
+              whileHover={{ scale: 1.01 }}
+              transition={{ duration: 0.2 }}
             >
-              <FaBed className="w-4 h-4" />
-              <span className="hidden sm:inline">Coming Soon</span>
-            </button>
+              <div className="relative">
+                <img
+                  src={WINE_STORE_LOGO}
+                  alt="AKR Wine Store Logo"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
+                />
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base md:text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  AKR WINE STORE
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  Premium Wine & Spirits Collection
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Mobile Navigation */}
+            <MobileNavigation />
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          {[
-            '/images/akr-wine-store.jpg'
-          ].map((img, i) => (
-            <img
-              key={img}
-              src={img}
-              alt="AKR Wine Store"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}
-            />
-          ))}
-          <div className="absolute inset-0 bg-black/60"></div>
+      <motion.section 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-purple-50 via-red-50 to-pink-50 relative overflow-hidden"
+      >
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20"
+            animate={{ 
+              x: [0, 50, 0],
+              y: [0, -50, 0],
+            }}
+            transition={{ 
+              duration: 15,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+          <motion.div
+            className="absolute top-0 right-10 w-48 h-48 md:w-64 md:h-64 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-20"
+            animate={{ 
+              x: [0, -30, 0],
+              y: [0, 30, 0],
+            }}
+            transition={{ 
+              duration: 18,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
         </div>
 
-        {/* Hero Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 lg:py-32">
-          <div className="text-center text-white">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-              AKR Wine Store
-            </h1>
-            <p className="text-lg md:text-xl lg:text-2xl text-gray-200 mb-8 max-w-4xl mx-auto">
-              A refined retail destination offering a curated selection of fine wines from around the world.
-            </p>
-          </div>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div
+              variants={fadeInUp}
+              className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-100 to-red-100 rounded-full mb-4"
+            >
+              <FaWineGlass className="w-3 h-3 text-purple-600 mr-2" />
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Curated Selection • Fine Wines • Global Collection</span>
+              <FaGlobe className="w-3 h-3 text-red-600 ml-2" />
+            </motion.div>
+
+            <motion.h1
+              variants={fadeInUp}
+              className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-800 via-purple-700 to-red-700 bg-clip-text text-transparent mb-4 leading-tight"
+            >
+              🍷 AKR Wine Store 🥂
+            </motion.h1>
+
+            <motion.p
+              variants={fadeInUp}
+              className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto"
+            >
+              A refined retail destination offering a curated selection of fine wines from around the world, crafted for true connoisseurs and enthusiasts alike.
+            </motion.p>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* About Section */}
+      <motion.section 
+        id="about" 
+        className="py-8 sm:py-12 md:py-16 bg-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Main Content */}
+          <motion.div 
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-12 lg:mb-16"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-30px" }}
+          >
+            <motion.div variants={fadeInLeft}>
+              <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-100 to-red-100 rounded-full mb-4">
+                <FaCheckCircle className="w-3 h-3 text-purple-600 mr-2" />
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">Curated Selection & Expert Consultation</span>
+              </div>
+              
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+                Crafted for 
+                <span className="bg-gradient-to-r from-purple-600 to-red-600 bg-clip-text text-transparent"> True Connoisseurs</span>
+              </h2>
+              
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-4">
+                We specialize in offering a carefully curated selection of fine wines from renowned vineyards and regions around the world. Our collection represents the pinnacle of winemaking excellence, sourced from the most prestigious wine-producing regions.
+              </p>
+              
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6">
+                Whether you're a seasoned connoisseur or an enthusiastic beginner, our expert team provides personalized recommendations and guidance to help you discover wines that perfectly match your taste and occasion.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {[
+                  { icon: FaWineGlass, label: "Fine Wines", color: "text-purple-600" },
+                  { icon: FaGlobe, label: "Global Selection", color: "text-red-600" },
+                  { icon: FaStar, label: "Premium Quality", color: "text-yellow-600" },
+                  { icon: FaUsers, label: "Expert Guidance", color: "text-blue-600" }
+                ].map((item, index) => (
+                  <motion.div 
+                    key={index}
+                    className="flex items-center space-x-2 p-2 sm:p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-300"
+                    whileHover={{ scale: 1.02 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center`}>
+                      <item.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${item.color}`} />
+                    </div>
+                    <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.label}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div 
+              variants={fadeInRight}
+              className="order-first lg:order-last"
+            >
+              <motion.div
+                className="relative group"
+                whileHover={{ scale: 1.01 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-red-500 rounded-2xl blur-xl opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+                <img
+                  src="/images/akr-wine-store.jpg"
+                  alt="AKR Wine Store"
+                  className="relative w-full h-64 sm:h-80 md:h-96 object-cover rounded-2xl shadow-xl"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent rounded-2xl"></div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+
+          {/* Features Grid */}
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+          >
+            {[
+              {
+                icon: "🍷",
+                title: "Fine Wines",
+                description: "Premium wines from renowned vineyards worldwide",
+                gradient: "from-purple-500 to-purple-600",
+                bgGradient: "from-purple-50 to-purple-100",
+                borderColor: "border-purple-200"
+              },
+              {
+                icon: "🥃",
+                title: "Premium Spirits",
+                description: "High-quality spirits and liqueurs for connoisseurs",
+                gradient: "from-red-500 to-red-600",
+                bgGradient: "from-red-50 to-red-100",
+                borderColor: "border-red-200"
+              },
+              {
+                icon: "👨‍💼",
+                title: "Expert Consultation",
+                description: "Professional wine recommendations and pairing advice",
+                gradient: "from-yellow-500 to-yellow-600",
+                bgGradient: "from-yellow-50 to-yellow-100",
+                borderColor: "border-yellow-200"
+              }
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                variants={fadeInUp}
+                className={`bg-gradient-to-br ${feature.bgGradient} p-4 sm:p-6 rounded-xl border ${feature.borderColor} text-center group hover:shadow-lg transition-all duration-300`}
+                whileHover={{ 
+                  scale: 1.02,
+                  transition: { duration: 0.2 }
+                }}
+              >
+                <motion.div 
+                  className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-md group-hover:shadow-lg transition-shadow duration-300`}
+                  whileHover={{ rotate: 180 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <span className="text-xl sm:text-2xl">{feature.icon}</span>
+                </motion.div>
+                <h3 className={`text-base sm:text-lg font-bold ${feature.gradient.includes('purple') ? 'text-purple-800' : feature.gradient.includes('red') ? 'text-red-800' : 'text-yellow-800'} mb-2`}>
+                  {feature.title}
+                </h3>
+                <p className={`text-xs sm:text-sm ${feature.gradient.includes('purple') ? 'text-purple-700' : feature.gradient.includes('red') ? 'text-red-700' : 'text-yellow-700'} leading-relaxed`}>
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </motion.section>
 
       {/* Services Section */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Our Wine Collection
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              Premium quality wines and spirits from renowned vineyards worldwide.
-            </p>
-          </div>
-
-          {/* Coming Soon Message */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-8 md:p-12 text-center mb-12">
-            <div className="text-6xl mb-6">🍷</div>
-            <h3 className="text-2xl md:text-3xl font-bold text-green-800 mb-4">
-              Services Coming Soon!
-            </h3>
-            <p className="text-lg md:text-xl text-green-700 mb-6 max-w-2xl mx-auto">
-              We're currently setting up our wine store services. Our team is working hard to bring you the finest selection of wines, spirits, and premium beverages from around the world.
-            </p>
-            <div className="bg-white rounded-xl p-6 md:p-8 shadow-lg">
-              <h4 className="text-xl font-semibold text-gray-900 mb-4">Want to know more?</h4>
-              <p className="text-gray-600 mb-6">
-                Contact us for information about our upcoming wine and spirits collection.
+      <motion.section 
+        className="py-8 sm:py-12 bg-gradient-to-br from-gray-50 to-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 lg:p-8 mb-8">
+            <motion.div 
+              className="text-center mb-6 sm:mb-8"
+              variants={fadeInUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-3">
+                Our Wine Collection
+              </h3>
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+                Curated selection of fine wines and premium spirits for true connoisseurs
               </p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <div className="flex items-center space-x-3 text-lg">
-                  <FaPhoneAlt className="w-6 h-6 text-green-600" />
-                  <span className="font-semibold">0773111266</span>
-                </div>
-                <div className="flex items-center space-x-3 text-lg">
-                  <FaEnvelope className="w-6 h-6 text-green-600" />
-                  <span className="font-semibold">akrfuture@gmail.com</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {[
-              {
-                title: "Fine Wines",
-                description: "Premium wines from renowned vineyards and regions worldwide.",
-                icon: "🍷"
-              },
-              {
-                title: "Spirits",
-                description: "High-quality spirits including whiskey, vodka, and more.",
-                icon: "🥃"
-              },
-              {
-                title: "Expert Consultation",
-                description: "Professional wine recommendations and pairing advice.",
-                icon: "👨‍💼"
-              },
-              {
-                title: "Gift Services",
-                description: "Beautiful gift packaging and delivery for special occasions.",
-                icon: "🎁"
-              }
-            ].map((service, index) => (
-              <div key={index} className="bg-gray-50 p-6 rounded-xl shadow-lg text-center opacity-75">
-                <div className="text-4xl mb-4">{service.icon}</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{service.title}</h3>
-                <p className="text-gray-600 text-sm">{service.description}</p>
-                <div className="mt-4">
-                  <span className="hidden sm:inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
-                    Coming Soon
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 md:py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Why Choose AKR Wine Store?
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              We provide the finest selection of wines and spirits with expert service.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {[
-              "Premium wine selection",
-              "Expert consultation",
-              "Competitive pricing",
-              "Professional service",
-              "Gift packaging",
-              "Quality assurance"
-            ].map((feature, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+            </motion.div>
+            
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-30px" }}
+            >
+              {[
+                {
+                  icon: "🍷",
+                  title: "Fine Wines",
+                  description: "Premium wines from renowned vineyards and regions worldwide",
+                  features: ["Red wines", "White wines", "Rosé wines", "Sparkling wines"]
+                },
+                {
+                  icon: "🥃",
+                  title: "Premium Spirits",
+                  description: "High-quality spirits including whiskey, vodka, and more",
+                  features: ["Whiskey", "Vodka", "Gin", "Premium liqueurs"]
+                },
+                {
+                  icon: "👨‍💼",
+                  title: "Expert Consultation",
+                  description: "Professional wine recommendations and pairing advice",
+                  features: ["Wine pairing", "Tasting notes", "Expert guidance", "Personalized recommendations"]
+                },
+                {
+                  icon: "🎁",
+                  title: "Gift Services",
+                  description: "Beautiful gift packaging and delivery for special occasions",
+                  features: ["Gift packaging", "Special occasions", "Delivery service", "Custom arrangements"]
+                }
+              ].map((service, index) => (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
+                  className="bg-white p-4 sm:p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group"
+                  whileHover={{ 
+                    scale: 1.02,
+                    transition: { duration: 0.2 }
+                  }}
+                >
+                  <div className="flex items-start space-x-3 sm:space-x-4 mb-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                      <span className="text-lg sm:text-xl">{service.icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2">{service.title}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">{service.description}</p>
+                    </div>
                   </div>
-                  <span className="text-gray-900 font-medium">{feature}</span>
-                </div>
-              </div>
-            ))}
+                  <ul className="text-xs text-gray-500 space-y-1 ml-12 sm:ml-16">
+                    {service.features.map((feature, fIndex) => (
+                      <li key={fIndex} className="flex items-center space-x-2">
+                        <div className="w-1 h-1 bg-gradient-to-r from-purple-500 to-red-500 rounded-full"></div>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* Contact & Info Section */}
+      <motion.section 
+        className="py-8 sm:py-12 bg-white"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-4 sm:p-6 lg:p-8">
+            <motion.div 
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              <motion.div variants={fadeInLeft}>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 sm:mb-6">Contact AKR Wine Store</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  {[
+                    { icon: FaClock, title: "Business Hours", info: "Mon - Sat: 10:00 AM - 8:00 PM", subtitle: "Sunday: 12:00 PM - 6:00 PM" },
+                    { icon: FaMapMarkerAlt, title: "Location", info: "Main Street, Murunkan", subtitle: "Mannar - Premium wine destination" },
+                    { icon: FaPhoneAlt, title: "Get Wines", info: "Phone: 0773111266", subtitle: "Call for wine selection and consultation" }
+                  ].map((item, index) => (
+                    <motion.div 
+                      key={index}
+                      className="flex items-start space-x-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.01 }}
+                    >
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <item.icon className="text-white w-3 h-3 sm:w-4 sm:h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">{item.title}</h4>
+                        <p className="text-sm sm:text-base text-gray-700 font-medium">{item.info}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{item.subtitle}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+              
+              <motion.div variants={fadeInRight}>
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 sm:mb-6">Why Choose Us</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  {[
+                    { icon: "⭐", title: "Premium Selection", description: "Curated fine wines" },
+                    { icon: "🌍", title: "Global Collection", description: "Wines from worldwide" },
+                    { icon: "👨‍💼", title: "Expert Guidance", description: "Professional consultation" },
+                    { icon: "🎁", title: "Gift Services", description: "Beautiful packaging" }
+                  ].map((benefit, index) => (
+                    <motion.div 
+                      key={index}
+                      className="bg-white p-3 sm:p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="text-lg sm:text-xl mb-2">{benefit.icon}</div>
+                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">{benefit.title}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{benefit.description}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
 
       {/* Footer */}
       <Footer homepageLogo={homepageLogo} />

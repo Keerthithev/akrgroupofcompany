@@ -1,11 +1,40 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/axios";
+import MobileNavigation from "../components/MobileNavigation";
+import { motion } from "framer-motion";
+import { 
+  Card, Button, Typography, Row, Col
+} from 'antd';
 import { 
   FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFacebook, FaInstagram, FaTwitter,
   FaBed, FaShoppingCart, FaTruck, FaGasPump, FaWineGlass, FaSeedling, FaHeart, FaCreditCard,
-  FaArrowLeft
+  FaArrowLeft, FaDumbbell, FaFilm, FaUtensils, FaWrench
 } from 'react-icons/fa';
+import { RightOutlined } from '@ant-design/icons';
+
+const { Title, Paragraph } = Typography;
+
+// Animation variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 60 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const scaleIn = {
+  initial: { opacity: 0, scale: 0.8 },
+  animate: { opacity: 1, scale: 1 },
+  transition: { duration: 0.5 }
+};
 
 const Multicomplex = () => {
   const navigate = useNavigate();
@@ -28,86 +57,135 @@ const Multicomplex = () => {
 
   const SERVICE_CARDS = [
     { 
-      name: "Hotel & Room Booking", 
-      description: "Book luxury rooms and suites.", 
+      name: "Shopping Center", 
+      description: "A world-class shopping experience with diverse retail outlets and brands.",
       status: "active",
-      buttonText: "Book Now"
+      buttonText: "View Details",
+      icon: FaShoppingCart
     },
     { 
-      name: "Shopping", 
-      description: "A world-class shopping experience.", 
-      status: "coming-soon",
-      buttonText: "Coming Soon"
+      name: "Party Hall & Restaurant", 
+      description: "Perfect venue for your celebrations, weddings, and special events.",
+      status: "active",
+      buttonText: "View Details",
+      icon: FaUtensils
     },
     { 
-      name: "Gym", 
-      description: "State-of-the-art fitness center.", 
-      status: "coming-soon",
-      buttonText: "Coming Soon"
+      name: "Hotel & Rooms", 
+      description: "Book luxury rooms and suites with premium amenities and exceptional service.", 
+      status: "active",
+      buttonText: "View Details",
+      icon: FaBed
     },
     { 
-      name: "Theatre", 
-      description: "Enjoy the latest movies and shows.", 
-      status: "coming-soon",
-      buttonText: "Coming Soon"
+      name: "Gym & Theater", 
+      description: "State-of-the-art fitness center and premium entertainment theatre with latest movies and shows.",
+      status: "active",
+      buttonText: "View Details",
+      icon: FaDumbbell
     },
     { 
-      name: "Party Hall", 
-      description: "Perfect venue for your celebrations.", 
-      status: "coming-soon",
-      buttonText: "Coming Soon"
-    },
-    { 
-      name: "Service Center", 
-      description: "Expert maintenance and support.", 
-      status: "coming-soon",
-      buttonText: "Coming Soon"
+      name: "AKR Service Center", 
+      description: "Professional vehicle maintenance and repair services for all brands.",
+      status: "active",
+      buttonText: "View Details",
+      icon: FaWrench
     },
   ];
 
   // Helper to get image for a service card by name
   const getServiceImage = (name) => {
     if (!settings?.services) return null;
-    const svc = settings.services.find(s => s.name === name);
-    return svc && svc.images && svc.images.length > 0 ? svc.images[0] : null;
+    
+    // Map new names to existing service names in settings
+    let serviceName = name;
+    if (name === "Shopping Center") {
+      serviceName = "Shopping";
+    } else if (name === "Gym & Theater") {
+      serviceName = "Gym";
+    } else if (name === "Party Hall & Restaurant") {
+      serviceName = "Party Hall";
+    } else if (name === "AKR Service Center") {
+      serviceName = "Service Center";
+    } else if (name === "Hotel & Rooms") {
+      serviceName = "Hotel & Room Booking";
+    }
+    
+    const svc = settings.services.find(s => s.name === serviceName);
+    
+    // If service exists and has images, return the first image
+    if (svc && svc.images && svc.images.length > 0) {
+      return svc.images[0];
+    }
+    
+    // Fallback to direct image files if service doesn't have images configured
+    const fallbackImages = {
+      "Shopping Center": "/images/shopping.jpg",
+      "Hotel & Rooms": "/images/Hotel & Rooms.jpg",
+      "Gym & Theater": "/images/Gym & Theater.jpg", 
+      "Party Hall & Restaurant": "/images/partyhall.jpg",
+      "AKR Service Center": "/images/AKR Service Center.jpeg"
+    };
+    
+    return fallbackImages[name] || null;
   };
 
-  if (!settings) return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  const handleServiceClick = (service) => {
+    if (service.name === "Hotel & Rooms") {
+      navigate("/hotel");
+    } else if (service.name === "Shopping Center") {
+      navigate("/shopping");
+    } else if (service.name === "Gym & Theater") {
+      navigate("/gym");
+    } else if (service.name === "AKR Service Center") {
+      navigate("/servicecenter");
+    } else if (service.name === "Party Hall & Restaurant") {
+      navigate("/partyhall");
+    }
+  };
+
+  if (!settings) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Professional Header */}
-      <header className="bg-white shadow-lg border-b border-gray-200">
+      <header className="bg-white/98 backdrop-blur-md shadow-lg border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+          <div className="flex items-center justify-between h-14 md:h-16">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              {settings.homepageLogo && (
-                <img
-                  src={settings.homepageLogo}
-                  alt="AKR Logo"
-                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-green-500"
-                />
-              )}
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                {settings.homepageLogo && (
+                  <img
+                    src={settings.homepageLogo}
+                    alt="AKR Logo"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
+                  />
+                )}
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
               <div>
-                <div className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900">AKR MULTI COMPLEX</div>
-                <div className="text-xs sm:text-sm text-gray-600">Your destination for luxury and convenience</div>
+                <div className="text-sm sm:text-base md:text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  AKR MULTI COMPLEX
+                </div>
+                <div className="text-xs text-gray-500 font-medium">
+                  Luxury & Convenience Hub
+                </div>
               </div>
             </div>
-            {/* CTA Button - only show on sm and up */}
-            <button 
-              onClick={() => document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' })}
-              className="hidden sm:flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 items-center space-x-2"
-            >
-              <FaMapMarkerAlt className="w-4 h-4" />
-              <span>Explore Services</span>
-            </button>
+
+            {/* Mobile Navigation */}
+            <MobileNavigation />
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
+      {/* Hero Section - Left Aligned Text */}
+      <section className="relative bg-gradient-to-br from-green-50 via-blue-50 to-gray-50 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
           {settings.banners && settings.banners.length > 0 ? (
@@ -115,132 +193,130 @@ const Multicomplex = () => {
               <img
                 key={img}
                 src={img}
-                alt="Banner"
+                alt="AKR Multi Complex"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}
               />
             ))
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-green-800"></div>
           )}
-          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="absolute inset-0 bg-black/40"></div>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 lg:py-24">
+        {/* Hero Content - Left Aligned */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 lg:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="text-white">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-white">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 {settings.homepageHeading || 'AKR Multi Complex'}
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 md:mb-8 leading-relaxed" style={{ color: settings.homepageSubheadingColor || '#fff' }}>
-                {settings.homepageSubheading || 'Your destination for shopping, fitness, entertainment, and luxury accommodation in Mannar.'}
+              <p className="text-lg sm:text-xl md:text-2xl text-gray-200 mb-8 leading-relaxed" style={{ color: settings.homepageSubheadingColor || '#fff' }}>
+                {settings.homepageSubheading || 'Your premier destination for shopping, fitness, entertainment, dining, and luxury accommodation in Mannar.'}
               </p>
               
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   onClick={() => document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
-                  <FaMapMarkerAlt className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>Explore Services</span>
+                  <FaMapMarkerAlt className="w-5 h-5" />
+                  <span>Discover Our Services</span>
                 </button>
                 <button 
                   onClick={() => window.location.href = '/hotel'}
-                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-gray-900 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 flex items-center justify-center space-x-2"
                 >
-                  <FaBed className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <FaBed className="w-5 h-5" />
                   <span>Book Hotel Now</span>
                 </button>
               </div>
             </div>
-
-            {/* Right Content - Service Preview Images */}
-            <div className="hidden md:block">
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                {settings.banners && settings.banners.slice(0, 4).map((img, i) => (
-                  <div key={i} className="relative group">
-                    <img
-                      src={img}
-                      alt={`Service ${i + 1}`}
-                      className="w-full h-32 sm:h-40 lg:h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Right side intentionally left empty for clean design */}
+            <div className="hidden lg:block"></div>
           </div>
         </div>
       </section>
 
-      {/* Service Cards */}
-      <div id="services-section" className="flex-1 flex flex-col items-center justify-center py-6">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Our Services</h2>
-          <p className="text-gray-600">Experience luxury and convenience at AKR Multi Complex</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl px-4">
-          {SERVICE_CARDS.map((service, idx) => (
-            <div
-              key={service.name}
-              className={`bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center transition-transform duration-200 hover:scale-105 ${
-                service.status === 'active' ? 'ring-2 ring-green-500 shadow-xl' : 'opacity-75'
-              }`}
-            >
-              <div className="w-full h-40 md:h-56 relative mb-3 overflow-hidden rounded-xl">
-                {getServiceImage(service.name) ? (
-                  <img src={getServiceImage(service.name)} alt={service.name} className="w-full h-full object-cover rounded-xl" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 rounded-xl">No Image</div>
-                )}
-                {service.status === 'active' && (
-                  <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                    ACTIVE
-                  </div>
-                )}
-                {service.status === 'coming-soon' && (
-                  <div className="hidden sm:block absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                    COMING SOON
-                  </div>
-                )}
-              </div>
-              <h2 className="text-lg md:text-xl font-bold text-green-800 mb-1 text-center">{service.name}</h2>
-              <p className="text-gray-600 text-center text-sm mb-2">{service.description}</p>
-              <button
-                onClick={() => {
-                  if (service.name === "Hotel & Room Booking") {
-                    navigate("/hotel");
-                  } else if (service.name === "Shopping") {
-                    navigate("/shopping");
-                  } else if (service.name === "Gym") {
-                    navigate("/gym");
-                  } else if (service.name === "Theatre") {
-                    navigate("/theater");
-                  } else if (service.name === "Service Center") {
-                    navigate("/servicecenter");
-                  } else if (service.name === "Party Hall") {
-                    navigate("/partyhall");
-                  } else {
-                    alert("Coming soon!");
-                  }
-                }}
-                className={`mt-2 px-4 py-2 rounded-lg shadow transition w-full ${
-                  service.status === 'active' 
-                    ? 'bg-green-700 text-white hover:bg-green-800' 
-                    : 'bg-yellow-500 text-white hover:bg-yellow-600'
-                }`}
-              >
-                {service.buttonText}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Service Cards - Matching Home Page Style */}
+      <motion.section 
+        id="services-section" 
+        className="py-16 bg-gray-50"
+        initial="initial"
+        whileInView="animate"
+        viewport={{ once: true }}
+        variants={staggerContainer}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-16"
+            variants={fadeInUp}
+          >
+            <Title level={2} className="mb-4">
+              Our Premium Services
+            </Title>
+            <Paragraph className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Discover world-class amenities and services designed for your comfort and convenience at AKR Multi Complex.
+            </Paragraph>
+          </motion.div>
 
-      {/* Contact Info */}
-      {/* Footer (copied from Shopping/Gym pages) */}
+          <Row gutter={[24, 24]}>
+            {SERVICE_CARDS.map((service, index) => (
+              <Col xs={24} sm={12} lg={6} key={service.name}>
+                <motion.div
+                  variants={scaleIn}
+                  whileHover={{ y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="h-full"
+                >
+                  <Card
+                    hoverable
+                    className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg flex flex-col"
+                    cover={
+                      <div className="h-48 overflow-hidden">
+                        {getServiceImage(service.name) ? (
+                          <img 
+                            alt={service.name}
+                            src={getServiceImage(service.name)}
+                            className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
+                            <service.icon className="w-12 h-12" />
+                          </div>
+                        )}
+                      </div>
+                    }
+                    onClick={() => handleServiceClick(service)}
+                    bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                  >
+                    <div className="text-center flex flex-col h-full">
+                      <Title level={4} className="mb-2">
+                        {service.name}
+                      </Title>
+                      <Paragraph className="text-gray-600 text-sm mb-4 flex-grow">
+                        {service.description}
+                      </Paragraph>
+                      <div className="mt-auto">
+                        <Button 
+                          type="link" 
+                          icon={<RightOutlined />}
+                          className="p-0 h-auto text-green-600 hover:text-green-700"
+                        >
+                          {service.buttonText}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      </motion.section>
+
+      {/* Footer */}
       <footer className="bg-gradient-to-r from-green-700 to-green-400 text-white pt-10 pb-6 mt-16" id="contact">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="flex flex-col items-center md:items-start">
@@ -273,10 +349,10 @@ const Multicomplex = () => {
           <div className="flex flex-col gap-2 items-center md:items-start">
             <div className="font-semibold mb-1">Quick Links</div>
             <a href="/" className="hover:underline">Home</a>
-            <a href="/shopping" className="hover:underline">Shopping</a>
-            <a href="/gym" className="hover:underline">Gym</a>
-            <a href="/hotel" className="hover:underline">Hotel</a>
-            <a href="/theatre" className="hover:underline">Theatre</a>
+            <a href="/multicomplex" className="hover:underline">Multi Complex</a>
+            <a href="/shopping" className="hover:underline">Shopping Center</a>
+            <a href="/hotel" className="hover:underline">Hotel & Rooms</a>
+            <a href="/gym" className="hover:underline">Gym & Theatre</a>
             <a href="/partyhall" className="hover:underline">Party Hall</a>
             <a href="/servicecenter" className="hover:underline">Service Center</a>
             <a href="#contact" className="hover:underline">Contact</a>
