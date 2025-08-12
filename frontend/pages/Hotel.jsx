@@ -95,43 +95,6 @@ const Hotel = () => {
   const [availabilityDetails, setAvailabilityDetails] = useState({});
   const navigate = useNavigate();
 
-  // Auto-swipe functionality for mobile room cards
-  useEffect(() => {
-    const intervals = {};
-    
-    // Set up auto-swipe for each category
-    ['Economy', 'Business', 'First-Class'].forEach(category => {
-      const categoryRooms = rooms.filter(room => room.category === category);
-      if (categoryRooms.length > 1) {
-        intervals[category] = setInterval(() => {
-          setAutoSwipeIndexes(prev => {
-            const currentIndex = prev[category] || 0;
-            const nextIndex = (currentIndex + 1) % categoryRooms.length;
-            
-            // Scroll to the next room
-            const scrollContainer = autoSwipeRefs.current[category];
-            if (scrollContainer) {
-              const roomWidth = 320; // w-80 = 320px
-              const gap = 16; // gap-4 = 16px
-              const scrollAmount = (roomWidth + gap) * nextIndex;
-              scrollContainer.scrollTo({
-                left: scrollAmount,
-                behavior: 'smooth'
-              });
-            }
-            
-            return { ...prev, [category]: nextIndex };
-          });
-        }, 3000); // 3 seconds
-      }
-    });
-    
-    // Cleanup intervals on unmount
-    return () => {
-      Object.values(intervals).forEach(interval => clearInterval(interval));
-    };
-  }, [rooms]);
-
   // Auto-swipe functionality for mobile
   const [autoSwipeIndexes, setAutoSwipeIndexes] = useState({});
   const autoSwipeRefs = useRef({});
@@ -223,6 +186,83 @@ const Hotel = () => {
     
     return filtered;
   }, [rooms, sortBy, selectedCategory, selectedAmenities]);
+
+  // Auto-swipe functionality for mobile room cards - MOVED HERE
+  useEffect(() => {
+    let intervals = {};
+    
+    const setupAutoSwipe = () => {
+      // Only enable auto-swipe on mobile devices
+      const isMobile = window.innerWidth < 768; // md breakpoint
+      console.log('Setting up auto-swipe, isMobile:', isMobile);
+      
+      if (!isMobile) {
+        // Clear any existing intervals
+        Object.values(intervals).forEach(interval => clearInterval(interval));
+        intervals = {};
+        return;
+      }
+      
+      // Set up auto-swipe for each category
+      ['Economy', 'Business', 'First-Class'].forEach(category => {
+        const categoryRooms = filteredRooms.filter(room => room.category === category);
+        console.log(`${category} rooms:`, categoryRooms.length);
+        
+        if (categoryRooms.length > 1) {
+          intervals[category] = setInterval(() => {
+            console.log(`Auto-swiping ${category}...`);
+            
+            setAutoSwipeIndexes(prev => {
+              const currentIndex = prev[category] || 0;
+              const nextIndex = (currentIndex + 1) % categoryRooms.length;
+              
+              // Scroll to the next room
+              const scrollContainer = autoSwipeRefs.current[category];
+              if (scrollContainer) {
+                console.log(`Scrolling ${category} to index ${nextIndex}`);
+                
+                // Simple scroll calculation
+                const roomWidth = 320; // w-80 = 320px
+                const gap = 16; // gap-4 = 16px
+                const scrollAmount = (roomWidth + gap) * nextIndex;
+                
+                scrollContainer.scrollTo({
+                  left: scrollAmount,
+                  behavior: 'smooth'
+                });
+              } else {
+                console.log(`No scroll container found for ${category}`);
+              }
+              
+              return { ...prev, [category]: nextIndex };
+            });
+          }, 2500); // 2.5 seconds
+        }
+      });
+    };
+    
+    // Initial setup
+    setupAutoSwipe();
+    
+    // Handle window resize
+    const handleResize = () => {
+      console.log('Window resized, re-setting up auto-swipe');
+      // Clear existing intervals
+      Object.values(intervals).forEach(interval => clearInterval(interval));
+      intervals = {};
+      
+      // Setup again based on new screen size
+      setupAutoSwipe();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup intervals and event listener on unmount
+    return () => {
+      Object.values(intervals).forEach(interval => clearInterval(interval));
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [filteredRooms]); // Changed dependency from rooms to filteredRooms
 
   if (loading) return <LoadingSpinner fullScreen={true} text="Loading hotel experience..." />;
 
@@ -474,8 +514,8 @@ const Hotel = () => {
                   Mannar: {filteredRooms.length} properties found
                 </h1>
                 <p className="text-gray-600 mt-1">Discover comfortable accommodations on the second floor</p>
-              </div>
-              
+            </div>
+
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">Sort by:</span>
@@ -491,7 +531,7 @@ const Hotel = () => {
                   </select>
                 </div>
                 
-                <div className="flex items-center gap-1 bg-gray-100 rounded p-1">
+                <div className="hidden md:flex items-center gap-1 bg-gray-100 rounded p-1">
                   <button
                     onClick={() => setViewMode('list')}
                     className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
@@ -619,7 +659,17 @@ const Hotel = () => {
                                     })}
                                   </div>
                                 </div>
-                          <div className="flex items-center gap-2 mb-0.5">
+                                
+                                {/* Rating Text Display - Right corner under stars */}
+                                {room.reviewCount > 0 && (
+                                  <div className="flex justify-end mb-0.5">
+                                    <span className="text-sm font-bold text-black">
+                                      Good {room.averageRating}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center gap-2 mb-0.5">
                                   <span className={`text-xs px-2 py-1 rounded font-medium ${
                                     room.availabilityStatus === 'available' 
                                       ? 'bg-green-100 text-green-700' 
@@ -638,25 +688,17 @@ const Hotel = () => {
                               <span className="bg-green-200 text-green-800 text-xs px-2 py-1 rounded font-medium">Special Offer</span>
                             )}
                           </div>
-                                <div className="text-sm text-gray-600 mb-0.5">
-                                  <span className="text-green-600">AKR Multicomplex, Main street Murunkan, Mannar • km from centre</span>
-                                </div>
                                 
-                                {/* Rating Text Display */}
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <span className="text-sm font-semibold text-gray-800">
-                                    {room.reviewCount > 0 
-                                      ? `Good ${room.averageRating}`
-                                      : 'No reviews yet'
-                                    }
-                                  </span>
-                                  {room.reviewCount > 0 && (
-                                    <span className="text-sm text-gray-600">
-                                      Based on {room.reviewCount} review{room.reviewCount !== 1 ? 's' : ''}
-                                    </span>
+                                {/* Room Details */}
+                                <div className="mb-0.5">
+                                  <div className="text-gray-600 text-sm">
+                                    <span className="font-medium">{room.type}</span> • {room.size && `${room.size} m²`} {room.maxGuests && `${room.maxGuests} guests`}
+                                  </div>
+                                  {room.cancellationPolicy && (
+                                    <div className="text-gray-500 text-xs">📋 {room.cancellationPolicy}</div>
                                   )}
                                 </div>
-                                
+                        
                                 {/* Availability Details */}
                                 {room.availabilityStatus === 'unavailable' && room.availabilityDetails && (
                                   <div className="text-xs text-red-600 mb-0.5">
@@ -665,50 +707,25 @@ const Hotel = () => {
                                 )}
                         </div>
                         
-                        {/* Room Details */}
-                        <div className="mb-0.5">
-                          <div className="flex items-center gap-4">
-                            <div>
-                              <div className="text-gray-900 font-medium text-sm">{room.type}</div>
-                              <div className="text-gray-600 text-sm">{room.beds} • {room.maxGuests} guests</div>
-                            </div>
-                            {room.size && (
-                              <div className="text-gray-600 text-sm">{room.size} m²</div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* List View Only - Description and Privacy Policy */}
-                        {viewMode === 'list' && (
-                          <div className="mb-0.5">
-                            {room.description && (
-                              <div className="text-gray-600 text-sm italic mb-0.5">{room.description}</div>
-                            )}
-                            {room.cancellationPolicy && (
-                              <div className="text-gray-500 text-xs mb-0.5">📋 {room.cancellationPolicy}</div>
+                      {/* Amenities and Features Side by Side */}
+                        <div className="flex items-start gap-4 mb-0.5">
+                        {/* Amenities */}
+                        {room.amenities && room.amenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                            {room.amenities.slice(0, 3).map((amenity, i) => (
+                                <span key={i} className="bg-green-50 text-green-700 text-xs px-1 py-0.5 rounded border border-green-200">
+                                {amenity}
+                              </span>
+                            ))}
+                            {room.amenities.length > 3 && (
+                              <span className="text-xs text-gray-500">+{room.amenities.length - 3} more</span>
                             )}
                           </div>
                         )}
                         
-                        {/* Amenities and Features Side by Side */}
-                        <div className="flex items-start gap-4 mb-0.5">
-                          {/* Amenities */}
-                          {room.amenities && room.amenities.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {room.amenities.slice(0, 3).map((amenity, i) => (
-                                <span key={i} className="bg-green-50 text-green-700 text-xs px-1 py-0.5 rounded border border-green-200">
-                                  {amenity}
-                                </span>
-                              ))}
-                              {room.amenities.length > 3 && (
-                                <span className="text-xs text-gray-500">+{room.amenities.length - 3} more</span>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Features */}
+                        {/* Features */}
                           <div className="flex items-center gap-2">
-                            <span className="text-green-600 text-sm">✓ No prepayment needed - pay at the property</span>
+                          <span className="text-green-600 text-sm">✓ No prepayment needed - pay at the property</span>
                           </div>
                         </div>
                       </div>
@@ -788,10 +805,24 @@ const Hotel = () => {
                     
                     return (
                       <div key={category} className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">{category} Rooms</h2>
+                        <div className="flex items-center justify-between mb-4 px-4">
+                          <h2 className="text-xl font-bold text-gray-900">{category} Rooms</h2>
+                          {categoryRooms.length > 1 && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-xs text-gray-500">Auto-scroll</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="overflow-x-auto">
                           <div 
-                            ref={el => autoSwipeRefs.current[category] = el}
+                            ref={el => {
+                              autoSwipeRefs.current[category] = el;
+                              // Debug: Check if ref is set
+                              if (el) {
+                                console.log(`Auto-swipe ref set for ${category}:`, el);
+                              }
+                            }}
                             className="flex gap-4 px-4 pb-4" 
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                           >
@@ -855,24 +886,21 @@ const Hotel = () => {
                                     </div>
                                     
                                     {/* Rating Text */}
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-semibold text-gray-800">
-                                        {room.reviewCount > 0 
-                                          ? `Good ${room.averageRating}`
-                                          : 'No reviews yet'
-                                        }
-                                      </span>
-                                      {room.reviewCount > 0 && (
-                                        <span className="text-sm text-gray-600">
-                                          Based on {room.reviewCount} review{room.reviewCount !== 1 ? 's' : ''}
+                                    {room.reviewCount > 0 && (
+                                      <div className="mb-2">
+                                        <span className="text-sm font-bold text-black">
+                                          Good {room.averageRating}
                                         </span>
-                                      )}
-                                    </div>
+                                      </div>
+                                    )}
                                     
                                     {/* Room Details */}
                                     <div className="text-gray-600 text-sm mb-2">
-                                      {room.beds} • {room.maxGuests} guests • {room.size} m²
+                                      <span className="font-medium">{room.type}</span> • {room.size && `${room.size} m²`} {room.maxGuests && `${room.maxGuests} guests`}
                                     </div>
+                                    {room.cancellationPolicy && (
+                                      <div className="text-gray-500 text-xs mb-2">📋 {room.cancellationPolicy}</div>
+                                    )}
                                     
                                     {/* Amenities */}
                                     {room.amenities && room.amenities.length > 0 && (
@@ -889,7 +917,7 @@ const Hotel = () => {
                                   {/* Footer */}
                                   <div className="border-t border-gray-100 pt-3">
                                     <div className="flex items-center justify-between mb-3">
-                                      <div>
+                            <div>
                                         {room.discountedPrice ? (
                                           <div className="flex items-center gap-2">
                                             <span className="text-lg font-bold text-green-600">
@@ -898,8 +926,8 @@ const Hotel = () => {
                                             <span className="text-sm text-gray-500 line-through">
                                               LKR {room.price.toLocaleString()}
                                             </span>
-                                          </div>
-                                        ) : (
+                            </div>
+                          ) : (
                                           <span className="text-lg font-bold text-green-600">
                                             LKR {room.price.toLocaleString()}
                                           </span>
@@ -913,27 +941,27 @@ const Hotel = () => {
                                         )}
                                         {room.taxesIncluded && (
                                           <div className="text-xs text-green-600">✓ Taxes included</div>
-                                        )}
-                                      </div>
-                                      
-                                      <button
-                                        onClick={() => {
+                          )}
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
                                           navigate(`/hotel/room/${room._id}`);
                                         }}
                                         disabled={room.availabilityStatus === 'unavailable'}
-                                        className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm ${
+                                        className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm border-2 ${
                                           room.availabilityStatus === 'unavailable'
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-green-600 hover:bg-green-700 text-white'
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300'
+                                            : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                                         }`}
                                       >
                                         {room.availabilityStatus === 'unavailable' ? 'Not Available' : 'View Details'}
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
                           </div>
                         </div>
                       </div>

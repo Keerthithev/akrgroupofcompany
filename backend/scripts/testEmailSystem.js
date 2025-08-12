@@ -1,66 +1,127 @@
-const axios = require('axios');
+const nodemailer = require('nodemailer');
 
-const API_BASE_URL = process.env.API_URL || 'https://akrgroupofcompany.onrender.com';
-
+// Test email configuration
 async function testEmailSystem() {
-  console.log('🧪 Testing AKR Group Hotel Email System...\n');
+  console.log('🧪 Testing AKR Hotel Email System...\n');
+
+  // Create transporter
+  const transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+      pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+    }
+  });
 
   try {
-    // Test 1: Test Email Functionality
-    console.log('1️⃣ Testing basic email functionality...');
-    const testEmailResponse = await axios.post(`${API_BASE_URL}/api/bookings/test-email`, {
-      emailType: 'System Test',
-      testEmail: 'keerthiganthevarasa@gmail.com'
-    });
-    console.log('✅ Test email sent successfully:', testEmailResponse.data.message);
-    console.log('📧 Message ID:', testEmailResponse.data.messageId);
-    console.log('');
+    // Test 1: Verify transporter
+    console.log('1️⃣ Testing email transporter...');
+    await transporter.verify();
+    console.log('✅ Email transporter verified successfully\n');
 
-    // Test 2: Test "We will contact soon" email
-    console.log('2️⃣ Testing "We will contact soon" email...');
-    const contactSoonResponse = await axios.post(`${API_BASE_URL}/api/bookings/send-contact-soon`, {
-      bookingId: '507f1f77bcf86cd799439011', // Test booking ID
-      customerEmail: 'keerthiganthevarasa@gmail.com',
-      customerName: 'Test Customer'
-    });
-    console.log('✅ Contact soon email sent successfully:', contactSoonResponse.data.message);
-    console.log('');
+    // Test 2: Send test email
+    console.log('2️⃣ Sending test email...');
+    const testMailOptions = {
+      from: `"AKR Hotel Test" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: 'keerthiganthevarasa@gmail.com',
+      subject: '🧪 Email System Test - AKR Hotel',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">🧪 Email Test Successful!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">AKR Hotel Email System is working properly</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">Test Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-top: 0;">📧 Email Configuration</h3>
+              <p><strong>SMTP Host:</strong> ${process.env.SMTP_HOST || 'smtp.gmail.com'}</p>
+              <p><strong>SMTP Port:</strong> ${process.env.SMTP_PORT || 587}</p>
+              <p><strong>SMTP User:</strong> ${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}</p>
+              <p><strong>Test Time:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">✅ Status</h3>
+              <p>All email functions should now work properly:</p>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>✅ Customer booking emails</li>
+                <li>✅ Admin notification emails</li>
+                <li>✅ Payment confirmation emails</li>
+                <li>✅ Review invitation emails</li>
+                <li>✅ Review reminder emails</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div style="background: #333; color: white; padding: 20px; text-align: center;">
+            <p style="margin: 0;">AKR Group Hotel</p>
+            <p style="margin: 5px 0;">Main Street, Murunkan, Mannar, Sri Lanka</p>
+            <p style="margin: 5px 0;">Phone: +94 77 311 1266 | Email: akrfuture@gmail.com</p>
+          </div>
+        </div>
+      `
+    };
+
+    const result = await transporter.sendMail(testMailOptions);
+    console.log('✅ Test email sent successfully:', result.messageId);
+    console.log('📧 Email sent to: keerthiganthevarasa@gmail.com\n');
 
     // Test 3: Test booking confirmation email
     console.log('3️⃣ Testing booking confirmation email...');
-    const confirmationResponse = await axios.post(`${API_BASE_URL}/api/bookings/send-confirmation`, {
-      bookingId: '507f1f77bcf86cd799439011', // Test booking ID
-      customerEmail: 'keerthiganthevarasa@gmail.com',
-      customerName: 'Test Customer'
+    const confirmationResponse = await fetch('http://localhost:5000/api/bookings/send-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: 'test-booking-id',
+        customerEmail: 'keerthiganthevarasa@gmail.com',
+        customerName: 'Test Customer'
+      })
     });
-    console.log('✅ Booking confirmation email sent successfully:', confirmationResponse.data.message);
-    console.log('');
+    
+    if (confirmationResponse.ok) {
+      console.log('✅ Booking confirmation email sent successfully:', confirmationResponse.data.message);
+    } else {
+      console.log('❌ Booking confirmation email failed');
+    }
 
     // Test 4: Test payment confirmation email
     console.log('4️⃣ Testing payment confirmation email...');
-    const paymentResponse = await axios.post(`${API_BASE_URL}/api/bookings/send-payment-confirmation`, {
-      bookingId: '507f1f77bcf86cd799439011', // Test booking ID
-      customerEmail: 'keerthiganthevarasa@gmail.com',
-      customerName: 'Test Customer',
-      paymentAmount: 5000
+    const paymentResponse = await fetch('http://localhost:5000/api/bookings/send-payment-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: 'test-booking-id',
+        customerEmail: 'keerthiganthevarasa@gmail.com',
+        customerName: 'Test Customer',
+        paymentAmount: 5000
+      })
     });
-    console.log('✅ Payment confirmation email sent successfully:', paymentResponse.data.message);
-    console.log('');
+    
+    if (paymentResponse.ok) {
+      console.log('✅ Payment confirmation email sent successfully:', paymentResponse.data.message);
+    } else {
+      console.log('❌ Payment confirmation email failed');
+    }
 
-    console.log('🎉 All email tests completed successfully!');
-    console.log('📧 Check your email inbox for test messages.');
-    console.log('📋 Email types tested:');
-    console.log('   - System test email');
-    console.log('   - "We will contact soon" email');
+    console.log('\n🎉 Email system test completed!');
+    console.log('📋 Summary:');
+    console.log('   - Email transporter verification');
+    console.log('   - Test email sending');
     console.log('   - Booking confirmation email');
     console.log('   - Payment confirmation email');
 
   } catch (error) {
-    console.error('❌ Email test failed:', error.response?.data || error.message);
-    console.error('🔍 Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data
+    console.error('❌ Email test failed:', error);
+    console.error('Error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      message: error.message
     });
   }
 }

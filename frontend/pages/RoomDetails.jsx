@@ -262,14 +262,14 @@ const RoomDetails = () => {
 
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Amenities</h3>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {room.amenities && room.amenities.map((amenity, index) => (
                         <div key={index} className="flex items-center gap-2 text-gray-700">
                           <FaCheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                           <span>{amenity}</span>
-            </div>
-              ))}
-            </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
