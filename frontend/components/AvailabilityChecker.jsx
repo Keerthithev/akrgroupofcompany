@@ -147,19 +147,19 @@ const AvailabilityChecker = ({ rooms, onAvailabilityCheck }) => {
     : 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <FaSearch className="text-blue-600 text-xl" />
-        <h3 className="text-xl font-bold text-gray-900">Check Room Availability</h3>
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <FaSearch className="text-green-600 text-lg" />
+        <h3 className="text-lg font-semibold text-gray-900">Check Room Availability</h3>
       </div>
 
       {/* Date and Time Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         {/* Date Range */}
         <div className="md:col-span-1">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            <FaCalendarAlt className="inline mr-2 text-blue-600" />
-            Check-in & Check-out Dates
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            <FaCalendarAlt className="inline mr-1 text-green-600" />
+            Check-in & Check-out
           </label>
           <DatePicker
             selectsRange={true}
@@ -168,30 +168,22 @@ const AvailabilityChecker = ({ rooms, onAvailabilityCheck }) => {
             onChange={handleDateChange}
             minDate={new Date()}
             placeholderText="Select dates"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
             dateFormat="MMM dd, yyyy"
           />
         </div>
 
         {/* Check-in Time */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            <FaClock className="inline mr-2 text-blue-600" />
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            <FaClock className="inline mr-1 text-green-600" />
             Check-in Time
           </label>
           <select
             value={checkInTime}
             onChange={(e) => setCheckInTime(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
           >
-            <option value="06:00">6:00 AM</option>
-            <option value="07:00">7:00 AM</option>
-            <option value="08:00">8:00 AM</option>
-            <option value="09:00">9:00 AM</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="12:00">12:00 PM</option>
-            <option value="13:00">1:00 PM</option>
             <option value="14:00">2:00 PM</option>
             <option value="15:00">3:00 PM</option>
             <option value="16:00">4:00 PM</option>
@@ -199,66 +191,50 @@ const AvailabilityChecker = ({ rooms, onAvailabilityCheck }) => {
             <option value="18:00">6:00 PM</option>
             <option value="19:00">7:00 PM</option>
             <option value="20:00">8:00 PM</option>
-            <option value="21:00">9:00 PM</option>
-            <option value="22:00">10:00 PM</option>
-            <option value="23:00">11:00 PM</option>
           </select>
         </div>
 
         {/* Check-out Time */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            <FaClock className="inline mr-2 text-blue-600" />
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            <FaClock className="inline mr-1 text-green-600" />
             Check-out Time
           </label>
           <select
             value={checkOutTime}
             onChange={(e) => setCheckOutTime(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
           >
-            <option value="06:00">6:00 AM</option>
-            <option value="07:00">7:00 AM</option>
-            <option value="08:00">8:00 AM</option>
-            <option value="09:00">9:00 AM</option>
             <option value="10:00">10:00 AM</option>
             <option value="11:00">11:00 AM</option>
             <option value="12:00">12:00 PM</option>
             <option value="13:00">1:00 PM</option>
             <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
-            <option value="18:00">6:00 PM</option>
-            <option value="19:00">7:00 PM</option>
-            <option value="20:00">8:00 PM</option>
-            <option value="21:00">9:00 PM</option>
-            <option value="22:00">10:00 PM</option>
-            <option value="23:00">11:00 PM</option>
           </select>
         </div>
       </div>
 
-      {/* Stay Summary */}
+      {/* Stay Summary - Compact */}
       {numberOfNights > 0 && (
-        <div className="bg-blue-50 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-green-50 rounded-md p-3 mb-4">
+          <div className="flex items-center justify-between text-sm">
             <div>
-              <p className="text-sm text-gray-600">Stay Duration</p>
-              <p className="font-semibold text-gray-900">
+              <span className="text-gray-600">Duration:</span>
+              <span className="font-medium text-gray-900 ml-1">
                 {numberOfNights} {numberOfNights === 1 ? 'night' : 'nights'}
-              </p>
+              </span>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Check-in</p>
-              <p className="font-semibold text-gray-900">
+              <span className="text-gray-600">Check-in:</span>
+              <span className="font-medium text-gray-900 ml-1">
                 {checkInDate?.toLocaleDateString()} at {checkInTime}
-              </p>
+              </span>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Check-out</p>
-              <p className="font-semibold text-gray-900">
+              <span className="text-gray-600">Check-out:</span>
+              <span className="font-medium text-gray-900 ml-1">
                 {checkOutDate?.toLocaleDateString()} at {checkOutTime}
-              </p>
+              </span>
             </div>
           </div>
         </div>
@@ -266,9 +242,9 @@ const AvailabilityChecker = ({ rooms, onAvailabilityCheck }) => {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
           <div className="flex items-center gap-2 text-red-700">
-            <span className="text-sm">{error}</span>
+            <span className="text-xs">{error}</span>
           </div>
         </div>
       )}
@@ -277,16 +253,16 @@ const AvailabilityChecker = ({ rooms, onAvailabilityCheck }) => {
       <button
         onClick={checkAvailability}
         disabled={loading || !checkInDate || !checkOutDate}
-        className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-green-600 text-white py-2 px-4 rounded-md font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
       >
         {loading ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            Checking Availability...
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            Checking...
           </>
         ) : (
           <>
-            <FaSearch />
+            <FaSearch className="w-3 h-3" />
             Check Availability
           </>
         )}

@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import api from "../lib/axios";
 import MobileNavigation from "../components/MobileNavigation";
 import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFilter, FaList, FaTh } from 'react-icons/fa';
-import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -90,11 +89,52 @@ const Hotel = () => {
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState('price-low');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [availabilityStatus, setAvailabilityStatus] = useState({});
   const [availabilityDetails, setAvailabilityDetails] = useState({});
   const navigate = useNavigate();
+
+  // Auto-swipe functionality for mobile room cards
+  useEffect(() => {
+    const intervals = {};
+    
+    // Set up auto-swipe for each category
+    ['Economy', 'Business', 'First-Class'].forEach(category => {
+      const categoryRooms = rooms.filter(room => room.category === category);
+      if (categoryRooms.length > 1) {
+        intervals[category] = setInterval(() => {
+          setAutoSwipeIndexes(prev => {
+            const currentIndex = prev[category] || 0;
+            const nextIndex = (currentIndex + 1) % categoryRooms.length;
+            
+            // Scroll to the next room
+            const scrollContainer = autoSwipeRefs.current[category];
+            if (scrollContainer) {
+              const roomWidth = 320; // w-80 = 320px
+              const gap = 16; // gap-4 = 16px
+              const scrollAmount = (roomWidth + gap) * nextIndex;
+              scrollContainer.scrollTo({
+                left: scrollAmount,
+                behavior: 'smooth'
+              });
+            }
+            
+            return { ...prev, [category]: nextIndex };
+          });
+        }, 3000); // 3 seconds
+      }
+    });
+    
+    // Cleanup intervals on unmount
+    return () => {
+      Object.values(intervals).forEach(interval => clearInterval(interval));
+    };
+  }, [rooms]);
+
+  // Auto-swipe functionality for mobile
+  const [autoSwipeIndexes, setAutoSwipeIndexes] = useState({});
+  const autoSwipeRefs = useRef({});
 
   useEffect(() => {
     if (hotelInfo.images.length === 0) return;
@@ -365,7 +405,7 @@ const Hotel = () => {
                     href="https://maps.google.com/?q=AKR+multicomplex+Murunkan+Mannar" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-block bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded font-medium transition-colors"
+                    className="inline-block bg-white text-green-600 border-2 border-green-600 hover:bg-green-600 hover:text-white text-xs px-3 py-1 rounded font-medium transition-colors"
                   >
                     View on Google Maps
                   </a>
@@ -473,40 +513,40 @@ const Hotel = () => {
               <div className="flex items-center gap-1 overflow-x-auto py-3">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border-2 ${
                     selectedCategory === 'all'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                   }`}
                 >
                   All Rooms ({rooms.length})
                 </button>
                 <button
                   onClick={() => setSelectedCategory('Economy')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border-2 ${
                     selectedCategory === 'Economy'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                   }`}
                 >
                   Economy ({rooms.filter(room => room.category === 'Economy').length})
                 </button>
                 <button
                   onClick={() => setSelectedCategory('Business')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border-2 ${
                     selectedCategory === 'Business'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                   }`}
                 >
                   Business ({rooms.filter(room => room.category === 'Business').length})
                 </button>
                 <button
                   onClick={() => setSelectedCategory('First-Class')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors border-2 ${
                     selectedCategory === 'First-Class'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                   }`}
                 >
                   First-Class ({rooms.filter(room => room.category === 'First-Class').length})
@@ -531,14 +571,14 @@ const Hotel = () => {
                   </button>
                 </div>
                 ) : (
-                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-2'}>
                     {filteredRooms.map(room => (
                       <div key={room._id} className={`bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200 ${
                         viewMode === 'grid' ? 'flex flex-col' : ''
                       }`}>
                         <div className={viewMode === 'grid' ? 'flex flex-col' : 'flex flex-col md:flex-row'}>
                     {/* Image Section - Mobile responsive */}
-                          <div className={`relative ${viewMode === 'grid' ? 'w-full h-48' : 'w-full md:w-64 h-48 md:h-56'} flex-shrink-0`}>
+                          <div className={`relative ${viewMode === 'grid' ? 'w-full h-48' : 'w-full md:w-80 h-48 md:h-64'} flex-shrink-0`}>
                       {room.images && room.images.length > 1 ? (
                         <RoomImageCarousel images={room.images} roomName={room.name} />
                       ) : room.images && room.images.length > 0 ? (
@@ -549,18 +589,14 @@ const Hotel = () => {
                         </div>
                       )}
                       
-                      {/* Second Floor Badge */}
-                      <div className="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded font-bold shadow-md">
-                        Second Floor
-                      </div>
                     </div>
                     
                     {/* Content Section */}
-                          <div className={`flex-1 p-4 md:p-6 flex flex-col ${viewMode === 'grid' ? 'justify-between flex-1' : 'justify-between'}`}>
+                          <div className={`flex-1 p-1 md:p-2 flex flex-col ${viewMode === 'grid' ? 'justify-between flex-1' : 'justify-between'}`}>
                       <div>
                         {/* Header */}
-                        <div className="mb-3">
-                                <div className="flex items-start justify-between mb-2">
+                        <div className="mb-1">
+                                <div className="flex items-start justify-between mb-0.5">
                                   <h3 className="text-lg md:text-xl font-bold text-green-700">{room.name}</h3>
                                   {/* Stars in top right corner */}
                                   <div className="flex items-center gap-1">
@@ -583,7 +619,7 @@ const Hotel = () => {
                                     })}
                                   </div>
                                 </div>
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-0.5">
                                   <span className={`text-xs px-2 py-1 rounded font-medium ${
                                     room.availabilityStatus === 'available' 
                                       ? 'bg-green-100 text-green-700' 
@@ -602,12 +638,12 @@ const Hotel = () => {
                               <span className="bg-green-200 text-green-800 text-xs px-2 py-1 rounded font-medium">Special Offer</span>
                             )}
                           </div>
-                                <div className="text-sm text-gray-600 mb-2">
-                                  <span className="text-green-600">Mannar Show on map • km from centre</span>
+                                <div className="text-sm text-gray-600 mb-0.5">
+                                  <span className="text-green-600">AKR Multicomplex, Main street Murunkan, Mannar • km from centre</span>
                                 </div>
                                 
                                 {/* Rating Text Display */}
-                                <div className="flex items-center gap-2 mb-2">
+                                <div className="flex items-center gap-2 mb-0.5">
                                   <span className="text-sm font-semibold text-gray-800">
                                     {room.reviewCount > 0 
                                       ? `Good ${room.averageRating}`
@@ -623,42 +659,63 @@ const Hotel = () => {
                                 
                                 {/* Availability Details */}
                                 {room.availabilityStatus === 'unavailable' && room.availabilityDetails && (
-                                  <div className="text-xs text-red-600 mb-2">
+                                  <div className="text-xs text-red-600 mb-0.5">
                                     {room.availabilityDetails}
                           </div>
                                 )}
                         </div>
                         
                         {/* Room Details */}
-                        <div className="mb-3">
-                          <div className="text-gray-900 font-medium text-sm">{room.type}</div>
-                          <div className="text-gray-600 text-sm">{room.beds} • {room.maxGuests} guests</div>
-                          {room.size && <div className="text-gray-600 text-sm">{room.size} m²</div>}
+                        <div className="mb-0.5">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <div className="text-gray-900 font-medium text-sm">{room.type}</div>
+                              <div className="text-gray-600 text-sm">{room.beds} • {room.maxGuests} guests</div>
+                            </div>
+                            {room.size && (
+                              <div className="text-gray-600 text-sm">{room.size} m²</div>
+                            )}
+                          </div>
                         </div>
                         
-                        {/* Amenities */}
-                        {room.amenities && room.amenities.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                            {room.amenities.slice(0, 3).map((amenity, i) => (
-                              <span key={i} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
-                                {amenity}
-                              </span>
-                            ))}
-                            {room.amenities.length > 3 && (
-                              <span className="text-xs text-gray-500">+{room.amenities.length - 3} more</span>
+                        {/* List View Only - Description and Privacy Policy */}
+                        {viewMode === 'list' && (
+                          <div className="mb-0.5">
+                            {room.description && (
+                              <div className="text-gray-600 text-sm italic mb-0.5">{room.description}</div>
+                            )}
+                            {room.cancellationPolicy && (
+                              <div className="text-gray-500 text-xs mb-0.5">📋 {room.cancellationPolicy}</div>
                             )}
                           </div>
                         )}
                         
-                        {/* Features */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-green-600 text-sm">✓ No prepayment needed - pay at the property</span>
+                        {/* Amenities and Features Side by Side */}
+                        <div className="flex items-start gap-4 mb-0.5">
+                          {/* Amenities */}
+                          {room.amenities && room.amenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {room.amenities.slice(0, 3).map((amenity, i) => (
+                                <span key={i} className="bg-green-50 text-green-700 text-xs px-1 py-0.5 rounded border border-green-200">
+                                  {amenity}
+                                </span>
+                              ))}
+                              {room.amenities.length > 3 && (
+                                <span className="text-xs text-gray-500">+{room.amenities.length - 3} more</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Features */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600 text-sm">✓ No prepayment needed - pay at the property</span>
+                          </div>
                         </div>
                       </div>
                       
                       {/* Footer */}
-                            <div className="pt-3 border-t border-gray-100">
-                              <div className="flex items-center justify-between mb-3">
+                            <div className="pt-0.5 border-t border-gray-100">
+                              <div className="flex items-center justify-between mb-0.5">
                                 <div>
                           {room.discountedPrice ? (
                                     <div className="flex items-center gap-2">
@@ -675,6 +732,15 @@ const Hotel = () => {
                                     </span>
                           )}
                                   <div className="text-xs text-gray-500">per night</div>
+                                  {room.breakfastIncluded && (
+                                    <div className="text-xs text-green-600">🍳 Breakfast included</div>
+                                  )}
+                                  {!room.taxesIncluded && room.taxesAmount > 0 && (
+                                    <div className="text-xs text-orange-600">+ LKR {room.taxesAmount.toLocaleString()} taxes</div>
+                                  )}
+                                  {room.taxesIncluded && (
+                                    <div className="text-xs text-green-600">✓ Taxes included</div>
+                                  )}
                         </div>
                         
                         <button 
@@ -682,10 +748,10 @@ const Hotel = () => {
                                     navigate(`/hotel/room/${room._id}`);
                                   }}
                                   disabled={room.availabilityStatus === 'unavailable'}
-                                  className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm ${
+                                  className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm border-2 ${
                                     room.availabilityStatus === 'unavailable'
-                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                      : 'bg-green-600 hover:bg-green-700 text-white'
+                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300'
+                                      : 'bg-white text-green-600 border-green-600 hover:bg-green-600 hover:text-white'
                                   }`}
                                 >
                                   {room.availabilityStatus === 'unavailable' ? 'Not Available' : 'View Details'}
@@ -724,7 +790,11 @@ const Hotel = () => {
                       <div key={category} className="mb-8">
                         <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">{category} Rooms</h2>
                         <div className="overflow-x-auto">
-                          <div className="flex gap-4 px-4 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                          <div 
+                            ref={el => autoSwipeRefs.current[category] = el}
+                            className="flex gap-4 px-4 pb-4" 
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                          >
                             {categoryRooms.map(room => (
                               <div key={room._id} className="bg-white rounded-lg shadow-md border border-gray-200 flex-shrink-0 w-80">
                                 {/* Image Section */}
@@ -736,11 +806,6 @@ const Hotel = () => {
                                       <FaBed className="w-8 h-8" />
                                     </div>
                                   )}
-                                  
-                                  {/* Second Floor Badge */}
-                                  <div className="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded font-bold shadow-md">
-                                    Second Floor
-                                  </div>
                                   
                                   {/* Stars in top right corner */}
                                   <div className="absolute top-3 right-3 flex items-center gap-1">
@@ -840,6 +905,15 @@ const Hotel = () => {
                                           </span>
                                         )}
                                         <div className="text-xs text-gray-500">per night</div>
+                                        {room.breakfastIncluded && (
+                                          <div className="text-xs text-green-600">🍳 Breakfast included</div>
+                                        )}
+                                        {!room.taxesIncluded && room.taxesAmount > 0 && (
+                                          <div className="text-xs text-orange-600">+ LKR {room.taxesAmount.toLocaleString()} taxes</div>
+                                        )}
+                                        {room.taxesIncluded && (
+                                          <div className="text-xs text-green-600">✓ Taxes included</div>
+                                        )}
                                       </div>
                                       
                                       <button

@@ -4,7 +4,7 @@ const RoomSchema = new mongoose.Schema({
   name: { type: String, required: true },
   category: { type: String, enum: ["Economy", "Business", "First-Class"], required: true },
   type: { type: String, required: true }, // e.g. Double, Twin, Suite
-  beds: { type: String, required: true }, // e.g. 1 double, 2 single
+  beds: { type: String, required: true }, // e.g. Single, Twin, Double, Queen, King
   maxGuests: { type: Number, required: true },
   size: { type: Number }, // in m²
   description: { type: String },
@@ -23,6 +23,8 @@ const RoomSchema = new mongoose.Schema({
   lastBookingEnd: { type: Date },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0 },
+  taxesIncluded: { type: Boolean, default: true },
+  taxesAmount: { type: Number, default: 0 },
 });
 
 module.exports = mongoose.model('Room', RoomSchema); 

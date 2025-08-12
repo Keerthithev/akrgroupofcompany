@@ -178,9 +178,19 @@ const RoomDetails = () => {
                       <div className="flex items-center gap-4 text-gray-600 mb-3">
                         <span className="text-green-600 font-medium flex items-center gap-1">
                           <FaMapMarkerAlt className="w-4 h-4" />
-                          Mannar, Sri Lanka
+                          AKR Multicomplex, Main street Murunkan, Mannar
                         </span>
                         <span>• {room.distanceFromCenter || 0.5} km from centre</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a 
+                          href="https://maps.google.com/?q=AKR+multicomplex+Murunkan+Mannar" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-block bg-white text-green-600 border-2 border-green-600 hover:bg-green-600 hover:text-white text-xs px-3 py-1 rounded font-medium transition-colors"
+                        >
+                          View on Google Maps
+                        </a>
                       </div>
                     </div>
                     

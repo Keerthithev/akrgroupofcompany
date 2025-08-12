@@ -86,9 +86,9 @@ const SUPERMARKET_CATEGORIES = [
   'Chocolates', 'Ice Cream', 'Fruits', 'Vegetables', 'Rice', 'Snacks', 'Dairy', 'Beverages', 'Bakery', 'Household', 'Personal Care', 'Frozen Foods'
 ];
 
-const ROOM_TYPES = ['Double', 'Twin', 'Suite', 'Family', 'Single'];
+const ROOM_TYPES = ['Double', 'Twin', 'Suite', 'Family', 'Single', 'Triple'];
 const ROOM_CATEGORIES = ['Economy', 'Business', 'First-Class'];
-const BED_TYPES = ['1 double', '2 single', '1 king', '2 queen', '1 single'];
+const BED_TYPES = ['Single', 'Twin', 'Double', 'Queen', 'King'];
 const VIEWS = ['Garden', 'Sea', 'City', 'Mountain', 'Pool', 'Paddy'];
 const AMENITIES = [
   'Free WiFi', 'Air Conditioning', 'Balcony', 'Private Bathroom', 'Breakfast Included',
@@ -392,7 +392,28 @@ const AdminDashboard = () => {
   const [manualRevenues, setManualRevenues] = useState([]);
   const [manualCosts, setManualCosts] = useState([]);
   const [manualCostForm, setManualCostForm] = useState({ category: 'Maintenance', amount: 0, description: '', date: dayjs(), paymentMethod: 'Cash' });
-  const [roomFormData, setRoomFormData] = useState({ name: '', category: 'Economy', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
+  const [roomFormData, setRoomFormData] = useState({ 
+    name: '', 
+    category: 'Economy', 
+    description: 'Comfortable room perfect for travelers', 
+    price: '', 
+    capacity: 1, 
+    amenities: [], 
+    images: [], 
+    isAvailable: true, 
+    type: '', 
+    beds: '', 
+    maxGuests: '', 
+    size: '', 
+    discountedPrice: '', 
+    breakfastIncluded: false, 
+    breakfastPrice: 'free', 
+    cancellationPolicy: 'Free cancellation up to 24 hours before check-in', 
+    view: '', 
+    newAmenity: '',
+    taxesIncluded: true,
+    taxesAmount: 0
+  });
   const [roomImageUploading, setRoomImageUploading] = useState(false);
   const [roomImageInput, setRoomImageInput] = useState('');
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
@@ -1731,6 +1752,12 @@ const AdminDashboard = () => {
         discountedPrice: roomFormData.discountedPrice ? Number(roomFormData.discountedPrice) : undefined,
         amenities: roomFormData.amenities,
         images: roomFormData.images,
+        description: roomFormData.description,
+        breakfastIncluded: roomFormData.breakfastIncluded,
+        breakfastPrice: roomFormData.breakfastPrice === 'free' ? 0 : (roomFormData.breakfastPrice ? Number(roomFormData.breakfastPrice) : undefined),
+        cancellationPolicy: roomFormData.cancellationPolicy,
+        taxesIncluded: roomFormData.taxesIncluded,
+        taxesAmount: roomFormData.taxesAmount ? Number(roomFormData.taxesAmount) : undefined,
       };
       if (editingRoomId) {
         await api.put(`/api/rooms/${editingRoomId}`, payload, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
@@ -1739,7 +1766,28 @@ const AdminDashboard = () => {
       }
       const res = await api.get('/api/rooms');
       setRooms(res.data);
-      setRoomFormData({ name: '', category: 'Economy', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
+      setRoomFormData({ 
+        name: '', 
+        category: 'Economy', 
+        description: 'Comfortable room perfect for travelers', 
+        price: '', 
+        capacity: 1, 
+        amenities: [], 
+        images: [], 
+        isAvailable: true, 
+        type: '', 
+        beds: '', 
+        maxGuests: '', 
+        size: '', 
+        discountedPrice: '', 
+        breakfastIncluded: false, 
+        breakfastPrice: 'free', 
+        cancellationPolicy: 'Free cancellation up to 24 hours before check-in', 
+        view: '', 
+        newAmenity: '',
+        taxesIncluded: true,
+        taxesAmount: 0
+      });
       setRoomDrawerOpen(false);
       setEditingRoomId(null);
       message.success(editingRoomId ? 'Room updated!' : 'Room added!');
@@ -1762,12 +1810,14 @@ const AdminDashboard = () => {
       discountedPrice: room.discountedPrice || '',
       amenities: room.amenities || [],
       images: room.images || [],
-      description: room.description || '',
+      description: room.description || 'Comfortable room perfect for travelers',
       capacity: room.capacity || 1,
       isAvailable: room.isAvailable !== undefined ? room.isAvailable : true,
       breakfastIncluded: room.breakfastIncluded || false,
-      breakfastPrice: room.breakfastPrice || '',
-      cancellationPolicy: room.cancellationPolicy || '',
+      breakfastPrice: room.breakfastPrice === 0 ? 'free' : (room.breakfastPrice || 'free'),
+      cancellationPolicy: room.cancellationPolicy || 'Free cancellation up to 24 hours before check-in',
+      taxesIncluded: room.taxesIncluded !== undefined ? room.taxesIncluded : true,
+      taxesAmount: room.taxesAmount || 0,
       newAmenity: '',
     });
     setEditingRoomId(room._id);
@@ -3520,7 +3570,7 @@ const AdminDashboard = () => {
                 />
               </div>
               <Button type="primary" style={{ marginTop: 40, marginBottom: 16 }} onClick={() => {
-                setRoomFormData({ name: '', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
+                setRoomFormData({ name: '', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: 'free', cancellationPolicy: '', view: '', newAmenity: '' });
                 setEditingRoomId(null);
                 setRoomDrawerOpen(true);
               }}>Add New Room</Button>
@@ -3648,6 +3698,93 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                   </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label>Discounted Price (LKR)</label>
+                    <Input type="number" min={0} value={roomFormData.discountedPrice} onChange={e => setRoomFormData({ ...roomFormData, discountedPrice: e.target.value })} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label>Description</label>
+                    <Input.TextArea 
+                      value={roomFormData.description} 
+                      onChange={e => setRoomFormData({ ...roomFormData, description: e.target.value })} 
+                      placeholder="Comfortable twin room perfect for business travelers"
+                      rows={3}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label>Breakfast Included</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Switch 
+                        checked={roomFormData.breakfastIncluded} 
+                        onChange={checked => setRoomFormData({ ...roomFormData, breakfastIncluded: checked })}
+                      />
+                      <span>{roomFormData.breakfastIncluded ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+                  {roomFormData.breakfastIncluded && (
+                    <div style={{ marginBottom: 12 }}>
+                      <label>Breakfast Pricing</label>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <input 
+                            type="radio" 
+                            name="breakfastType" 
+                            value="free"
+                            checked={roomFormData.breakfastPrice === 'free'}
+                            onChange={() => setRoomFormData({ ...roomFormData, breakfastPrice: 'free' })}
+                          />
+                          Free Breakfast
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input 
+                            type="radio" 
+                            name="breakfastType" 
+                            value="paid"
+                            checked={roomFormData.breakfastPrice !== 'free'}
+                            onChange={() => setRoomFormData({ ...roomFormData, breakfastPrice: roomFormData.breakfastPrice === 'free' ? '500' : roomFormData.breakfastPrice })}
+                          />
+                          Paid Breakfast
+                        </label>
+                      </div>
+                      {roomFormData.breakfastPrice !== 'free' && (
+                        <Input 
+                          type="number" 
+                          min={0} 
+                          value={roomFormData.breakfastPrice} 
+                          onChange={e => setRoomFormData({ ...roomFormData, breakfastPrice: e.target.value })} 
+                          placeholder="500"
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div style={{ marginBottom: 12 }}>
+                    <label>Cancellation Policy</label>
+                    <Input.TextArea 
+                      value={roomFormData.cancellationPolicy} 
+                      onChange={e => setRoomFormData({ ...roomFormData, cancellationPolicy: e.target.value })} 
+                      placeholder="Free cancellation up to 24 hours before check-in"
+                      rows={2}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label>Taxes & Charges</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <Switch 
+                        checked={roomFormData.taxesIncluded} 
+                        onChange={checked => setRoomFormData({ ...roomFormData, taxesIncluded: checked })}
+                      />
+                      <span>{roomFormData.taxesIncluded ? 'Included in price' : 'Additional'}</span>
+                    </div>
+                    {!roomFormData.taxesIncluded && (
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        value={roomFormData.taxesAmount} 
+                        onChange={e => setRoomFormData({ ...roomFormData, taxesAmount: e.target.value })} 
+                        placeholder="Taxes amount (LKR)"
+                      />
+                    )}
+                  </div>
                   <Button type="primary" htmlType="submit" style={{ marginTop: 16, width: '100%' }} disabled={!roomFormData.name || !roomFormData.category || !roomFormData.type || !roomFormData.beds || !roomFormData.maxGuests || !roomFormData.price || !roomFormData.images.length || roomImageUploading}>
                     {editingRoomId ? 'Update Room' : 'Add Room'}
                   </Button>
@@ -3698,12 +3835,27 @@ const AdminDashboard = () => {
                   { 
                     title: 'Room Details', 
                     dataIndex: 'name',
-                    width: 200,
+                    width: 250,
                     render: (name, record) => (
                       <div>
                         <div style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>{name}</div>
                         <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{record.type} • {record.beds}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Size: {record.size}m² • View: {record.view}</div>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Size: {record.size}m² • View: {record.view}</div>
+                        {record.description && (
+                          <div style={{ fontSize: 11, color: '#888', marginBottom: 4, fontStyle: 'italic' }}>
+                            {record.description}
+                          </div>
+                        )}
+                        {record.breakfastIncluded && (
+                          <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 4 }}>
+                            🍳 Breakfast: {record.breakfastPrice === 0 ? 'Free' : `Rs. ${record.breakfastPrice?.toLocaleString() || '500'}`}
+                          </div>
+                        )}
+                        {record.cancellationPolicy && (
+                          <div style={{ fontSize: 10, color: '#666', marginBottom: 4 }}>
+                            📋 {record.cancellationPolicy}
+                          </div>
+                        )}
                       </div>
                     )
                   },
@@ -3754,15 +3906,30 @@ const AdminDashboard = () => {
                   },
                   { 
                     title: 'Pricing', 
-                    width: 120,
+                    width: 150,
                     render: (_, record) => (
                       <div>
                         <div style={{ fontWeight: 'bold', fontSize: 14, color: '#1890ff' }}>
-                          Rs. {record.price?.toLocaleString()}
+                          Rs. {record.discountedPrice ? record.discountedPrice.toLocaleString() : record.price?.toLocaleString()}
                         </div>
                         {record.discountedPrice && (
                           <div style={{ fontSize: 12, color: '#52c41a', textDecoration: 'line-through' }}>
-                            Rs. {record.discountedPrice?.toLocaleString()}
+                            Rs. {record.price?.toLocaleString()}
+                          </div>
+                        )}
+                        {record.breakfastIncluded && (
+                          <div style={{ fontSize: 11, color: '#52c41a' }}>
+                            🍳 Breakfast included
+                          </div>
+                        )}
+                        {!record.taxesIncluded && record.taxesAmount > 0 && (
+                          <div style={{ fontSize: 11, color: '#fa8c16' }}>
+                            + Rs. {record.taxesAmount?.toLocaleString()} taxes
+                          </div>
+                        )}
+                        {record.taxesIncluded && (
+                          <div style={{ fontSize: 11, color: '#52c41a' }}>
+                            ✓ Taxes included
                           </div>
                         )}
                       </div>
