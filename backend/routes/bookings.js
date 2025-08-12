@@ -584,7 +584,11 @@ router.post('/send-confirmation', async (req, res) => {
               <p><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleDateString()}</p>
               <p><strong>Nights:</strong> ${booking.nights}</p>
               <p><strong>Guests:</strong> ${booking.guests}</p>
-              <p><strong>Total Amount:</strong> Rs. ${(booking.totalAmount || booking.payment?.amount || booking.advancePaid || 0).toLocaleString()}</p>
+              <p><strong>Room Rate:</strong> Rs. ${(booking.room.price || 0).toLocaleString()} per night</p>
+              <p><strong>Subtotal:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              ${booking.discountAmount ? `<p><strong>Discount:</strong> Rs. ${booking.discountAmount.toLocaleString()} ${booking.discountPercentage ? `(${booking.discountPercentage}%)` : ''}</p>` : ''}
+              ${booking.discountReason ? `<p><strong>Discount Reason:</strong> ${booking.discountReason}</p>` : ''}
+              <p><strong>Final Amount:</strong> Rs. ${(booking.finalAmount || booking.totalAmount || 0).toLocaleString()}</p>
             </div>
             
             <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -601,6 +605,8 @@ router.post('/send-confirmation', async (req, res) => {
               <ul style="margin: 0; padding-left: 20px;">
                 <li>Please arrive at the hotel between 2:00 PM and 6:00 PM for check-in</li>
                 <li>Bring a valid ID (passport or national ID) for verification</li>
+                <li>Payment will be collected upon arrival at the property</li>
+                <li>Please bring the final amount in cash or card</li>
                 <li>All rooms are located on the second floor</li>
                 <li>For any changes, please contact us at least 24 hours in advance</li>
               </ul>
@@ -701,7 +707,8 @@ router.post('/send-contact-soon', async (req, res) => {
               <h3 style="color: #f57c00; margin-top: 0;">Important Information</h3>
               <ul style="margin: 0; padding-left: 20px;">
                 <li>This is a booking request, not a confirmed reservation</li>
-                <li>No payment has been processed yet</li>
+                <li>Payment will be collected upon arrival at the property</li>
+                <li>Please bring the final amount in cash or card</li>
                 <li>We will contact you to confirm availability</li>
                 <li>For urgent inquiries, please call us directly</li>
               </ul>
@@ -883,7 +890,11 @@ async function sendCustomerBookingEmail(booking, room) {
               <p><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleDateString()} at ${booking.checkOutTime || '11:00'}</p>
               <p><strong>Duration:</strong> ${getStayDuration(booking.nights)}</p>
               <p><strong>Guests:</strong> ${booking.guests} ${booking.guests === 1 ? 'guest' : 'guests'}</p>
-              <p><strong>Total Amount:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              <p><strong>Room Rate:</strong> Rs. ${(room.price || 0).toLocaleString()} per night</p>
+              <p><strong>Subtotal:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              ${booking.discountAmount ? `<p><strong>Discount:</strong> Rs. ${booking.discountAmount.toLocaleString()} ${booking.discountPercentage ? `(${booking.discountPercentage}%)` : ''}</p>` : ''}
+              ${booking.discountReason ? `<p><strong>Discount Reason:</strong> ${booking.discountReason}</p>` : ''}
+              <p><strong>Final Amount:</strong> Rs. ${(booking.finalAmount || booking.totalAmount || 0).toLocaleString()}</p>
               <p><strong>Booking ID:</strong> ${booking._id}</p>
             </div>
             
@@ -911,7 +922,8 @@ async function sendCustomerBookingEmail(booking, room) {
               <h3 style="color: #f57c00; margin-top: 0;">⚠️ Important Information</h3>
               <ul style="margin: 0; padding-left: 20px;">
                 <li>📝 This is a booking request, not a confirmed reservation</li>
-                <li>💳 No payment has been processed yet</li>
+                <li>💳 Payment will be collected upon arrival at the property</li>
+                <li>💰 Please bring the final amount in cash or card</li>
                 <li>⏳ We will contact you to confirm availability</li>
                 <li>📞 For urgent inquiries, please call us directly</li>
                 <li>🕐 Standard check-in time: 2:00 PM | Check-out time: 11:00 AM</li>
@@ -1301,6 +1313,176 @@ router.get('/review/validate/:bookingId/:token', async (req, res) => {
   } catch (error) {
     console.error('Error validating review token:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Send payment confirmation email
+router.post('/send-payment-confirmation', async (req, res) => {
+  try {
+    const { bookingId, customerEmail, customerName, paymentAmount } = req.body;
+    
+    // Find the booking with room details
+    const booking = await Booking.findById(bookingId).populate('room');
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      }
+    });
+
+    // Email content
+    const mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'AKR Group Hotel'}" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: customerEmail,
+      subject: 'Payment Confirmed - AKR Group Hotel',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">✅ Payment Confirmed!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">Your payment has been received successfully</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">Payment Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">💰 Payment Information</h3>
+              <p><strong>Amount Paid:</strong> Rs. ${paymentAmount?.toLocaleString() || booking.totalAmount?.toLocaleString()}</p>
+              <p><strong>Payment Date:</strong> ${new Date().toLocaleDateString()}</p>
+              <p><strong>Payment Method:</strong> Received at property</p>
+              <p><strong>Payment Status:</strong> <span style="color: #28a745; font-weight: bold;">Confirmed</span></p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-top: 0;">🏨 Booking Details</h3>
+              <p><strong>Room:</strong> ${booking.room.name}</p>
+              <p><strong>Check-in:</strong> ${new Date(booking.checkIn).toLocaleDateString()}</p>
+              <p><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleDateString()}</p>
+              <p><strong>Nights:</strong> ${booking.nights}</p>
+              <p><strong>Guests:</strong> ${booking.guests}</p>
+              <p><strong>Room Rate:</strong> Rs. ${(booking.room.price || 0).toLocaleString()} per night</p>
+              <p><strong>Subtotal:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              ${booking.discountAmount ? `<p><strong>Discount Applied:</strong> Rs. ${booking.discountAmount.toLocaleString()} ${booking.discountPercentage ? `(${booking.discountPercentage}%)` : ''}</p>` : ''}
+              ${booking.discountReason ? `<p><strong>Discount Reason:</strong> ${booking.discountReason}</p>` : ''}
+              <p><strong>Final Amount Paid:</strong> Rs. ${(booking.finalAmount || booking.totalAmount || 0).toLocaleString()}</p>
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">✅ Thank You!</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>Your payment has been received successfully</li>
+                <li>Your booking is now fully confirmed</li>
+                <li>We hope you enjoy your stay with us</li>
+                <li>Please review our room and service after your stay</li>
+                <li>Your feedback helps us improve our services</li>
+                <li>For any assistance during your stay, please contact reception</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div style="background: #333; color: white; padding: 20px; text-align: center;">
+            <p style="margin: 0;">AKR Group Hotel</p>
+            <p style="margin: 5px 0;">Main Street, Murunkan, Mannar, Sri Lanka</p>
+            <p style="margin: 5px 0;">Phone: +94 77 311 1266 | Email: akrfuture@gmail.com</p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send email
+    console.log('Sending payment confirmation email to:', customerEmail);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Payment confirmation email sent successfully:', result.messageId);
+    
+    res.json({ message: 'Payment confirmation email sent successfully' });
+    
+  } catch (error) {
+    console.error('Payment confirmation email error:', error);
+    res.status(500).json({ error: 'Failed to send payment confirmation email' });
+  }
+});
+
+// Test email functionality
+router.post('/test-email', async (req, res) => {
+  try {
+    const { emailType, testEmail } = req.body;
+    
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      }
+    });
+
+    let mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'AKR Group Hotel'}" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: testEmail || 'keerthiganthevarasa@gmail.com',
+      subject: 'Test Email - AKR Group Hotel Email System',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">🧪 Email Test Successful!</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">AKR Group Hotel Email System is working</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">Test Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-top: 0;">📧 Email Configuration</h3>
+              <p><strong>SMTP Host:</strong> ${process.env.SMTP_HOST || 'smtp.gmail.com'}</p>
+              <p><strong>SMTP Port:</strong> ${process.env.SMTP_PORT || 587}</p>
+              <p><strong>From Email:</strong> ${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}</p>
+              <p><strong>Email Type:</strong> ${emailType || 'General Test'}</p>
+              <p><strong>Test Time:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">✅ Status</h3>
+              <p>✅ Email system is working correctly</p>
+              <p>✅ SMTP configuration is valid</p>
+              <p>✅ Authentication is successful</p>
+              <p>✅ Email delivery is functional</p>
+            </div>
+          </div>
+          
+          <div style="background: #333; color: white; padding: 20px; text-align: center;">
+            <p style="margin: 0;">AKR Group Hotel</p>
+            <p style="margin: 5px 0;">Main Street, Murunkan, Mannar, Sri Lanka</p>
+            <p style="margin: 5px 0;">Phone: +94 77 311 1266 | Email: akrfuture@gmail.com</p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send test email
+    console.log('Sending test email to:', testEmail || 'keerthiganthevarasa@gmail.com');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Test email sent successfully:', result.messageId);
+    
+    res.json({ 
+      message: 'Test email sent successfully',
+      messageId: result.messageId,
+      emailType: emailType || 'General Test'
+    });
+    
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({ 
+      error: 'Failed to send test email',
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
