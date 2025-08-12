@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaStar, FaThumbsUp, FaUser } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../lib/axios';
 
 const ReviewsDisplay = ({ roomId, roomName }) => {
   const [reviews, setReviews] = useState([]);
@@ -9,19 +10,25 @@ const ReviewsDisplay = ({ roomId, roomName }) => {
   const [showAllReviews, setShowAllReviews] = useState(false);
 
   useEffect(() => {
+    console.log('ReviewsDisplay mounted with roomId:', roomId, 'roomName:', roomName);
     fetchReviews();
     fetchStats();
   }, [roomId]);
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`/api/reviews/room/${roomId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setReviews(data);
-      }
+      console.log('Fetching reviews for room:', roomId);
+      const response = await api.get(`/api/reviews/room/${roomId}`);
+      console.log('Reviews response:', response.data);
+      setReviews(response.data);
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
     } finally {
       setLoading(false);
     }
@@ -29,29 +36,30 @@ const ReviewsDisplay = ({ roomId, roomName }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/reviews/room/${roomId}/stats`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
+      console.log('Fetching stats for room:', roomId);
+      const response = await api.get(`/api/reviews/room/${roomId}/stats`);
+      console.log('Stats response:', response.data);
+      setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
     }
   };
 
   const handleHelpful = async (reviewId) => {
     try {
-      const response = await fetch(`/api/reviews/${reviewId}/helpful`, {
-        method: 'PUT'
-      });
-      if (response.ok) {
-        const { helpful } = await response.json();
-        setReviews(prevReviews =>
-          prevReviews.map(review =>
-            review._id === reviewId ? { ...review, helpful } : review
-          )
-        );
-      }
+      const response = await api.put(`/api/reviews/${reviewId}/helpful`);
+      const { helpful } = response.data;
+      setReviews(prevReviews =>
+        prevReviews.map(review =>
+          review._id === reviewId ? { ...review, helpful } : review
+        )
+      );
     } catch (error) {
       console.error('Error updating helpful count:', error);
     }
