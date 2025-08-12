@@ -106,7 +106,7 @@ const FillingStation = () => {
         const response = await api.get("/api/settings");
         const settings = response.data;
         const fillingStationImages = settings.fillingStationSection?.images || [];
-        setBanners(fillingStationImages.length > 0 ? fillingStationImages : []);
+      setBanners(fillingStationImages.length > 0 ? fillingStationImages : []);
         setHomepageLogo(settings.homepageLogo || "");
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -142,11 +142,11 @@ const FillingStation = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={FILLING_STATION_LOGO}
-                  alt="AKR Filling Station Logo"
+              <img
+                src={FILLING_STATION_LOGO}
+                alt="AKR Filling Station Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -255,8 +255,8 @@ const FillingStation = () => {
                              <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-red-100 to-orange-100 rounded-full mb-4">
                  <FaCheckCircle className="w-3 h-3 text-red-600 mr-2" />
                  <span className="text-xs sm:text-sm font-semibold text-gray-700">High-Quality Fuel & Petroleum Products</span>
-               </div>
-              
+          </div>
+
                              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
                  Two Petrol Stations Serving 
                  <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent"> Premium Fuel</span>
@@ -287,7 +287,7 @@ const FillingStation = () => {
                   >
                     <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center`}>
                       <item.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${item.color}`} />
-                    </div>
+                </div>
                     <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.label}</span>
                   </motion.div>
                 ))}
@@ -432,8 +432,8 @@ const FillingStation = () => {
                    title: "Quality Assurance",
                    description: "Rigorous quality control ensuring fuel meets industry standards",
                    features: ["Quality testing", "Certified fuel", "Performance guarantee", "Safety standards"]
-                 }
-               ].map((service, index) => (
+              }
+            ].map((service, index) => (
                 <motion.div
                   key={index}
                   variants={fadeInUp}
@@ -450,8 +450,8 @@ const FillingStation = () => {
                     <div className="flex-1">
                       <h4 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2">{service.title}</h4>
                       <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">{service.description}</p>
-                    </div>
-                  </div>
+                </div>
+              </div>
                   <ul className="text-xs text-gray-500 space-y-1 ml-12 sm:ml-16">
                     {service.features.map((feature, fIndex) => (
                       <li key={fIndex} className="flex items-center space-x-2">
@@ -510,7 +510,7 @@ const FillingStation = () => {
                       </div>
                     </motion.div>
                   ))}
-                </div>
+          </div>
               </motion.div>
               
               <motion.div variants={fadeInRight}>

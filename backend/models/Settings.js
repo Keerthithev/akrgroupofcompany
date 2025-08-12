@@ -72,6 +72,8 @@ const SettingsSchema = new mongoose.Schema({
     specialOffer: String,
     specialOfferLink: String,
   },
+  // Room turnover management settings
+  bufferHours: { type: Number, default: 3, min: 1, max: 5 },
 });
 
 module.exports = mongoose.model('Settings', SettingsSchema); 

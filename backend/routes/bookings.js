@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { stringify } = require('csv-stringify/sync');
+const { sendReviewInvitation, sendReviewReminder } = require('../utils/emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 function requireAdmin(req, res, next) {
@@ -84,6 +85,15 @@ router.get('/', requireAdmin, async (req, res) => {
 router.get('/unavailable-dates/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
+    console.log('🔍 Checking unavailable dates for room:', roomId);
+    
+    // Check if room exists
+    const room = await Room.findById(roomId);
+    if (!room) {
+      console.log('❌ Room not found');
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    console.log('✅ Room found:', room.name);
     
     // Find all bookings for this room (exclude cancelled bookings)
     const bookings = await Booking.find({ 
@@ -92,10 +102,13 @@ router.get('/unavailable-dates/:roomId', async (req, res) => {
       paymentStatus: { $in: ['pending', 'paid'] } // Only confirmed bookings
     });
     
+    console.log(`📅 Found ${bookings.length} active bookings for this room`);
+    
     // Generate array of unavailable dates
     const unavailableDates = [];
     
     bookings.forEach(booking => {
+      console.log(`  Processing booking: ${booking.checkIn} to ${booking.checkOut}`);
       const checkIn = new Date(booking.checkIn);
       const checkOut = new Date(booking.checkOut);
       
@@ -105,10 +118,12 @@ router.get('/unavailable-dates/:roomId', async (req, res) => {
         // Format date as YYYY-MM-DD to avoid timezone issues
         const dateString = currentDate.toISOString().split('T')[0];
         unavailableDates.push(dateString);
+        console.log(`    Added unavailable date: ${dateString}`);
         currentDate.setDate(currentDate.getDate() + 1);
       }
     });
     
+    console.log(`📋 Final unavailable dates:`, unavailableDates);
     res.json({ unavailableDates });
   } catch (error) {
     console.error('Error fetching unavailable dates:', error);
@@ -119,10 +134,10 @@ router.get('/unavailable-dates/:roomId', async (req, res) => {
 // POST create booking with conflict checking
 router.post('/', async (req, res) => {
   try {
-    const { roomId, checkIn, checkOut, guests, nights, totalAmount, advancePaid, customerName, customerEmail, customerPhone } = req.body;
+    const { roomId, checkIn, checkOut, checkInTime, checkOutTime, guests, nights, totalAmount, advancePaid, customerName, customerEmail, customerPhone } = req.body;
     
     // Validate required fields
-    if (!roomId || !checkIn || !checkOut || !guests || !customerName || !customerEmail) {
+    if (!roomId || !checkIn || !checkOut || !checkInTime || !checkOutTime || !guests || !customerName || !customerEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
@@ -164,28 +179,105 @@ router.post('/', async (req, res) => {
         }
       ]
     });
+
+    // Additional time-based conflict checking for same-day bookings
+    const sameDayConflicts = conflictingBookings.filter(booking => {
+      const bookingCheckIn = new Date(booking.checkIn);
+      const bookingCheckOut = new Date(booking.checkOut);
+      
+      // If dates overlap, check for time conflicts
+      if (checkInDate.toDateString() === bookingCheckIn.toDateString() || 
+          checkInDate.toDateString() === bookingCheckOut.toDateString() ||
+          checkOutDate.toDateString() === bookingCheckIn.toDateString() ||
+          checkOutDate.toDateString() === bookingCheckOut.toDateString()) {
+        
+        // Check if there's a time overlap on the same day
+        const newCheckInTime = checkInTime || '14:00';
+        const newCheckOutTime = checkOutTime || '11:00';
+        const existingCheckInTime = booking.checkInTime || '14:00';
+        const existingCheckOutTime = booking.checkOutTime || '11:00';
+        
+        // If same day, check time overlap
+        if (checkInDate.toDateString() === checkOutDate.toDateString() && 
+            bookingCheckIn.toDateString() === bookingCheckOut.toDateString() &&
+            checkInDate.toDateString() === bookingCheckIn.toDateString()) {
+          
+          // Check if time ranges overlap
+          return !(newCheckOutTime <= existingCheckInTime || newCheckInTime >= existingCheckOutTime);
+        }
+      }
+      
+      return true; // Keep the booking as a conflict if dates overlap
+    });
     
     if (conflictingBookings.length > 0) {
       return res.status(409).json({ error: 'Selected dates are not available. Please choose different dates.' });
     }
     
-    // Create booking
+    // Professional night calculation
+    const calculateNights = (checkIn, checkOut) => {
+      // Reset time to midnight to avoid timezone issues
+      const checkInDate = new Date(checkIn);
+      checkInDate.setHours(0, 0, 0, 0);
+      const checkOutDate = new Date(checkOut);
+      checkOutDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      
+      // Professional booking logic:
+      // - Same day booking = 1 night (minimum)
+      // - Different days = exact night calculation
+      return Math.max(1, Math.floor(diffDays));
+    };
+
+    const calculatedNights = calculateNights(checkInDate, checkOutDate);
+    const calculatedTotalAmount = room.price * calculatedNights;
+
+    // Create booking with professional calculations
     const booking = new Booking({
       room: roomId,
       checkIn: checkInDate,
       checkOut: checkOutDate,
+      checkInTime: checkInTime || '14:00',
+      checkOutTime: checkOutTime || '11:00',
       guests: guests,
-      nights: nights || Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)),
-      totalAmount: totalAmount || (room.price * (nights || Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)))),
+      nights: nights || calculatedNights,
+      totalAmount: totalAmount || calculatedTotalAmount,
       advancePaid: advancePaid || 0,
       paymentStatus: 'pending',
       customerName,
       customerEmail,
       customerPhone,
-      paymentReference: `BK${Date.now()}` // Generate a simple reference
+      paymentReference: `BK${Date.now()}`, // Generate a simple reference
+      // Automatically add the customer who books via website form to customers array
+      customers: [{
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone || '',
+        address: '',
+        age: null,
+        relationship: 'Primary Guest'
+      }]
     });
     
   await booking.save();
+    
+    // Send detailed customer email immediately after booking creation
+    try {
+      await sendCustomerBookingEmail(booking, room);
+    } catch (error) {
+      console.error('Failed to send customer booking email:', error);
+      // Don't fail the booking if email fails
+    }
+    
+    // Send admin notification email
+    try {
+      await sendAdminNotificationEmail(booking, room);
+    } catch (error) {
+      console.error('Failed to send admin notification email:', error);
+      // Don't fail the booking if email fails
+    }
     
     res.status(201).json({ 
       message: 'Booking created successfully',
@@ -216,6 +308,97 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
   const { status } = req.body;
   const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
   res.json(booking);
+});
+
+// PATCH apply discount to booking
+router.patch('/:id/discount', requireAdmin, async (req, res) => {
+  try {
+    const { discountAmount, discountPercentage, discountReason, finalAmount } = req.body;
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { 
+        discountAmount, 
+        discountPercentage, 
+        discountReason, 
+        finalAmount 
+      },
+      { new: true }
+    ).populate('room');
+    
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    
+    res.json(booking);
+  } catch (error) {
+    console.error('Error applying discount:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PATCH update payment status and details
+router.patch('/:id/payment', requireAdmin, async (req, res) => {
+  try {
+    const { 
+      amount, 
+      discountAmount, 
+      discountPercentage, 
+      discountReason, 
+      finalAmount, 
+      paymentStatus 
+    } = req.body;
+    
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { 
+        amount,
+        discountAmount, 
+        discountPercentage, 
+        discountReason, 
+        finalAmount,
+        paymentStatus,
+        payment: {
+          amount: finalAmount,
+          method: 'manual',
+          status: paymentStatus,
+          reference: `PAY${Date.now()}`
+        }
+      },
+      { new: true }
+    ).populate('room');
+    
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    
+    res.json({ 
+      message: 'Payment recorded successfully', 
+      booking 
+    });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST add manual revenue entry
+router.post('/manual-revenue', requireAdmin, async (req, res) => {
+  try {
+    const { type, amount, description } = req.body;
+    
+    // For now, we'll just return success since we don't have a manual revenue collection
+    // In a real implementation, you might want to store this in a separate collection
+    
+    console.log('Manual revenue entry:', { type, amount, description });
+    
+    res.json({ 
+      message: 'Manual revenue entry recorded successfully',
+      entry: { type, amount, description, date: new Date() }
+    });
+  } catch (error) {
+    console.error('Error recording manual revenue:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // PUT update booking (for payment status updates)
@@ -547,6 +730,231 @@ router.post('/send-contact-soon', async (req, res) => {
   }
 });
 
+// Send admin notification email for new bookings
+async function sendAdminNotificationEmail(booking, room) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      }
+    });
+
+    // Email content
+    const mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'AKR Group Hotel'}" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: 'keerthiganthevarasa@gmail.com', // Admin email
+      subject: '🔔 New Hotel Room Booking Request - AKR Group Hotel',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">🆕 New Booking Request</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">A customer has requested to book a hotel room</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">📋 Booking Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">🏨 Room Information</h3>
+              <p><strong>Room:</strong> ${room.name}</p>
+              <p><strong>Type:</strong> ${room.type}</p>
+              <p><strong>Beds:</strong> ${room.beds}</p>
+              <p><strong>Max Guests:</strong> ${room.maxGuests}</p>
+              <p><strong>Room Rate:</strong> Rs. ${room.price?.toLocaleString() || 'N/A'}</p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+              <h3 style="color: #007bff; margin-top: 0;">📅 Stay Details</h3>
+              <p><strong>Check-in:</strong> ${new Date(booking.checkIn).toLocaleDateString()} at ${booking.checkInTime || '14:00'}</p>
+              <p><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleDateString()} at ${booking.checkOutTime || '11:00'}</p>
+              <p><strong>Nights:</strong> ${booking.nights}</p>
+              <p><strong>Guests:</strong> ${booking.guests}</p>
+              <p><strong>Total Amount:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              <p><strong>Payment Status:</strong> <span style="color: #ffc107; font-weight: bold;">${booking.paymentStatus}</span></p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #6f42c1;">
+              <h3 style="color: #6f42c1; margin-top: 0;">👤 Customer Information</h3>
+              <p><strong>Name:</strong> ${booking.customerName}</p>
+              <p><strong>Email:</strong> ${booking.customerEmail}</p>
+              <p><strong>Phone:</strong> ${booking.customerPhone}</p>
+              ${booking.customerAddress ? `<p><strong>Address:</strong> ${booking.customerAddress}</p>` : ''}
+              ${booking.specialRequests ? `<p><strong>Special Requests:</strong> ${booking.specialRequests}</p>` : ''}
+            </div>
+            
+            <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+              <h3 style="color: #856404; margin-top: 0;">⚠️ Action Required</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>Review the booking request</li>
+                <li>Check room availability for the requested dates</li>
+                <li>Contact the customer to confirm or discuss alternatives</li>
+                <li>Update booking status in the admin panel</li>
+                <li>Send confirmation email to customer once approved</li>
+              </ul>
+            </div>
+            
+            <div style="background: #d1ecf1; padding: 20px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+              <h3 style="color: #0c5460; margin-top: 0;">📞 Quick Actions</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li><strong>Call Customer:</strong> ${booking.customerPhone}</li>
+                <li><strong>Email Customer:</strong> ${booking.customerEmail}</li>
+                <li><strong>Booking ID:</strong> ${booking._id}</li>
+                <li><strong>Created:</strong> ${new Date(booking.createdAt).toLocaleString()}</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div style="background: #333; color: white; padding: 20px; text-align: center;">
+            <p style="margin: 0;">AKR Group Hotel</p>
+            <p style="margin: 5px 0;">Main Street, Murunkan, Mannar, Sri Lanka</p>
+            <p style="margin: 5px 0;">Phone: +94 77 311 1266 | Email: akrfuture@gmail.com</p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send email
+    console.log('Sending admin notification email to: keerthiganthevarasa@gmail.com');
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Admin notification email sent successfully:', result.messageId);
+    
+  } catch (error) {
+    console.error('Admin notification email sending error:', error);
+    throw error;
+  }
+}
+
+// Send detailed customer email immediately after booking creation
+async function sendCustomerBookingEmail(booking, room) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      }
+    });
+
+    // Calculate stay duration for display
+    const getStayDuration = (nights) => {
+      if (nights === 1) return '1 night';
+      if (nights < 7) return `${nights} nights`;
+      if (nights === 7) return '1 week';
+      if (nights < 30) return `${nights} nights (${Math.ceil(nights / 7)} weeks)`;
+      if (nights === 30) return '1 month';
+      if (nights < 365) return `${nights} nights (${Math.ceil(nights / 30)} months)`;
+      return `${nights} nights (${Math.ceil(nights / 365)} years)`;
+    };
+
+    // Email content
+    const mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'AKR Group Hotel'}" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: booking.customerEmail,
+      subject: '🏨 Booking Received - AKR Group Hotel - We Will Contact You Soon',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">🏨 Booking Received</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px;">Thank you for choosing AKR Group Hotel</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">We will contact you within 24 hours to confirm your reservation</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-bottom: 20px;">📋 Your Booking Details</h2>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+              <h3 style="color: #667eea; margin-top: 0;">🏨 Room Information</h3>
+              <p><strong>Room:</strong> ${room.name}</p>
+              <p><strong>Type:</strong> ${room.type}</p>
+              <p><strong>Beds:</strong> ${room.beds}</p>
+              <p><strong>Max Guests:</strong> ${room.maxGuests}</p>
+              <p><strong>Room Rate:</strong> Rs. ${room.price?.toLocaleString() || 'N/A'} per night</p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+              <h3 style="color: #28a745; margin-top: 0;">📅 Stay Details</h3>
+              <p><strong>Check-in:</strong> ${new Date(booking.checkIn).toLocaleDateString()} at ${booking.checkInTime || '14:00'}</p>
+              <p><strong>Check-out:</strong> ${new Date(booking.checkOut).toLocaleDateString()} at ${booking.checkOutTime || '11:00'}</p>
+              <p><strong>Duration:</strong> ${getStayDuration(booking.nights)}</p>
+              <p><strong>Guests:</strong> ${booking.guests} ${booking.guests === 1 ? 'guest' : 'guests'}</p>
+              <p><strong>Total Amount:</strong> Rs. ${(booking.totalAmount || 0).toLocaleString()}</p>
+              <p><strong>Booking ID:</strong> ${booking._id}</p>
+            </div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+              <h3 style="color: #ffc107; margin-top: 0;">👤 Guest Information</h3>
+              <p><strong>Name:</strong> ${booking.customerName}</p>
+              <p><strong>Email:</strong> ${booking.customerEmail}</p>
+              <p><strong>Phone:</strong> ${booking.customerPhone}</p>
+              ${booking.customerAddress ? `<p><strong>Address:</strong> ${booking.customerAddress}</p>` : ''}
+              ${booking.specialRequests ? `<p><strong>Special Requests:</strong> ${booking.specialRequests}</p>` : ''}
+            </div>
+            
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
+              <h3 style="color: #1976d2; margin-top: 0;">⏰ Next Steps</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>✅ We have received your booking request</li>
+                <li>📞 Our team will contact you within 24 hours</li>
+                <li>🔍 We will verify room availability for your dates</li>
+                <li>💳 We will discuss payment options and confirm details</li>
+                <li>📧 You will receive a final confirmation email once approved</li>
+              </ul>
+            </div>
+            
+            <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800;">
+              <h3 style="color: #f57c00; margin-top: 0;">⚠️ Important Information</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>📝 This is a booking request, not a confirmed reservation</li>
+                <li>💳 No payment has been processed yet</li>
+                <li>⏳ We will contact you to confirm availability</li>
+                <li>📞 For urgent inquiries, please call us directly</li>
+                <li>🕐 Standard check-in time: 2:00 PM | Check-out time: 11:00 AM</li>
+              </ul>
+            </div>
+            
+            <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #9c27b0;">
+              <h3 style="color: #7b1fa2; margin-top: 0;">🎁 What's Included</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li>🛏️ Comfortable accommodation</li>
+                <li>🚿 Private bathroom</li>
+                <li>❄️ Air conditioning</li>
+                <li>📶 Free WiFi</li>
+                <li>🅿️ Parking available</li>
+                <li>🏪 Located in the heart of Murunkan</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div style="background: #333; color: white; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-weight: bold;">AKR Group Hotel</p>
+            <p style="margin: 5px 0;">Main Street, Murunkan, Mannar, Sri Lanka</p>
+            <p style="margin: 5px 0;">📞 Phone: +94 77 311 1266</p>
+            <p style="margin: 5px 0;">📧 Email: akrfuture@gmail.com</p>
+            <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">
+              Thank you for choosing AKR Group Hotel. We look forward to welcoming you!
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send email
+    console.log('Sending detailed booking email to customer:', booking.customerEmail);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Customer booking email sent successfully:', result.messageId);
+    
+  } catch (error) {
+    console.error('Customer booking email sending error:', error);
+    throw error;
+  }
+}
+
 // Send booking cancellation email
 router.post('/send-cancellation', async (req, res) => {
   try {
@@ -787,6 +1195,111 @@ router.get('/export', requireAdmin, async (req, res) => {
     res.send(csv);
   } catch (error) {
     console.error('Error exporting bookings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST send review invitation email
+router.post('/:id/send-review-invitation', requireAdmin, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('room');
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (!booking.customerEmail) {
+      return res.status(400).json({ error: 'No customer email available for this booking' });
+    }
+
+    // For manual sending, allow resending even if already sent
+    // Just log a warning if it was already sent
+    if (booking.reviewInvitationSent) {
+      console.log(`⚠️ Resending review invitation to ${booking.customerEmail} (was already sent)`);
+    }
+
+    const result = await sendReviewInvitation(booking, booking.room);
+    
+    if (result.success) {
+      // Update booking with review token and invitation details
+      booking.reviewToken = result.reviewToken;
+      booking.reviewInvitationSent = true;
+      booking.reviewInvitationDate = new Date();
+      booking.reviewExpiryDate = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 days from now
+      await booking.save();
+
+      res.json({ 
+        message: 'Review invitation sent successfully',
+        reviewToken: result.reviewToken
+      });
+    } else {
+      console.error('Failed to send review invitation:', result.error);
+      res.status(500).json({ error: 'Failed to send review invitation', details: result.error });
+    }
+  } catch (error) {
+    console.error('Error sending review invitation:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST send review reminder email
+router.post('/:id/send-review-reminder', requireAdmin, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('room');
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (!booking.customerEmail) {
+      return res.status(400).json({ error: 'No customer email available for this booking' });
+    }
+
+    if (!booking.reviewInvitationSent) {
+      return res.status(400).json({ error: 'Review invitation not sent yet. Send invitation first.' });
+    }
+
+    const result = await sendReviewReminder(booking, booking.room);
+    
+    if (result.success) {
+      res.json({ message: 'Review reminder sent successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to send review reminder', details: result.error });
+    }
+  } catch (error) {
+    console.error('Error sending review reminder:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET validate review token
+router.get('/review/validate/:bookingId/:token', async (req, res) => {
+  try {
+    const { bookingId, token } = req.params;
+    
+    const booking = await Booking.findById(bookingId).populate('room');
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (booking.reviewToken !== token) {
+      return res.status(401).json({ error: 'Invalid review token' });
+    }
+
+    if (new Date() > booking.reviewExpiryDate) {
+      return res.status(401).json({ error: 'Review invitation has expired' });
+    }
+
+    res.json({ 
+      valid: true, 
+      booking: {
+        _id: booking._id,
+        customerName: booking.customerName,
+        room: booking.room,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut
+      }
+    });
+  } catch (error) {
+    console.error('Error validating review token:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

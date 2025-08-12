@@ -141,7 +141,7 @@ const PartyHall = () => {
                 src={PARTY_HALL_LOGO}
                   alt="AKR Party Hall & Restaurant Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>

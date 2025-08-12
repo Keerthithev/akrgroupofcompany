@@ -159,13 +159,13 @@ const Multicomplex = () => {
             {/* Logo and Brand */}
             <div className="flex items-center space-x-3">
               <div className="relative">
-                {settings.homepageLogo && (
-                  <img
-                    src={settings.homepageLogo}
-                    alt="AKR Logo"
+              {settings.homepageLogo && (
+                <img
+                  src={settings.homepageLogo}
+                  alt="AKR Logo"
                     className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                  />
-                )}
+                />
+              )}
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -275,18 +275,18 @@ const Multicomplex = () => {
                     className="h-full cursor-pointer transition-all duration-300 hover:shadow-lg flex flex-col"
                     cover={
                       <div className="h-48 overflow-hidden">
-                        {getServiceImage(service.name) ? (
+                {getServiceImage(service.name) ? (
                           <img 
                             alt={service.name}
                             src={getServiceImage(service.name)}
                             className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                           />
-                        ) : (
+                ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
                             <service.icon className="w-12 h-12" />
-                          </div>
-                        )}
-                      </div>
+                  </div>
+                )}
+              </div>
                     }
                     onClick={() => handleServiceClick(service)}
                     bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
@@ -303,15 +303,15 @@ const Multicomplex = () => {
                           type="link" 
                           icon={<RightOutlined />}
                           className="p-0 h-auto text-green-600 hover:text-green-700"
-                        >
-                          {service.buttonText}
+              >
+                {service.buttonText}
                         </Button>
                       </div>
-                    </div>
+            </div>
                   </Card>
                 </motion.div>
               </Col>
-            ))}
+          ))}
           </Row>
         </div>
       </motion.section>

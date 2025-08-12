@@ -1,25 +1,43 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Layout, Menu, Button, Typography, Upload, message, Input, Modal, List, Space, Row, Col, Empty, Spin, Table, Form, InputNumber, Popconfirm, Switch, Alert, Drawer } from "antd";
+import { Layout, Menu, Button, Typography, Upload, message, Input, Modal, List, Space, Row, Col, Empty, Spin, Table, Form, InputNumber, Popconfirm, Switch, Alert, Drawer, DatePicker, Tabs, Statistic, Card, Divider, Progress } from "antd";
 import { Input as AntInput } from "antd";
 import {
   DashboardOutlined,
-  ShopOutlined,
   HomeOutlined,
+  PictureOutlined,
+  ShopOutlined,
   TrophyOutlined,
   VideoCameraOutlined,
   GiftOutlined,
   ToolOutlined,
-  PictureOutlined,
   SettingOutlined,
   LogoutOutlined,
+  BellOutlined,
+  BarChartOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  UserAddOutlined,
+  DownloadOutlined,
   DeleteOutlined,
   PlusOutlined,
   EditOutlined,
-  DownloadOutlined
+  QrcodeOutlined,
+  BankOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined
 } from '@ant-design/icons';
 import api from "../lib/axios";
-import { DatePicker, Select } from 'antd';
+import { Select } from 'antd';
+import QRCodeGenerator from '../components/QRCodeGenerator';
+import SimpleChart from '../components/SimpleChart';
+import VisualCharts from '../components/VisualCharts';
+import { BarChart, LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Tag } from 'antd';
+import dayjs from 'dayjs';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
@@ -37,8 +55,10 @@ const SECTIONS = [
       { key: 'bookings-cancelled', label: 'Cancelled Bookings' },
       { key: 'bookings-all', label: 'All Bookings' },
       { key: 'customer-details', label: 'Customer Details' },
+      { key: 'reviews', label: 'Reviews Management' },
     ]
   },
+  { key: 'payment-history', label: 'Payment History', icon: <BarChartOutlined /> },
   { key: 'banners', label: 'Banners & Images', icon: <PictureOutlined /> },
   { key: 'shopping', label: 'Shopping', icon: <ShopOutlined /> },
   { key: 'gym', label: 'Gym', icon: <TrophyOutlined /> },
@@ -67,6 +87,7 @@ const SUPERMARKET_CATEGORIES = [
 ];
 
 const ROOM_TYPES = ['Double', 'Twin', 'Suite', 'Family', 'Single'];
+const ROOM_CATEGORIES = ['Economy', 'Business', 'First-Class'];
 const BED_TYPES = ['1 double', '2 single', '1 king', '2 queen', '1 single'];
 const VIEWS = ['Garden', 'Sea', 'City', 'Mountain', 'Pool', 'Paddy'];
 const AMENITIES = [
@@ -76,14 +97,12 @@ const AMENITIES = [
 ];
 
 // Move this OUTSIDE AdminDashboard:
-function CustomerDetailsSection({ selected }) {
-  const [bookings, setBookings] = React.useState([]);
+function CustomerDetailsSection({ selected, bookings, setBookings, newCustomer, setNewCustomer }) {
   const [loading, setLoading] = React.useState(true);
   const [editingBookingId, setEditingBookingId] = React.useState(null);
-  const [newCustomer, setNewCustomer] = React.useState({ name: '', email: '', phone: '', address: '', age: '', relationship: '' });
   const [addingToBookingId, setAddingToBookingId] = React.useState(null);
   const [search, setSearch] = React.useState('');
-  const [date, setDate] = React.useState(null);
+  const [date, setDate] = React.useState(dayjs());
   const [admin, setAdmin] = React.useState('');
   const [admins, setAdmins] = React.useState([]);
 
@@ -159,7 +178,7 @@ function CustomerDetailsSection({ selected }) {
         <DatePicker
           placeholder="Select date"
           value={date}
-          onChange={setDate}
+          onChange={(date) => setDate(date)}
         />
         <Select
           placeholder="Filter by admin"
@@ -192,15 +211,22 @@ function CustomerDetailsSection({ selected }) {
                     dataSource={booking.customers || []}
                     renderItem={(customer, idx) => (
                       <List.Item key={idx} style={{ padding: 8, background: '#fff', marginBottom: 4, borderRadius: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                         <Space direction="vertical" size={0}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span><b>Name:</b> {customer.name}</span>
+                              {customer.relationship === 'Primary Guest' && (
+                                <Tag color="green" size="small">Auto-Added</Tag>
+                              )}
+                            </div>
                           {customer.email && <span><b>Email:</b> {customer.email}</span>}
                           {customer.phone && <span><b>Phone:</b> {customer.phone}</span>}
                           {customer.address && <span><b>Address:</b> {customer.address}</span>}
                           {customer.age && <span><b>Age:</b> {customer.age}</span>}
                           {customer.relationship && <span><b>Relationship:</b> {customer.relationship}</span>}
                         </Space>
-                        <Button danger size="small" style={{ marginLeft: 16 }} onClick={() => handleDeleteCustomer(booking._id, idx)}>Delete</Button>
+                          <Button danger size="small" onClick={() => handleDeleteCustomer(booking._id, idx)}>Delete</Button>
+                        </div>
                       </List.Item>
                     )}
                   />
@@ -229,7 +255,31 @@ function CustomerDetailsSection({ selected }) {
 }
 
 const AdminDashboard = () => {
-  const [selected, setSelected] = useState('dashboard');
+  const [selected, setSelected] = React.useState('dashboard');
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [bookings, setBookings] = React.useState([]);
+  const [rooms, setRooms] = React.useState([]);
+  const [reviews, setReviews] = React.useState([]);
+  const [selectedDate, setSelectedDate] = React.useState(dayjs()); // Add date selection state
+  const [loading, setLoading] = React.useState(true);
+  const [notificationCount, setNotificationCount] = React.useState(0);
+  const [revenuePeriod, setRevenuePeriod] = React.useState('monthly');
+  const [manualRevenueModal, setManualRevenueModal] = React.useState(false);
+  const [manualCostModal, setManualCostModal] = React.useState(false);
+  const [discountModal, setDiscountModal] = React.useState(false);
+  const [selectedBooking, setSelectedBooking] = React.useState(null);
+  const [paymentModal, setPaymentModal] = React.useState(false);
+  const [paymentForm, setPaymentForm] = React.useState({
+    amount: 0,
+    discountAmount: 0,
+    discountPercentage: 0,
+    discountReason: '',
+    finalAmount: 0
+  });
+  const [qrCodeModal, setQrCodeModal] = React.useState(false);
+  const [showBookingChart, setShowBookingChart] = React.useState(true);
+  const [showRevenueChart, setShowRevenueChart] = React.useState(true);
+  const [reviewsLoading, setReviewsLoading] = React.useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [settings, setSettings] = useState(null);
   const [descEdit, setDescEdit] = useState({});
@@ -324,6 +374,7 @@ const AdminDashboard = () => {
   const [akrGroupHeading, setAkrGroupHeading] = useState("");
   const [akrGroupSubheading, setAkrGroupSubheading] = useState("");
   const [akrGroupHeadingColor, setAkrGroupHeadingColor] = useState("#22c55e");
+  const [bufferHours, setBufferHours] = useState(3);
   const [akrGroupSubheadingColor, setAkrGroupSubheadingColor] = useState("#fff");
   const [akrGroupBanners, setAkrGroupBanners] = useState([]);
 
@@ -334,19 +385,34 @@ const AdminDashboard = () => {
   const [multiComplexSubheadingColor, setMultiComplexSubheadingColor] = useState("#fff");
 
   // Room management state
-  const [rooms, setRooms] = useState([]);
   const [roomModal, setRoomModal] = useState({ open: false, editing: null });
-  const [roomFormData, setRoomFormData] = useState({ name: '', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
+  const [roomCategoryFilter, setRoomCategoryFilter] = useState('all');
+  const [discountForm, setDiscountForm] = useState({ type: 'percentage', value: 0, reason: '' });
+  const [manualRevenueForm, setManualRevenueForm] = useState({ type: 'collected', amount: 0, description: '', date: dayjs() });
+  const [manualRevenues, setManualRevenues] = useState([]);
+  const [manualCosts, setManualCosts] = useState([]);
+  const [manualCostForm, setManualCostForm] = useState({ category: 'Maintenance', amount: 0, description: '', date: dayjs(), paymentMethod: 'Cash' });
+  const [roomFormData, setRoomFormData] = useState({ name: '', category: 'Economy', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
   const [roomImageUploading, setRoomImageUploading] = useState(false);
   const [roomImageInput, setRoomImageInput] = useState('');
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
+  const [reviewEmails, setReviewEmails] = useState({}); // Store review emails for each room
+  const [currentQRIndex, setCurrentQRIndex] = useState(0); // Track current QR code index
   
   // Booking management state
-  const [bookings, setBookings] = useState([]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingModal, setBookingModal] = useState({ open: false, booking: null });
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all'); // 'all', 'pending', 'confirmed', 'cancelled'
+  const [customerModal, setCustomerModal] = useState({ open: false, bookingId: null });
+  const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '', address: '', age: '', relationship: '' });
+  
+  // Booking statistics state
+  const [bookingStats, setBookingStats] = useState({
+    monthly: [],
+    daily: [],
+    revenueByPeriod: []
+  });
 
   // Booking management functions
   const fetchBookings = async () => {
@@ -366,26 +432,20 @@ const AdminDashboard = () => {
 
   const handleConfirmBooking = async (bookingId) => {
     try {
-      // Update booking status to confirmed
-      await api.patch(`/api/bookings/${bookingId}/status`, 
-        { status: 'Confirmed' },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
-      );
+      console.log('🔄 Confirming booking:', bookingId);
       
-      // Send confirmation email
-      const booking = bookings.find(b => b._id === bookingId);
-      if (booking) {
-        await api.post('/api/bookings/send-confirmation', {
-          bookingId: booking._id,
-          customerEmail: booking.customerEmail,
-          customerName: booking.customerName
-        });
-      }
+      const response = await api.put(`/api/bookings/${bookingId}`, {
+        status: 'Confirmed',
+        paymentStatus: 'pending' // This ensures it goes to Upcoming Revenue
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
       
-      message.success('Booking confirmed and email sent!');
-      fetchBookings(); // Refresh the list
+      console.log('✅ Booking confirmed successfully:', response.data);
+      message.success('Booking confirmed successfully!');
+      fetchBookings(); // Refresh bookings
     } catch (error) {
-      console.error('Error confirming booking:', error);
+      console.error('❌ Error confirming booking:', error);
       message.error('Failed to confirm booking');
     }
   };
@@ -416,6 +476,92 @@ const AdminDashboard = () => {
     }
   };
 
+  const handlePaymentPaid = async (bookingId) => {
+    try {
+      console.log('💳 Marking payment as paid for booking:', bookingId);
+      
+      const booking = bookings.find(b => b._id === bookingId);
+      if (!booking) {
+        message.error('Booking not found');
+        return;
+      }
+
+      console.log('📋 Booking details before payment:', {
+        customerName: booking.customerName,
+        totalAmount: booking.totalAmount,
+        discountAmount: booking.discountAmount,
+        paymentStatus: booking.paymentStatus
+      });
+
+      // Calculate final amount with existing discount
+      const finalAmount = booking.totalAmount - (booking.discountAmount || 0);
+      
+      console.log('💰 Final amount to be collected:', finalAmount);
+      
+      // Update booking to mark payment as paid - this moves it from Upcoming to Collected Revenue
+      const response = await api.put(`/api/bookings/${bookingId}`, {
+        paymentStatus: 'paid',
+        finalAmount: finalAmount
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      console.log('✅ Payment marked as paid successfully:', response.data);
+      message.success(`Payment marked as paid! Amount ${formatCurrency(finalAmount)} moved to Collected Revenue.`);
+      fetchBookings(); // Refresh bookings
+    } catch (error) {
+      console.error('❌ Error marking payment as paid:', error);
+      message.error('Failed to mark payment as paid');
+    }
+  };
+
+  const handlePaymentSubmit = async () => {
+    try {
+      const { booking } = paymentModal;
+      if (!booking) {
+        message.error('No booking selected');
+        return;
+      }
+
+      // Calculate final amount
+      const finalAmount = paymentForm.amount - paymentForm.discountAmount;
+
+      // Update booking with payment and discount details
+      await api.patch(`/api/bookings/${booking._id}/payment`, {
+        amount: paymentForm.amount,
+        discountAmount: paymentForm.discountAmount,
+        discountPercentage: paymentForm.discountPercentage,
+        discountReason: paymentForm.discountReason,
+        finalAmount: finalAmount,
+        paymentStatus: 'paid'
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+
+      // Add to manual revenue as collected (optional - for tracking purposes)
+      try {
+        await api.post('/api/bookings/manual-revenue', {
+          type: 'collected',
+          amount: finalAmount,
+          description: `Payment received for booking ${booking.customerName} - ${booking.room?.name}`
+        }, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+      } catch (revenueError) {
+        console.log('Manual revenue tracking failed (non-critical):', revenueError);
+        // Don't fail the payment if revenue tracking fails
+      }
+
+      message.success('Payment recorded successfully!');
+      setPaymentModal({ open: false, booking: null });
+      setPaymentForm({ amount: 0, discountAmount: 0, discountPercentage: 0, discountReason: '' });
+      fetchBookings(); // Refresh the list
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      message.error('Failed to record payment');
+    }
+  };
+
   // Filter bookings based on status
   const getFilteredBookings = () => {
     if (bookingStatusFilter === 'all') {
@@ -428,6 +574,173 @@ const AdminDashboard = () => {
     });
   };
 
+  // Calculate notification count
+  const calculateNotificationCount = () => {
+    const pendingBookings = bookings.filter(b => b.status === 'Pending').length;
+    setNotificationCount(pendingBookings);
+  };
+
+  // Currency formatting function
+  const formatCurrency = (amount) => {
+    if (amount >= 1000000000) {
+      return `Rs. ${(amount / 1000000000).toFixed(1)}B`;
+    } else if (amount >= 1000000) {
+      return `Rs. ${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `Rs. ${(amount / 1000).toFixed(1)}K`;
+    } else {
+      return `Rs. ${amount.toLocaleString()}`;
+    }
+  };
+
+  // Calculate dashboard statistics
+  const calculateDashboardStats = () => {
+    const totalBookings = bookings.length;
+    const confirmedBookings = bookings.filter(b => b.status === 'Confirmed').length;
+    const pendingBookings = bookings.filter(b => b.status === 'Pending').length;
+    const availableRooms = rooms.filter(r => r.status === 'Available').length;
+    const totalRooms = rooms.length;
+    const totalReviews = reviews.length;
+    const averageRating = reviews.length > 0 
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : 0;
+    const notificationCount = calculateNotificationCount();
+
+    return {
+      totalBookings,
+      confirmedBookings,
+      pendingBookings,
+      availableRooms,
+      totalRooms,
+      totalReviews,
+      averageRating,
+      notificationCount
+    };
+  };
+
+  // Fetch reviews
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const response = await api.get('/api/reviews', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      setReviews(response.data);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      message.error('Failed to fetch reviews');
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Delete review
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      await api.delete(`/api/reviews/${reviewId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      message.success('Review deleted successfully!');
+      fetchReviews(); // Refresh reviews
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      message.error('Failed to delete review');
+    }
+  };
+
+  // Fetch booking statistics
+  const fetchBookingStats = async () => {
+    try {
+      // Calculate monthly statistics
+      const monthlyStats = [];
+      const currentDate = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const monthBookings = bookings.filter(booking => {
+          const bookingDate = new Date(booking.createdAt);
+          return bookingDate.getMonth() === date.getMonth() && 
+                 bookingDate.getFullYear() === date.getFullYear();
+        });
+        
+        monthlyStats.push({
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          bookings: monthBookings.length,
+          revenue: monthBookings
+            .filter(b => b.status === 'Confirmed' && new Date(b.checkOut) < new Date())
+            .reduce((sum, b) => sum + (b.totalAmount || 0), 0)
+        });
+      }
+
+      // Calculate daily statistics (last 30 days)
+      const dailyStats = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayBookings = bookings.filter(booking => {
+          const bookingDate = new Date(booking.createdAt);
+          return bookingDate.toDateString() === date.toDateString();
+        });
+        
+        dailyStats.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          bookings: dayBookings.length,
+          revenue: dayBookings
+            .filter(b => b.status === 'Confirmed' && new Date(b.checkOut) < new Date())
+            .reduce((sum, b) => sum + (b.totalAmount || 0), 0)
+        });
+      }
+
+      // Calculate revenue by completed booking periods
+      const completedBookings = bookings.filter(booking => 
+        booking.status === 'Confirmed' && new Date(booking.checkOut) < new Date()
+      );
+      
+      const revenueByPeriod = [];
+      const currentYear = new Date().getFullYear();
+      for (let month = 0; month < 12; month++) {
+        const monthBookings = completedBookings.filter(booking => {
+          const checkoutDate = new Date(booking.checkOut);
+          return checkoutDate.getMonth() === month && checkoutDate.getFullYear() === currentYear;
+        });
+        
+        revenueByPeriod.push({
+          month: new Date(currentYear, month).toLocaleDateString('en-US', { month: 'short' }),
+          revenue: monthBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0)
+        });
+      }
+
+      setBookingStats({
+        monthly: monthlyStats,
+        daily: dailyStats,
+        revenueByPeriod: revenueByPeriod
+      });
+    } catch (error) {
+      console.error('Error calculating booking statistics:', error);
+    }
+  };
+
+  // Handle adding customer to booking
+  const handleAddCustomerToBooking = async (bookingId) => {
+    if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
+      message.error('Please fill in all required fields (Name, Email, Phone)');
+      return;
+    }
+
+    try {
+      await api.put(`/api/bookings/${bookingId}/add-customer`, newCustomer, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      message.success('Customer added successfully!');
+      setCustomerModal({ open: false, bookingId: null });
+      setNewCustomer({ name: '', email: '', phone: '', address: '', age: '', relationship: '' });
+      fetchBookings(); // Refresh bookings
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      message.error('Failed to add customer');
+    }
+  };
+
   useEffect(() => {
     if (selected === 'hotel-management') {
       api.get('/api/rooms').then(res => setRooms(res.data));
@@ -437,7 +750,28 @@ const AdminDashboard = () => {
       setBookingStatusFilter(status);
       fetchBookings();
     }
+    if (selected === 'dashboard') {
+      // Fetch bookings and rooms for dashboard
+      fetchBookings();
+      api.get('/api/rooms').then(res => setRooms(res.data));
+      fetchReviews(); // Fetch reviews for dashboard stats
+      fetchManualRevenue(); // Fetch manual revenue
+      fetchManualCosts(); // Fetch manual costs
+    }
+    if (selected === 'reviews') {
+      fetchReviews();
+    }
+    if (selected === 'payment-history') {
+      fetchManualRevenue(); // Fetch manual revenue
+      fetchManualCosts(); // Fetch manual costs
+    }
   }, [selected]);
+
+  // Update notification count when bookings change
+  useEffect(() => {
+    calculateNotificationCount();
+    fetchBookingStats();
+  }, [bookings]);
 
   // Fetch settings on mount
   useEffect(() => {
@@ -446,6 +780,13 @@ const AdminDashboard = () => {
       setSettings(res.data);
     };
     fetchSettings();
+  }, []);
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    fetchBookings();
+    fetchReviews();
+    api.get('/api/rooms').then(res => setRooms(res.data));
   }, []);
 
   // When settings are loaded, set local state for homepage fields
@@ -473,6 +814,9 @@ const AdminDashboard = () => {
       setShoppingSubheadingColor(settings.shoppingSubheadingColor || "#fff");
       setShoppingSpecialOffer(settings.shoppingSpecialOffer || "");
       setShoppingSpecialOfferLink(settings.shoppingSpecialOfferLink || "");
+      
+      // Room turnover management settings
+      setBufferHours(settings.bufferHours || 3);
     }
   }, [settings]);
 
@@ -1377,6 +1721,7 @@ const AdminDashboard = () => {
     try {
       const payload = {
         name: roomFormData.name,
+        category: roomFormData.category,
         type: roomFormData.type,
         beds: roomFormData.beds,
         view: roomFormData.view,
@@ -1394,7 +1739,7 @@ const AdminDashboard = () => {
       }
       const res = await api.get('/api/rooms');
       setRooms(res.data);
-      setRoomFormData({ name: '', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
+      setRoomFormData({ name: '', category: 'Economy', description: '', price: '', capacity: 1, amenities: [], images: [], isAvailable: true, type: '', beds: '', maxGuests: '', size: '', discountedPrice: '', breakfastIncluded: false, breakfastPrice: '', cancellationPolicy: '', view: '', newAmenity: '' });
       setRoomDrawerOpen(false);
       setEditingRoomId(null);
       message.success(editingRoomId ? 'Room updated!' : 'Room added!');
@@ -1407,6 +1752,7 @@ const AdminDashboard = () => {
   const handleEditRoom = (room) => {
     setRoomFormData({
       name: room.name || '',
+      category: room.category || 'Economy',
       type: room.type || '',
       beds: room.beds || '',
       view: room.view || '',
@@ -1438,47 +1784,1611 @@ const AdminDashboard = () => {
     }
   };
 
+  // Filter rooms by category
+  const getFilteredRooms = () => {
+    if (roomCategoryFilter === 'all') {
+      return rooms;
+    }
+    return rooms.filter(room => room.category === roomCategoryFilter);
+  };
+
+  // Send review invitation
+  const handleSendReviewInvitation = async (bookingId) => {
+    try {
+      await api.post(`/api/bookings/${bookingId}/send-review-invitation`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      message.success('Review invitation sent successfully!');
+      fetchBookings(); // Refresh bookings
+    } catch (error) {
+      console.error('Error sending review invitation:', error);
+      message.error('Failed to send review invitation');
+    }
+  };
+
+  // Send review reminder
+  const handleSendReviewReminder = async (bookingId) => {
+    try {
+      await api.post(`/api/bookings/${bookingId}/send-review-reminder`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      message.success('Review reminder sent successfully!');
+    } catch (error) {
+      console.error('Error sending review reminder:', error);
+      message.error('Failed to send review reminder');
+    }
+  };
+
+  // Helper function to get category colors
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Maintenance': '#ff4d4f',
+      'Utilities': '#1890ff',
+      'Supplies': '#52c41a',
+      'Staff': '#722ed1',
+      'Marketing': '#fa8c16',
+      'Other': '#666666'
+    };
+    return colors[category] || '#666666';
+  };
+
+  // Handle adding manual cost
+  const handleAddManualCost = async () => {
+    if (!manualCostForm.amount || !manualCostForm.description) {
+      message.error('Please fill in amount and description');
+      return;
+    }
+
+    try {
+      const costData = {
+        category: manualCostForm.category,
+        amount: parseFloat(manualCostForm.amount),
+        description: manualCostForm.description,
+        date: manualCostForm.date.toDate(),
+        paymentMethod: manualCostForm.paymentMethod
+      };
+
+      await api.post('/api/manual-costs', costData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+
+      setManualCostForm({ category: 'Maintenance', amount: 0, description: '', date: dayjs(), paymentMethod: 'Cash' });
+      setManualCostModal(false);
+      message.success('Cost entry added successfully!');
+      fetchManualCosts(); // Refresh the list
+    } catch (error) {
+      console.error('Error adding manual cost:', error);
+      message.error('Failed to add cost entry');
+    }
+  };
+
+  // Calculate total manual costs
+  const calculateTotalManualCosts = () => {
+    return manualCosts.reduce((total, cost) => total + cost.amount, 0);
+  };
+
+  // Calculate net profit (revenue - costs)
+  const calculateNetProfit = () => {
+    const totalRevenue = calculateCollectedRevenue() + calculateManualRevenue('collected');
+    const totalCosts = calculateTotalManualCosts();
+    return totalRevenue - totalCosts;
+  };
+
+  const handleAddManualRevenue = async () => {
+    try {
+      const revenueData = {
+        type: manualRevenueForm.type,
+        amount: parseFloat(manualRevenueForm.amount),
+        description: manualRevenueForm.description,
+        date: manualRevenueForm.date.toDate()
+      };
+      
+      if (manualRevenueForm.editingId) {
+        // Editing existing entry
+        await api.put(`/api/manual-revenue/${manualRevenueForm.editingId}`, revenueData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        message.success('Revenue entry updated successfully!');
+      } else {
+        // Adding new entry
+        await api.post('/api/manual-revenue', revenueData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        message.success('Revenue entry added successfully!');
+      }
+      
+      setManualRevenueModal(false);
+      setManualRevenueForm({ type: 'collected', amount: 0, description: '', date: dayjs() });
+      fetchManualRevenue(); // Refresh the list
+    } catch (error) {
+      console.error('Error saving manual revenue:', error);
+      message.error('Failed to save revenue entry');
+    }
+  };
+
+  // Calculate total manual revenue
+  const calculateManualRevenue = (type) => {
+    return manualRevenues
+      .filter(revenue => revenue.type === type)
+      .reduce((total, revenue) => total + revenue.amount, 0);
+  };
+
+  // Calculate total revenue including manual entries
+  const calculateTotalRevenue = (period) => {
+    const bookingRevenue = calculateRevenueByPeriod(period); // Only paid bookings
+    const collectedRevenue = calculateManualRevenue('collected');
+    const upcomingRevenue = calculateManualRevenue('upcoming');
+    return bookingRevenue + collectedRevenue + upcomingRevenue;
+  };
+
+  // Calculate upcoming revenue from confirmed but unpaid bookings
+  const calculateUpcomingRevenue = () => {
+    // Handle both old bookings (no paymentStatus) and new bookings (with paymentStatus)
+    const upcomingBookings = bookings.filter(b => {
+      if (b.status === 'Confirmed') {
+        // If paymentStatus doesn't exist, treat as unpaid (upcoming)
+        if (!b.paymentStatus) {
+          return true;
+        }
+        // If paymentStatus exists, check if it's not 'paid'
+        return b.paymentStatus !== 'paid';
+      }
+      return false;
+    });
+    
+    const total = upcomingBookings.reduce((sum, b) => {
+      const baseAmount = b.totalAmount || 0;
+      const discountAmount = b.discountAmount || 0;
+      return sum + (baseAmount - discountAmount);
+    }, 0);
+
+    // Debug logging
+    console.log('🔍 Upcoming Revenue Calculation:');
+    console.log(`  - Total bookings: ${bookings.length}`);
+    console.log(`  - Confirmed bookings: ${bookings.filter(b => b.status === 'Confirmed').length}`);
+    console.log(`  - Upcoming bookings: ${upcomingBookings.length}`);
+    upcomingBookings.forEach(b => {
+      console.log(`    - ${b.customerName}: ${b.totalAmount} (paymentStatus: ${b.paymentStatus})`);
+    });
+    console.log(`  - Total upcoming revenue: ${total}`);
+
+    return total;
+  };
+
+  // Calculate collected revenue from paid bookings
+  const calculateCollectedRevenue = () => {
+    // Only include bookings that explicitly have paymentStatus === 'paid'
+    const collectedBookings = bookings.filter(b => b.status === 'Confirmed' && b.paymentStatus === 'paid');
+    
+    const total = collectedBookings.reduce((sum, b) => {
+      const finalAmount = b.finalAmount || (b.totalAmount - (b.discountAmount || 0));
+      return sum + finalAmount;
+    }, 0);
+
+    // Debug logging
+    console.log('💰 Collected Revenue Calculation:');
+    console.log(`  - Collected bookings: ${collectedBookings.length}`);
+    collectedBookings.forEach(b => {
+      console.log(`    - ${b.customerName}: ${b.finalAmount || (b.totalAmount - (b.discountAmount || 0))} (paymentStatus: ${b.paymentStatus})`);
+    });
+    console.log(`  - Total collected revenue: ${total}`);
+
+    return total;
+  };
+
+  // Calculate payment activities for a specific date
+  const calculatePaymentActivitiesForDate = (date) => {
+    // Convert dayjs to Date if needed
+    const dateObj = date instanceof Date ? date : date.toDate();
+    const startOfDay = new Date(dateObj);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(dateObj);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Filter bookings for the specific date
+    const dateBookings = bookings.filter(b => {
+      // Use updatedAt for payment status changes, createdAt for new bookings
+      const bookingDate = new Date(b.updatedAt || b.createdAt);
+      return bookingDate >= startOfDay && bookingDate <= endOfDay;
+    });
+
+    // Calculate collected revenue for the date (only paid bookings)
+    const collectedRevenue = dateBookings
+      .filter(b => b.status === 'Confirmed' && b.paymentStatus === 'paid')
+      .reduce((sum, b) => {
+        const finalAmount = b.finalAmount || (b.totalAmount - (b.discountAmount || 0));
+        return sum + finalAmount;
+      }, 0);
+
+    // Count paid bookings for the date
+    const paidBookings = dateBookings.filter(b => 
+      b.status === 'Confirmed' && b.paymentStatus === 'paid'
+    ).length;
+
+    // Count pending payments for the date
+    const pendingPayments = dateBookings.filter(b => 
+      b.status === 'Confirmed' && b.paymentStatus !== 'paid'
+    ).length;
+
+    // Calculate total discounts for the date
+    const totalDiscounts = dateBookings.reduce((sum, b) => {
+      return sum + (b.discountAmount || 0);
+    }, 0);
+
+    // Debug logging
+    console.log(`💰 Payment Activities for ${dateObj.toLocaleDateString()}:`);
+    console.log(`  - Total bookings on this date: ${dateBookings.length}`);
+    console.log(`  - Paid bookings: ${paidBookings}`);
+    console.log(`  - Pending payments: ${pendingPayments}`);
+    console.log(`  - Collected revenue: ${collectedRevenue}`);
+    console.log(`  - Total discounts: ${totalDiscounts}`);
+
+    return {
+      collectedRevenue,
+      paidBookings,
+      pendingPayments,
+      totalDiscounts,
+      totalBookings: dateBookings.length
+    };
+  };
+
+  // Handle discount application
+  const handleApplyDiscount = async () => {
+    try {
+      const { booking } = discountModal;
+      const { type, value, reason } = discountForm;
+      
+      let discountAmount = 0;
+      let discountPercentage = 0;
+      
+      if (type === 'percentage') {
+        discountPercentage = value;
+        discountAmount = (booking.totalAmount * value) / 100;
+      } else {
+        discountAmount = value;
+        discountPercentage = (value / booking.totalAmount) * 100;
+      }
+      
+      const finalAmount = booking.totalAmount - discountAmount;
+      
+      await api.patch(`/api/bookings/${booking._id}/discount`, {
+        discountAmount,
+        discountPercentage,
+        discountReason: reason,
+        finalAmount
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      
+      message.success('Discount applied successfully!');
+      setDiscountModal({ open: false, booking: null });
+      setDiscountForm({ type: 'percentage', value: 0, reason: '' });
+      fetchBookings(); // Refresh bookings
+    } catch (error) {
+      console.error('Error applying discount:', error);
+      message.error('Failed to apply discount');
+    }
+  };
+
+  // Calculate revenue based on selected period
+  const calculateRevenueByPeriod = (period) => {
+    const now = new Date();
+    let startDate;
+    
+    switch (period) {
+      case 'daily':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'weekly':
+        const dayOfWeek = now.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToSubtract);
+        break;
+      case 'monthly':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'yearly':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    // Filter by when payment was made (updatedAt) instead of check-in date
+    return bookings
+      .filter(b => {
+        if (b.status !== 'Confirmed' || b.paymentStatus !== 'paid') return false;
+        
+        // Use updatedAt for when payment was marked as paid
+        const paymentDate = new Date(b.updatedAt || b.createdAt);
+        return paymentDate >= startDate && paymentDate <= now;
+      })
+      .reduce((sum, b) => {
+        const finalAmount = b.finalAmount || (b.totalAmount - (b.discountAmount || 0));
+        return sum + finalAmount;
+      }, 0);
+  };
+
+  // Fetch manual revenue and costs from backend
+  const fetchManualRevenue = async () => {
+    try {
+      const response = await api.get('/api/manual-revenue', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      setManualRevenues(response.data);
+    } catch (error) {
+      console.error('Error fetching manual revenue:', error);
+      message.error('Failed to fetch manual revenue');
+    }
+  };
+
+  const fetchManualCosts = async () => {
+    try {
+      const response = await api.get('/api/manual-costs', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      setManualCosts(response.data);
+    } catch (error) {
+      console.error('Error fetching manual costs:', error);
+      message.error('Failed to fetch manual costs');
+    }
+  };
+
+  // Fetch bookings and rooms for dashboard
+  useEffect(() => {
+    fetchBookings();
+    fetchReviews();
+    api.get('/api/rooms').then(res => setRooms(res.data));
+  }, []);
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={220} style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}>
+      <Sider 
+        width={220} 
+        collapsed={collapsed}
+        collapsedWidth={80}
+        style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}
+        trigger={null}
+      >
         <div className="p-4 text-center">
-          <Title level={4} style={{ margin: 0, color: '#11998e' }}>Admin Panel</Title>
+          <Title level={4} style={{ margin: 0, color: '#11998e', fontSize: collapsed ? 16 : 20 }}>
+            {collapsed ? 'AP' : 'Admin Panel'}
+          </Title>
         </div>
         <Menu
           mode="inline"
           selectedKeys={[selected]}
           onClick={({ key }) => setSelected(key)}
           style={{ height: '100%', borderRight: 0 }}
+          inlineCollapsed={collapsed}
           items={SECTIONS.map(s => {
             if (s.children) {
               return {
                 key: s.key,
                 icon: s.icon,
-                label: s.label,
-                children: s.children.map(child => ({
+                label: collapsed ? null : s.label,
+                children: collapsed ? undefined : s.children.map(child => ({
                   key: child.key,
                   label: child.label
                 }))
               };
             }
-            return { key: s.key, icon: s.icon, label: s.label };
+            return { 
+              key: s.key, 
+              icon: s.icon, 
+              label: collapsed ? null : s.label,
+              title: collapsed ? s.label : undefined
+            };
           })}
         />
         <div className="p-4">
-          <Button icon={<LogoutOutlined />} block danger onClick={handleLogout}>Logout</Button>
+          <Button 
+            icon={<LogoutOutlined />} 
+            block 
+            danger 
+            onClick={handleLogout}
+            title={collapsed ? 'Logout' : undefined}
+          >
+            {collapsed ? null : 'Logout'}
+          </Button>
         </div>
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', borderBottom: '1px solid #f0f0f0', padding: '0 24px' }}>
+        <Header style={{ background: '#fff', borderBottom: '1px solid #f0f0f0', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ fontSize: 16 }}
+            />
           <Title level={3} style={{ margin: 0, color: '#11998e' }}>
             {selected.startsWith('bookings-') || selected === 'hotel-management'
               ? SECTIONS.find(s => s.key === 'hotel')?.children?.find(c => c.key === selected)?.label || 'Hotel Management'
               : SECTIONS.find(s => s.key === selected)?.label || 'Admin Panel'
             }
           </Title>
+          </div>
+          
+          {/* Notification Bell */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ position: 'relative' }}>
+              <Button
+                type="text"
+                icon={<BellOutlined style={{ fontSize: 20 }} />}
+                size="large"
+                onClick={() => setSelected('bookings-pending')}
+                style={{ 
+                  color: notificationCount > 0 ? '#ff4d4f' : '#666',
+                  border: notificationCount > 0 ? '1px solid #ff4d4f' : '1px solid #d9d9d9'
+                }}
+              />
+              {notificationCount > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: -5,
+                  right: -5,
+                  background: '#ff4d4f',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 'bold',
+                  border: '2px solid white'
+                }}>
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </div>
+              )}
+            </div>
+          </div>
         </Header>
         <Content style={{ margin: 0, padding: 24, background: '#fff', minHeight: 360 }}>
-          {selected === 'dashboard' && <div>Dashboard stats and overview here.</div>}
+          {selected === 'dashboard' && (
+            <div>
+              {/* Dashboard Overview Cards with Financial Summary */}
+              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} lg={16}>
+                  {/* Dashboard Overview Cards */}
+                  <Row gutter={[16, 16]}>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Total Bookings"
+                          value={bookings.length}
+                          prefix={<CalendarOutlined style={{ color: '#1890ff' }} />}
+                          valueStyle={{ color: '#1890ff' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          Confirmed: {bookings.filter(b => b.status === 'Confirmed').length} | 
+                          Pending: {bookings.filter(b => b.status === 'Pending').length}
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Available Rooms"
+                          value={rooms.filter(r => r.status === 'Available').length}
+                          prefix={<HomeOutlined style={{ color: '#52c41a' }} />}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          Total: {rooms.length} rooms
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Total Reviews"
+                          value={reviews.length}
+                          prefix={<TrophyOutlined style={{ color: '#722ed1' }} />}
+                          valueStyle={{ color: '#722ed1' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          Average: {reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0} ⭐
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Notification Count"
+                          value={notificationCount}
+                          prefix={<BellOutlined style={{ color: '#fa8c16' }} />}
+                          valueStyle={{ color: '#fa8c16' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          New bookings pending
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Collected Revenue"
+                          value={formatCurrency(calculateCollectedRevenue() + calculateManualRevenue('collected'))}
+                          prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          Paid bookings + Manual
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Card style={{ textAlign: 'center' }}>
+                        <Statistic
+                          title="Upcoming Revenue"
+                          value={formatCurrency(calculateUpcomingRevenue() + calculateManualRevenue('upcoming'))}
+                          prefix={<DollarOutlined style={{ color: '#fa8c16' }} />}
+                          valueStyle={{ color: '#fa8c16' }}
+                        />
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+                          Confirmed but unpaid
+                        </div>
+                      </Card>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col xs={24} lg={8}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {/* Financial Summary Card */}
+                    <Card title="📊 Financial Summary" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ lineHeight: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14 }}>💰 Booking Revenue:</span>
+                          <span style={{ fontSize: 14, fontWeight: 'bold', color: '#52c41a' }}>
+                            {formatCurrency(calculateCollectedRevenue())}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14 }}>➕ Manual Revenue:</span>
+                          <span style={{ fontSize: 14, fontWeight: 'bold', color: '#52c41a' }}>
+                            {formatCurrency(calculateManualRevenue('collected'))}
+                          </span>
+                        </div>
+                        <Divider style={{ margin: '12px 0' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, fontWeight: 'bold' }}>📈 Total Revenue:</span>
+                          <span style={{ fontSize: 14, fontWeight: 'bold', color: '#52c41a' }}>
+                            {formatCurrency(calculateCollectedRevenue() + calculateManualRevenue('collected'))}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14 }}>💸 Total Costs:</span>
+                          <span style={{ fontSize: 14, fontWeight: 'bold', color: '#ff4d4f' }}>
+                            -{formatCurrency(calculateTotalManualCosts())}
+                          </span>
+                        </div>
+                        <Divider style={{ margin: '12px 0' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, fontWeight: 'bold' }}>💵 Net Profit:</span>
+                          <span style={{ fontSize: 14, fontWeight: 'bold', color: calculateNetProfit() >= 0 ? '#52c41a' : '#ff4d4f' }}>
+                            {formatCurrency(calculateNetProfit())}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Today's Schedule and QR Code - Side by side under dashboard cards */}
+              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} lg={16}>
+                  <Card title="📅 Today's Schedule" style={{ height: 'fit-content' }}>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} sm={12}>
+                        <div style={{ 
+                          padding: 16, 
+                          backgroundColor: '#f6ffed', 
+                          borderRadius: 8, 
+                          border: '1px solid #b7eb8f',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a', marginBottom: 8 }}>
+                            {bookings.filter(b => {
+                              const today = new Date().toDateString();
+                              const checkInDate = new Date(b.checkIn).toDateString();
+                              return checkInDate === today && b.status === 'Confirmed';
+                            }).length}
+                          </div>
+                          <div style={{ fontSize: 14, color: '#52c41a', fontWeight: 'bold' }}>
+                            Check-ins Today
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                            Confirmed bookings
+                          </div>
+                        </div>
+                      </Col>
+                      <Col xs={24} sm={12}>
+                        <div style={{ 
+                          padding: 16, 
+                          backgroundColor: '#fff7e6', 
+                          borderRadius: 8, 
+                          border: '1px solid #ffd591',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: 24, fontWeight: 'bold', color: '#fa8c16', marginBottom: 8 }}>
+                            {bookings.filter(b => {
+                              const today = new Date().toDateString();
+                              const checkOutDate = new Date(b.checkOut).toDateString();
+                              return checkOutDate === today && b.status === 'Confirmed';
+                            }).length}
+                          </div>
+                          <div style={{ fontSize: 14, color: '#fa8c16', fontWeight: 'bold' }}>
+                            Check-outs Today
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                            Rooms to clean
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                    
+                    {/* Today's Schedule Details */}
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 12, color: '#1890ff' }}>
+                        📋 Today's Details
+                      </div>
+                      
+                      {/* Check-ins List */}
+                      {(() => {
+                        const todayCheckIns = bookings.filter(b => {
+                          const today = new Date().toDateString();
+                          const checkInDate = new Date(b.checkIn).toDateString();
+                          return checkInDate === today && b.status === 'Confirmed';
+                        });
+                        
+                        if (todayCheckIns.length > 0) {
+                          return (
+                            <div style={{ marginBottom: 12 }}>
+                              <div style={{ fontSize: 12, color: '#52c41a', fontWeight: 'bold', marginBottom: 8 }}>
+                                ✅ Check-ins ({todayCheckIns.length})
+                              </div>
+                              {todayCheckIns.slice(0, 3).map(booking => (
+                                <div key={booking._id} style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  alignItems: 'center',
+                                  padding: '8px 12px',
+                                  backgroundColor: '#f6ffed',
+                                  borderRadius: 6,
+                                  marginBottom: 4
+                                }}>
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 'bold' }}>
+                                      {booking.customerName}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#666' }}>
+                                      {booking.room?.name || 'Room N/A'}
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: 11, color: '#52c41a' }}>
+                                    {new Date(booking.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              ))}
+                              {todayCheckIns.length > 3 && (
+                                <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 4 }}>
+                                  +{todayCheckIns.length - 3} more check-ins
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      
+                      {/* Check-outs List */}
+                      {(() => {
+                        const todayCheckOuts = bookings.filter(b => {
+                          const today = new Date().toDateString();
+                          const checkOutDate = new Date(b.checkOut).toDateString();
+                          return checkOutDate === today && b.status === 'Confirmed';
+                        });
+                        
+                        if (todayCheckOuts.length > 0) {
+                          return (
+                            <div>
+                              <div style={{ fontSize: 12, color: '#fa8c16', fontWeight: 'bold', marginBottom: 8 }}>
+                                🚪 Check-outs ({todayCheckOuts.length})
+                              </div>
+                              {todayCheckOuts.slice(0, 3).map(booking => (
+                                <div key={booking._id} style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between', 
+                                  alignItems: 'center',
+                                  padding: '8px 12px',
+                                  backgroundColor: '#fff7e6',
+                                  borderRadius: 6,
+                                  marginBottom: 4
+                                }}>
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 'bold' }}>
+                                      {booking.customerName}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#666' }}>
+                                      {booking.room?.name || 'Room N/A'}
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: 11, color: '#fa8c16' }}>
+                                    {new Date(booking.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              ))}
+                              {todayCheckOuts.length > 3 && (
+                                <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 4 }}>
+                                  +{todayCheckOuts.length - 3} more check-outs
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      
+                      {/* Enhanced Empty State */}
+                      {(() => {
+                        const todayCheckIns = bookings.filter(b => {
+                          const today = new Date().toDateString();
+                          const checkInDate = new Date(b.checkIn).toDateString();
+                          return checkInDate === today && b.status === 'Confirmed';
+                        });
+                        
+                        const todayCheckOuts = bookings.filter(b => {
+                          const today = new Date().toDateString();
+                          const checkOutDate = new Date(b.checkOut).toDateString();
+                          return checkOutDate === today && b.status === 'Confirmed';
+                        });
+                        
+                        if (todayCheckIns.length === 0 && todayCheckOuts.length === 0) {
+                          return (
+                            <div style={{ 
+                              textAlign: 'center', 
+                              padding: 20, 
+                              color: '#666',
+                              backgroundColor: '#f5f5f5',
+                              borderRadius: 8
+                            }}>
+                              <div style={{ fontSize: 16, marginBottom: 8 }}>📅</div>
+                              <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>No Schedule Today</div>
+                              <div style={{ fontSize: 12, marginBottom: 12 }}>No check-ins or check-outs scheduled for today</div>
+                              
+                              {/* Show upcoming bookings */}
+                              {(() => {
+                                const upcomingBookings = bookings.filter(b => {
+                                  const today = new Date();
+                                  const checkInDate = new Date(b.checkIn);
+                                  return checkInDate > today && b.status === 'Confirmed';
+                                }).slice(0, 2);
+                                
+                                if (upcomingBookings.length > 0) {
+                                  return (
+                                    <div style={{ textAlign: 'left', marginTop: 12 }}>
+                                      <div style={{ fontSize: 12, fontWeight: 'bold', color: '#1890ff', marginBottom: 8 }}>
+                                        🔮 Upcoming Bookings:
+                                      </div>
+                                      {upcomingBookings.map(booking => (
+                                        <div key={booking._id} style={{ 
+                                          fontSize: 11, 
+                                          marginBottom: 4,
+                                          padding: '4px 8px',
+                                          backgroundColor: '#e6f7ff',
+                                          borderRadius: 4
+                                        }}>
+                                          <div style={{ fontWeight: 'bold' }}>
+                                            {booking.customerName} - {booking.room?.name || 'Room N/A'}
+                                          </div>
+                                          <div style={{ color: '#666' }}>
+                                            {new Date(booking.checkIn).toLocaleDateString()} at {new Date(booking.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                              
+                              {/* Show room status summary */}
+                              <div style={{ marginTop: 12, padding: '8px 12px', backgroundColor: '#f0f9ff', borderRadius: 6 }}>
+                                <div style={{ fontSize: 12, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>
+                                  🏨 Room Status Summary:
+                                </div>
+                                <div style={{ fontSize: 11, color: '#666' }}>
+                                  Available: {rooms.filter(r => r.status === 'Available').length} | 
+                                  Occupied: {rooms.filter(r => r.status === 'Occupied').length} | 
+                                  Cleaning: {rooms.filter(r => r.status === 'Cleaning').length}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={24} lg={8}>
+                  <Card title="📱 Room QR Code for Reviews" style={{ height: 'fit-content' }}>
+                    {rooms.length > 0 ? (
+                      <div style={{ textAlign: 'center' }}>
+                        {/* Room Information */}
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
+                            {rooms[currentQRIndex]?.name}
+                          </div>
+                          <div style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
+                            {rooms[currentQRIndex]?.category} • {rooms[currentQRIndex]?.type}
+                          </div>
+                        </div>
+                        
+                        {/* QR Code Display */}
+                        <div style={{ 
+                          backgroundColor: '#f5f5f5', 
+                          padding: 20, 
+                          borderRadius: 8, 
+                          marginBottom: 16,
+                          minHeight: 150,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <QrcodeOutlined style={{ fontSize: 100, color: '#1890ff' }} />
+                            <div style={{ fontSize: 14, color: '#666', marginTop: 12 }}>
+                              QR Code for {rooms[currentQRIndex]?.name}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Review Invitation Form */}
+                        <div style={{ marginBottom: 16 }}>
+                          <Input
+                            placeholder="Enter customer email"
+                            size="middle"
+                            style={{ marginBottom: 12 }}
+                            value={reviewEmails[rooms[currentQRIndex]?._id] || ''}
+                            onChange={(e) => {
+                              setReviewEmails(prev => ({
+                                ...prev,
+                                [rooms[currentQRIndex]?._id]: e.target.value
+                              }));
+                            }}
+                          />
+                          <Button
+                            type="primary"
+                            size="middle"
+                            style={{ width: '100%' }}
+                            onClick={async () => {
+                              const room = rooms[currentQRIndex];
+                              const email = reviewEmails[room?._id];
+                              if (!email) {
+                                message.error('Please enter customer email');
+                                return;
+                              }
+                              
+                              try {
+                                // Find a booking for this room and email
+                                const booking = bookings.find(b => 
+                                  b.room && b.room._id === room._id && 
+                                  (b.customerEmail === email || b.customerName?.toLowerCase().includes(email.toLowerCase()))
+                                );
+                                
+                                if (booking) {
+                                  await api.post(`/api/bookings/${booking._id}/send-review-invitation`, {}, {
+                                    headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                  });
+                                  message.success(`Review invitation sent to ${email} for ${room.name}`);
+                                  // Clear the email input after successful send
+                                  setReviewEmails(prev => ({
+                                    ...prev,
+                                    [room._id]: ''
+                                  }));
+                                } else {
+                                  message.error(`No booking found for ${email} in ${room.name}`);
+                                }
+                              } catch (error) {
+                                console.error('Error sending review invitation:', error);
+                                message.error('Failed to send review invitation');
+                              }
+                            }}
+                          >
+                            Send Review Invitation
+                          </Button>
+                        </div>
+
+                        {/* Navigation */}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <Button
+                            size="middle"
+                            disabled={currentQRIndex === 0}
+                            onClick={() => setCurrentQRIndex(prev => Math.max(0, prev - 1))}
+                            style={{ flex: 1 }}
+                          >
+                            ← Previous
+                          </Button>
+                          <span style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            fontSize: 14, 
+                            color: '#666',
+                            minWidth: 60,
+                            justifyContent: 'center'
+                          }}>
+                            {currentQRIndex + 1} / {rooms.length}
+                          </span>
+                          <Button
+                            size="middle"
+                            disabled={currentQRIndex === rooms.length - 1}
+                            onClick={() => setCurrentQRIndex(prev => Math.min(rooms.length - 1, prev + 1))}
+                            style={{ flex: 1 }}
+                          >
+                            Next →
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: 20, color: '#666' }}>
+                        No rooms available for QR codes
+                      </div>
+                    )}
+                  </Card>
+                </Col>
+              </Row>
+
+              {/* Recent Bookings */}
+              <div style={{ marginBottom: 24 }}>
+                <Title level={4} style={{ marginBottom: 16 }}>📋 Recent Bookings</Title>
+                <Table
+                  dataSource={bookings.slice(0, 5)}
+                  rowKey="_id"
+                  pagination={false}
+                  size="small"
+                  columns={[
+                    {
+                      title: 'Customer',
+                      dataIndex: 'customerName',
+                      key: 'customerName',
+                      render: (text, record) => (
+                        <div>
+                          <div style={{ fontWeight: 'bold' }}>{text}</div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>{record.customerPhone}</div>
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Room',
+                      key: 'room',
+                      render: (_, record) => {
+                        // Handle different room data structures
+                        let roomName = 'N/A';
+                        let roomCategory = '';
+                        
+                        if (record.room) {
+                          if (typeof record.room === 'object' && record.room.name) {
+                            roomName = record.room.name;
+                            roomCategory = record.room.category || '';
+                          } else if (typeof record.room === 'string') {
+                            roomName = record.room;
+                          } else if (record.roomId) {
+                            // Fallback to roomId if room object is not populated
+                            roomName = `Room ID: ${record.roomId}`;
+                          }
+                        }
+                        
+                        return (
+                          <div style={{ fontSize: 14 }}>
+                            <div style={{ fontWeight: 'bold' }}>{roomName}</div>
+                            {roomCategory && (
+                              <div style={{ fontSize: 12, color: '#666' }}>{roomCategory}</div>
+                            )}
+                          </div>
+                        );
+                      }
+                    },
+                    {
+                      title: 'Dates',
+                      key: 'dates',
+                      render: (_, record) => (
+                        <div>
+                          <div>{new Date(record.checkIn).toLocaleDateString()}</div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {record.nights} nights
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Amount',
+                      dataIndex: 'totalAmount',
+                      key: 'totalAmount',
+                      render: (amount, record) => (
+                        <div>
+                          <div>{formatCurrency(amount || 0)}</div>
+                          {record.discountAmount > 0 && (
+                            <div style={{ fontSize: 12, color: '#dc3545' }}>
+                              -{formatCurrency(record.discountAmount)} ({record.discountPercentage}%)
+                            </div>
+                          )}
+                          {record.finalAmount && record.finalAmount !== amount && (
+                            <div style={{ fontSize: 12, fontWeight: 'bold', color: '#11998e' }}>
+                              Final: {formatCurrency(record.finalAmount)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Status',
+                      dataIndex: 'status',
+                      key: 'status',
+                      render: (status) => (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          backgroundColor: status === 'Confirmed' ? '#e6f7ff' : status === 'Cancelled' ? '#fff2e8' : '#f6ffed',
+                          color: status === 'Confirmed' ? '#1890ff' : status === 'Cancelled' ? '#fa8c16' : '#52c41a'
+                        }}>
+                          {status}
+                        </span>
+                      )
+                    },
+                    {
+                      title: 'Actions',
+                      key: 'actions',
+                      render: (_, record) => (
+                        <Space>
+                          {record.status === 'Pending' && (
+                            <Button 
+                              size="small" 
+                              type="primary"
+                              onClick={() => handleConfirmBooking(record._id)}
+                            >
+                              Confirm
+                            </Button>
+                          )}
+                          {record.status === 'Pending' && (
+                            <Button 
+                              size="small" 
+                              danger
+                              onClick={() => handleCancelBooking(record._id)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                          {record.status === 'Confirmed' && record.paymentStatus !== 'paid' && (
+                            <Button 
+                              size="small" 
+                              type="primary"
+                              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                              onClick={() => handlePaymentPaid(record._id)}
+                            >
+                              Payment Paid
+                            </Button>
+                          )}
+                          <Button 
+                            size="small"
+                            onClick={() => setSelected('bookings-all')}
+                          >
+                            View
+                          </Button>
+                          <Button 
+                            size="small"
+                            type="default"
+                            onClick={() => setDiscountModal({ open: true, booking: record })}
+                          >
+                            Discount
+                          </Button>
+                        </Space>
+                      )
+                    }
+                  ]}
+                />
+                {bookings.length > 5 && (
+                  <div style={{ textAlign: 'center', marginTop: 16 }}>
+                    <Button type="link" onClick={() => setSelected('bookings-all')}>
+                      View All Bookings ({bookings.length})
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Payment Activities */}
+              <div style={{ marginBottom: 24 }}>
+                <Title level={4} style={{ marginBottom: 16 }}>💰 Recent Payment Activities</Title>
+                <div style={{ 
+                  background: '#f8f9fa', 
+                  borderRadius: 8, 
+                  padding: 16,
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: 14 }}>Payment Summary</div>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <DatePicker
+                            value={dayjs(selectedDate)}
+                            onChange={(date) => setSelectedDate(date ? date : dayjs())}
+                            format="DD/MM/YYYY"
+                            style={{ width: 150 }}
+                            placeholder="Select Date"
+                          />
+                          <Button 
+                            size="small" 
+                            type="default"
+                            onClick={() => setSelectedDate(dayjs())}
+                          >
+                            Today
+                          </Button>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#666' }}>
+                        {selectedDate.toDate().toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 'bold', color: '#52c41a' }}>
+                        {formatCurrency(calculatePaymentActivitiesForDate(selectedDate).collectedRevenue)}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Collected Revenue</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ 
+                      background: 'white', 
+                      padding: 12, 
+                      borderRadius: 6, 
+                      flex: 1, 
+                      minWidth: 120,
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Paid Bookings</div>
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: '#52c41a' }}>
+                        {calculatePaymentActivitiesForDate(selectedDate).paidBookings}
+                      </div>
+                    </div>
+                    <div style={{ 
+                      background: 'white', 
+                      padding: 12, 
+                      borderRadius: 6, 
+                      flex: 1, 
+                      minWidth: 120,
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Pending Payments</div>
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: '#fa8c16' }}>
+                        {calculatePaymentActivitiesForDate(selectedDate).pendingPayments}
+                      </div>
+                    </div>
+                    <div style={{ 
+                      background: 'white', 
+                      padding: 12, 
+                      borderRadius: 6, 
+                      flex: 1, 
+                      minWidth: 120,
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Total Discounts</div>
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: '#ff4d4f' }}>
+                        {formatCurrency(calculatePaymentActivitiesForDate(selectedDate).totalDiscounts)}
+                      </div>
+                    </div>
+                    <div style={{ 
+                      background: 'white', 
+                      padding: 12, 
+                      borderRadius: 6, 
+                      flex: 1, 
+                      minWidth: 120,
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Total Bookings</div>
+                      <div style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>
+                        {calculatePaymentActivitiesForDate(selectedDate).totalBookings}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Room Management */}
+              <div style={{ marginBottom: 24 }}>
+                <Title level={4} style={{ marginBottom: 16 }}>🏠 Room Management</Title>
+                <Row gutter={[16, 16]}>
+                  {rooms.slice(0, 4).map(room => (
+                    <Col xs={24} sm={12} md={6} key={room._id}>
+                      <div style={{ 
+                        border: '1px solid #e8e8e8', 
+                        borderRadius: 8, 
+                        padding: 16,
+                        background: room.status === 'Available' ? '#f6ffed' : 
+                                   room.status === 'Cleaning' ? '#fff7e6' : '#fff2e8'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                          {room.images && room.images.length > 0 && (
+                            <img 
+                              src={room.images[0]} 
+                              alt={room.name}
+                              style={{ 
+                                width: 40, 
+                                height: 40, 
+                                objectFit: 'cover', 
+                                borderRadius: 4,
+                                marginRight: 12
+                              }} 
+                            />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: 14 }}>{room.name}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>{room.type} • {room.category}</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>
+                          <span style={{ color: '#666' }}>Price:</span> Rs. {room.price?.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>
+                          <span style={{ color: '#666' }}>Max Guests:</span> {room.maxGuests}
+                        </div>
+                        <div style={{ fontSize: 12, marginBottom: 8 }}>
+                          <span style={{ color: '#666' }}>Status:</span> 
+                          <span style={{
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            marginLeft: 4,
+                            backgroundColor: room.status === 'Available' ? '#f6ffed' : 
+                                           room.status === 'Cleaning' ? '#fff7e6' : '#fff2e8',
+                            color: room.status === 'Available' ? '#52c41a' : 
+                                  room.status === 'Cleaning' ? '#fa8c16' : '#ff4d4f',
+                            border: `1px solid ${room.status === 'Available' ? '#52c41a' : 
+                                              room.status === 'Cleaning' ? '#fa8c16' : '#ff4d4f'}`
+                          }}>
+                            {room.status}
+                          </span>
+                        </div>
+                        {room.status === 'Cleaning' && room.cleaningEndTime && (
+                          <div style={{ fontSize: 10, color: '#fa8c16', marginBottom: 8 }}>
+                            Available at: {new Date(room.cleaningEndTime).toLocaleTimeString()}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <Button 
+                            size="small" 
+                            type="default"
+                            onClick={() => setSelected('hotel-management')}
+                            style={{ flex: 1, fontSize: 10 }}
+                          >
+                            Manage
+                          </Button>
+                          {room.status === 'Cleaning' && (
+                            <Button 
+                              size="small" 
+                              type="primary"
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/api/rooms/${room._id}/mark-ready`, {}, {
+                                    headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                  });
+                                  message.success('Room marked as ready!');
+                                  // Refresh rooms data
+                                  api.get('/api/rooms').then(res => setRooms(res.data));
+                                } catch (error) {
+                                  console.error('Error marking room as ready:', error);
+                                  message.error('Failed to mark room as ready');
+                                }
+                              }}
+                              style={{ flex: 1, fontSize: 10, backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                            >
+                              Mark Ready
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+                {rooms.length > 4 && (
+                  <div style={{ textAlign: 'center', marginTop: 16 }}>
+                    <Button type="link" onClick={() => setSelected('hotel-management')}>
+                      Manage All Rooms ({rooms.length})
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Room Occupancy & Revenue Charts */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Title level={4} style={{ margin: 0 }}>📊 Analytics Charts</Title>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button 
+                      type="default" 
+                      size="small"
+                      onClick={() => setShowBookingChart(!showBookingChart)}
+                      style={{ fontSize: 12 }}
+                    >
+                      {showBookingChart ? '🙈 Hide' : '📊 Show'} Booking Chart
+                    </Button>
+                    <Button 
+                      type="default" 
+                      size="small"
+                      onClick={() => setShowRevenueChart(!showRevenueChart)}
+                      style={{ fontSize: 12 }}
+                    >
+                      {showRevenueChart ? '🙈 Hide' : '📈 Show'} Revenue Chart
+                    </Button>
+                  </div>
+                </div>
+                
+                <Row gutter={[16, 16]}>
+                  {showBookingChart && (
+                    <Col xs={24} lg={12}>
+                      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <Title level={4} style={{ marginBottom: 16 }}>🏨 Room Booking Count</Title>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={rooms.map(room => {
+                            // Handle room object structure
+                            const roomBookings = bookings.filter(b => {
+                              // Extract room name from different possible structures
+                              let bookingRoomName = '';
+                              
+                              if (typeof b.room === 'string') {
+                                bookingRoomName = b.room;
+                              } else if (b.room && typeof b.room === 'object') {
+                                bookingRoomName = b.room.name || b.room.roomName || b.room._id || '';
+                              } else {
+                                bookingRoomName = b.roomName || b.roomId || b.room_id || '';
+                              }
+                              
+                              const roomName = room.name || room.roomName || '';
+                              
+                              return bookingRoomName.toLowerCase().includes(roomName.toLowerCase()) ||
+                                     roomName.toLowerCase().includes(bookingRoomName.toLowerCase()) ||
+                                     bookingRoomName === roomName ||
+                                     b.roomId === room._id ||
+                                     (b.room && b.room._id === room._id);
+                            });
+                            
+                            const totalBookings = roomBookings.length;
+                            const totalRevenue = roomBookings.reduce((sum, b) => {
+                              const amount = parseFloat(b.finalAmount) || parseFloat(b.amount) || 0;
+                              return sum + amount;
+                            }, 0);
+                            
+                            return {
+                              name: room.name,
+                              bookings: totalBookings,
+                              revenue: totalRevenue
+                            };
+                          })}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                            <YAxis />
+                            <Tooltip formatter={(value, name) => [name === 'revenue' ? `Rs. ${value.toLocaleString()}` : value, name === 'revenue' ? 'Revenue' : 'Bookings']} />
+                            <Legend />
+                            <Bar dataKey="bookings" fill="#1890ff" name="Bookings" />
+                            <Bar dataKey="revenue" fill="#52c41a" name="Revenue" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        
+
+                      </Card>
+                    </Col>
+                  )}
+                  {showRevenueChart && (
+                    <Col xs={24} lg={showBookingChart ? 12 : 24}>
+                      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <Title level={4} style={{ marginBottom: 16 }}>📈 Booking Revenue Trend</Title>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={[
+                            { month: 'Jan', revenue: 0 },
+                            { month: 'Feb', revenue: 0 },
+                            { month: 'Mar', revenue: 0 },
+                            { month: 'Apr', revenue: 0 },
+                            { month: 'May', revenue: 0 },
+                            { month: 'Jun', revenue: calculateCollectedRevenue() + calculateManualRevenue('collected') },
+                            { month: 'Jul', revenue: 0 },
+                            { month: 'Aug', revenue: 0 },
+                            { month: 'Sep', revenue: 0 },
+                            { month: 'Oct', revenue: 0 },
+                            { month: 'Nov', revenue: 0 },
+                            { month: 'Dec', revenue: 0 }
+                          ]}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `Rs. ${value.toLocaleString()}`} />
+                            <Legend />
+                            <Line 
+                              type="monotone" 
+                              dataKey="revenue" 
+                              stroke="#1890ff" 
+                              strokeWidth={3}
+                              dot={{ fill: '#1890ff', strokeWidth: 2, r: 4 }}
+                              activeDot={{ r: 6 }}
+                              name="Revenue"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </Card>
+                    </Col>
+                  )}
+                </Row>
+                
+                {!showBookingChart && !showRevenueChart && (
+                  <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', textAlign: 'center', padding: 40 }}>
+                    <Title level={4} style={{ color: '#666', marginBottom: 16 }}>📊 Charts Hidden</Title>
+                    <p style={{ color: '#999', marginBottom: 16 }}>
+                      Charts are currently hidden. Use the toggle buttons above to show them when needed.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                      <Button 
+                        type="primary" 
+                        size="small"
+                        onClick={() => setShowBookingChart(true)}
+                      >
+                        Show Booking Chart
+                      </Button>
+                      <Button 
+                        type="primary" 
+                        size="small"
+                        onClick={() => setShowRevenueChart(true)}
+                      >
+                        Show Revenue Chart
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Quick Actions moved to top right corner */}
+
+                {/* Manual Revenue History */}
+                {manualRevenues.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <Title level={4} style={{ marginBottom: 16 }}>💰 Manual Revenue History</Title>
+                    <Table
+                      dataSource={manualRevenues}
+                      rowKey="id"
+                      pagination={{ pageSize: 5 }}
+                      columns={[
+                        {
+                          title: 'Date',
+                          dataIndex: 'date',
+                          key: 'date',
+                          render: (date) => new Date(date).toLocaleDateString()
+                        },
+                        {
+                          title: 'Type',
+                          dataIndex: 'type',
+                          key: 'type',
+                          render: (type) => (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              backgroundColor: type === 'collected' ? '#e6f7ff' : 
+                                             type === 'upcoming' ? '#fff7e6' : '#fff2e8',
+                              color: type === 'collected' ? '#1890ff' : 
+                                    type === 'upcoming' ? '#fa8c16' : '#ff4d4f'
+                            }}>
+                              {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </span>
+                          )
+                        },
+                        {
+                          title: 'Amount',
+                          dataIndex: 'amount',
+                          key: 'amount',
+                          render: (amount) => `Rs. ${amount.toLocaleString()}`
+                        },
+                        {
+                          title: 'Description',
+                          dataIndex: 'description',
+                          key: 'description',
+                          ellipsis: true
+                        },
+                        {
+                          title: 'Actions',
+                          key: 'actions',
+                          render: (_, record) => (
+                            <Space>
+                              <Button 
+                                size="small" 
+                                type="primary"
+                                onClick={() => {
+                                  setManualRevenueForm({
+                                    type: record.type,
+                                    amount: record.amount,
+                                    description: record.description,
+                                    date: dayjs(record.date),
+                                    editingId: record._id
+                                  });
+                                  setManualRevenueModal(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="small" 
+                                danger
+                                onClick={async () => {
+                                  try {
+                                    await api.delete(`/api/manual-revenue/${record._id}`, {
+                                      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                    });
+                                    message.success('Revenue entry removed');
+                                    fetchManualRevenue(); // Refresh the list
+                                  } catch (error) {
+                                    console.error('Error removing revenue entry:', error);
+                                    message.error('Failed to remove revenue entry');
+                                  }
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </Space>
+                          )
+                        }
+                      ]}
+                    />
+                  </div>
+                )}
+
+              
+
+
+
+              {/* System Status */}
+              <div style={{ marginBottom: 24 }}>
+                <Title level={4} style={{ marginBottom: 16 }}>🔧 System Status</Title>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={12} md={8}>
+                    <Alert
+                      message="Email Notifications"
+                      description="Admin notifications are active"
+                      type="success"
+                      showIcon
+                    />
+                  </Col>
+                  <Col xs={24} sm={12} md={8}>
+                    <Alert
+                      message="Database Connection"
+                      description="Connected and operational"
+                      type="success"
+                      showIcon
+                    />
+                  </Col>
+                  <Col xs={24} sm={12} md={8}>
+                    <Alert
+                      message="Last Updated"
+                      description={new Date().toLocaleString()}
+                      type="info"
+                      showIcon
+                    />
+                  </Col>
+                </Row>
+              </div>
+            </div>
+          )}
           {selected === 'banners' && renderBannersAndImages()}
           {selected === 'shopping' && <>
             {renderSection('shopping')}
@@ -1627,6 +3537,13 @@ const AdminDashboard = () => {
                     <Input value={roomFormData.name} onChange={e => setRoomFormData({ ...roomFormData, name: e.target.value })} required />
                   </div>
                   <div style={{ marginBottom: 12 }}>
+                    <label>Category</label>
+                    <select value={roomFormData.category} onChange={e => setRoomFormData({ ...roomFormData, category: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }} required>
+                      <option value="" disabled>Select category</option>
+                      {ROOM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
                     <label>Type</label>
                     <select value={roomFormData.type} onChange={e => setRoomFormData({ ...roomFormData, type: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }} required>
                       <option value="" disabled>Select type</option>
@@ -1731,51 +3648,205 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                   </div>
-                  <Button type="primary" htmlType="submit" style={{ marginTop: 16, width: '100%' }} disabled={!roomFormData.name || !roomFormData.type || !roomFormData.beds || !roomFormData.maxGuests || !roomFormData.price || !roomFormData.images.length || roomImageUploading}>
+                  <Button type="primary" htmlType="submit" style={{ marginTop: 16, width: '100%' }} disabled={!roomFormData.name || !roomFormData.category || !roomFormData.type || !roomFormData.beds || !roomFormData.maxGuests || !roomFormData.price || !roomFormData.images.length || roomImageUploading}>
                     {editingRoomId ? 'Update Room' : 'Add Room'}
                   </Button>
                 </form>
               </Drawer>
+              
+              {/* Category Filter */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <label style={{ fontWeight: 'bold' }}>Filter by Category:</label>
+                  <Select
+                    value={roomCategoryFilter}
+                    onChange={setRoomCategoryFilter}
+                    style={{ width: 200 }}
+                  >
+                    <Select.Option value="all">All Categories</Select.Option>
+                    {ROOM_CATEGORIES.map(category => (
+                      <Select.Option key={category} value={category}>{category}</Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 14, color: '#666' }}>
+                    Showing {getFilteredRooms().length} of {rooms.length} rooms
+                  </div>
+                  <Button 
+                    type="default" 
+                    onClick={() => setQrCodeModal(true)} 
+                    icon={<QrcodeOutlined />}
+                  >
+                    Room QR Codes
+                  </Button>
+                </div>
+              </div>
+              
               <Table
-                dataSource={rooms}
+                dataSource={getFilteredRooms()}
                 rowKey="_id"
                 columns={[
-                  { title: 'Image', dataIndex: 'images', render: imgs => imgs && imgs.length > 0 ? <img src={imgs[0]} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} /> : 'No Image' },
-                  { title: 'Name', dataIndex: 'name' },
-                  { title: 'Description', dataIndex: 'description', ellipsis: true },
-                  { title: 'Price', dataIndex: 'price', render: p => `LKR ${p}` },
-                  { title: 'Capacity', dataIndex: 'capacity' },
-                  { title: 'Available', dataIndex: 'isAvailable', render: v => v ? 'Yes' : 'No' },
-                  { title: 'Type', dataIndex: 'type' },
-                  { title: 'Beds', dataIndex: 'beds' },
-                  { title: 'Max Guests', dataIndex: 'maxGuests' },
-                  { title: 'Size', dataIndex: 'size' },
-                  { title: 'Discounted Price', dataIndex: 'discountedPrice', render: p => p ? `LKR ${p}` : 'N/A' },
-                  { title: 'View', dataIndex: 'view' },
+                  { 
+                    title: 'Image', 
+                    dataIndex: 'images', 
+                    width: 80,
+                    render: imgs => imgs && imgs.length > 0 ? 
+                      <img src={imgs[0]} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }} /> : 
+                      <div style={{ width: 60, height: 60, backgroundColor: '#f5f5f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>No Image</div>
+                  },
+                  { 
+                    title: 'Room Details', 
+                    dataIndex: 'name',
+                    width: 200,
+                    render: (name, record) => (
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>{name}</div>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{record.type} • {record.beds}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Size: {record.size}m² • View: {record.view}</div>
+                      </div>
+                    )
+                  },
+                  { 
+                    title: 'Category & Status', 
+                    width: 150,
+                    render: (_, record) => (
+                      <div>
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            backgroundColor: record.category === 'Economy' ? '#f0f9ff' : 
+                                           record.category === 'Business' ? '#f0fdf4' : '#fef3c7',
+                            color: record.category === 'Economy' ? '#0369a1' : 
+                                  record.category === 'Business' ? '#166534' : '#92400e',
+                            border: `1px solid ${record.category === 'Economy' ? '#0369a1' : 
+                                              record.category === 'Business' ? '#166534' : '#92400e'}`
+                          }}>
+                            {record.category}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            backgroundColor: record.status === 'Available' ? '#f6ffed' : 
+                                           record.status === 'Cleaning' ? '#fff7e6' : '#fff2e8',
+                            color: record.status === 'Available' ? '#52c41a' : 
+                                  record.status === 'Cleaning' ? '#fa8c16' : '#ff4d4f',
+                            border: `1px solid ${record.status === 'Available' ? '#52c41a' : 
+                                              record.status === 'Cleaning' ? '#fa8c16' : '#ff4d4f'}`
+                          }}>
+                            {record.status}
+                          </span>
+                        </div>
+                        {record.status === 'Cleaning' && record.cleaningEndTime && (
+                          <div style={{ fontSize: 10, color: '#fa8c16', marginTop: 4 }}>
+                            Ready: {new Date(record.cleaningEndTime).toLocaleTimeString()}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  },
+                  { 
+                    title: 'Pricing', 
+                    width: 120,
+                    render: (_, record) => (
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: 14, color: '#1890ff' }}>
+                          Rs. {record.price?.toLocaleString()}
+                        </div>
+                        {record.discountedPrice && (
+                          <div style={{ fontSize: 12, color: '#52c41a', textDecoration: 'line-through' }}>
+                            Rs. {record.discountedPrice?.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  },
+                  { 
+                    title: 'Capacity', 
+                    width: 100,
+                    render: (_, record) => (
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 'bold' }}>{record.maxGuests} Guests</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Max Capacity</div>
+                      </div>
+                    )
+                  },
                   { 
                     title: 'Amenities', 
+                    width: 200,
                     dataIndex: 'amenities', 
                     render: amenities => amenities && amenities.length > 0 ? (
-                      <div style={{ maxWidth: 200 }}>
+                      <div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>
                         {amenities.slice(0, 3).join(', ')}
-                        {amenities.length > 3 && ` +${amenities.length - 3} more`}
                       </div>
-                    ) : 'None'
+                        {amenities.length > 3 && (
+                          <div style={{ fontSize: 11, color: '#666' }}>
+                            +{amenities.length - 3} more amenities
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#999' }}>No amenities</div>
+                    )
                   },
                   {
                     title: 'Actions',
+                    width: 120,
                     render: (_, rec) => (
-                      <span>
-                        <Button size="small" onClick={() => handleEditRoom(rec)} style={{ marginRight: 8 }}>Edit</Button>
-                        <Popconfirm title="Delete this room?" onConfirm={() => handleDeleteRoom(rec._id)} okText="Yes" cancelText="No">
-                          <Button size="small" danger>Delete</Button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <Button 
+                          size="small" 
+                          onClick={() => handleEditRoom(rec)} 
+                          style={{ width: '100%' }}
+                        >
+                          Edit
+                        </Button>
+                        {rec.status === 'Cleaning' && (
+                          <Button 
+                            size="small" 
+                            type="primary"
+                            onClick={async () => {
+                              try {
+                                await api.put(`/api/rooms/${rec._id}/mark-ready`, {}, {
+                                  headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                });
+                                message.success('Room marked as ready!');
+                                // Refresh rooms data
+                                api.get('/api/rooms').then(res => setRooms(res.data));
+                              } catch (error) {
+                                console.error('Error marking room as ready:', error);
+                                message.error('Failed to mark room as ready');
+                              }
+                            }}
+                            style={{ width: '100%', backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                          >
+                            Mark Ready
+                          </Button>
+                        )}
+                        <Popconfirm 
+                          title="Delete this room?" 
+                          onConfirm={() => handleDeleteRoom(rec._id)} 
+                          okText="Yes" 
+                          cancelText="No"
+                        >
+                          <Button size="small" danger style={{ width: '100%' }}>Delete</Button>
                         </Popconfirm>
-                      </span>
+                      </div>
                     )
                   }
                 ]}
                 pagination={false}
                 style={{ marginBottom: 32, marginTop: 16 }}
+                scroll={{ x: 1000 }}
+                size="middle"
               />
             </div>
           )}
@@ -2125,9 +4196,32 @@ const AdminDashboard = () => {
                   },
                   {
                     title: 'Room',
-                    dataIndex: 'room',
                     key: 'room',
-                    render: (room) => room?.name || 'N/A'
+                    render: (_, record) => {
+                      // Handle different room data structures
+                      let roomName = 'N/A';
+                      let roomCategory = '';
+                      
+                      if (record.room) {
+                        if (typeof record.room === 'object' && record.room.name) {
+                          roomName = record.room.name;
+                          roomCategory = record.room.category || '';
+                        } else if (typeof record.room === 'string') {
+                          roomName = record.room;
+                        } else if (record.roomId) {
+                          roomName = `Room ID: ${record.roomId}`;
+                        }
+                      }
+                      
+                      return (
+                        <div style={{ fontSize: 14 }}>
+                          <div style={{ fontWeight: 'bold' }}>{roomName}</div>
+                          {roomCategory && (
+                            <div style={{ fontSize: 12, color: '#666' }}>{roomCategory}</div>
+                          )}
+                        </div>
+                      );
+                    }
                   },
                   {
                     title: 'Dates',
@@ -2166,6 +4260,72 @@ const AdminDashboard = () => {
                     )
                   },
                   {
+                    title: 'Payment',
+                    dataIndex: 'paymentStatus',
+                    key: 'paymentStatus',
+                    render: (paymentStatus, record) => {
+                      if (record.status !== 'Confirmed') return '-';
+                      return (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          backgroundColor: paymentStatus === 'paid' ? '#f6ffed' : '#fff7e6',
+                          color: paymentStatus === 'paid' ? '#52c41a' : '#fa8c16',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {paymentStatus === 'paid' ? (
+                            <>
+                              <CheckCircleOutlined style={{ fontSize: '12px' }} />
+                              Paid
+                            </>
+                          ) : (
+                            <>
+                              <ClockCircleOutlined style={{ fontSize: '12px' }} />
+                              Pending
+                            </>
+                          )}
+                        </span>
+                      );
+                    }
+                  },
+                  {
+                    title: 'Review Invitation',
+                    dataIndex: 'reviewInvitationSent',
+                    key: 'reviewInvitationSent',
+                    render: (sent, record) => {
+                      if (record.status !== 'Confirmed') return '-';
+                      return (
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          backgroundColor: sent ? '#f6ffed' : '#fff2e8',
+                          color: sent ? '#52c41a' : '#ff4d4f',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {sent ? (
+                            <>
+                              <CheckCircleOutlined style={{ fontSize: '12px' }} />
+                              Sent
+                            </>
+                          ) : (
+                            <>
+                              <ClockCircleOutlined style={{ fontSize: '12px' }} />
+                              Pending
+                            </>
+                          )}
+                        </span>
+                      );
+                    }
+                  },
+                  {
                     title: 'Actions',
                     key: 'actions',
                     render: (_, record) => (
@@ -2188,13 +4348,14 @@ const AdminDashboard = () => {
                             Cancel
                           </Button>
                         )}
-                        {record.status === 'Confirmed' && (
+                        {record.status === 'Confirmed' && record.paymentStatus !== 'paid' && (
                           <Button 
                             size="small" 
-                            danger
-                            onClick={() => handleCancelBooking(record._id)}
+                            type="primary"
+                            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                            onClick={() => handlePaymentPaid(record._id)}
                           >
-                            Cancel
+                            💰 Payment Paid
                           </Button>
                         )}
                         <Button 
@@ -2203,6 +4364,24 @@ const AdminDashboard = () => {
                         >
                           View Details
                         </Button>
+                        {record.status === 'Confirmed' && !record.reviewInvitationSent && (
+                          <Button 
+                            size="small"
+                            type="default"
+                            onClick={() => handleSendReviewInvitation(record._id)}
+                          >
+                            Send Review Invitation
+                          </Button>
+                        )}
+                        {record.status === 'Confirmed' && record.reviewInvitationSent && (
+                          <Button 
+                            size="small"
+                            type="default"
+                            onClick={() => handleSendReviewReminder(record._id)}
+                          >
+                            Send Reminder
+                          </Button>
+                        )}
                       </Space>
                     )
                   }
@@ -2246,6 +4425,868 @@ const AdminDashboard = () => {
                   </div>
                 )}
               </Modal>
+
+              {/* Payment Modal */}
+              <Modal
+                title="💰 Record Payment & Apply Discount"
+                open={paymentModal}
+                onCancel={() => setPaymentModal(false)}
+                footer={[
+                  <Button key="cancel" onClick={() => setPaymentModal(false)}>
+                    Cancel
+                  </Button>,
+                  <Button key="submit" type="primary" onClick={handlePaymentSubmit}>
+                    Record Payment
+                  </Button>
+                ]}
+                width={600}
+              >
+                {paymentModal.booking && (
+                  <div>
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f6ffed', borderRadius: 8 }}>
+                      <h4>Booking Summary</h4>
+                      <p><strong>Customer:</strong> {paymentModal.booking.customerName}</p>
+                      <p><strong>Room:</strong> {paymentModal.booking.room?.name}</p>
+                      <p><strong>Original Amount:</strong> Rs. {paymentModal.booking.totalAmount?.toLocaleString() || '0'}</p>
+                    </div>
+
+                    <Form layout="vertical">
+                      <Row gutter={16}>
+                        <Col span={12}>
+                          <Form.Item label="Payment Amount">
+                            <InputNumber
+                              style={{ width: '100%' }}
+                              value={paymentForm.amount}
+                              onChange={(value) => setPaymentForm({ ...paymentForm, amount: value || 0 })}
+                              formatter={(value) => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                              parser={(value) => value.replace(/Rs.\s?|(,*)/g, '')}
+                              min={0}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item label="Discount Amount">
+                            <InputNumber
+                              style={{ width: '100%' }}
+                              value={paymentForm.discountAmount}
+                              onChange={(value) => {
+                                const discountAmount = value || 0;
+                                const percentage = paymentForm.amount > 0 ? (discountAmount / paymentForm.amount) * 100 : 0;
+                                setPaymentForm({ 
+                                  ...paymentForm, 
+                                  discountAmount: discountAmount,
+                                  discountPercentage: Math.round(percentage)
+                                });
+                              }}
+                              formatter={(value) => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                              parser={(value) => value.replace(/Rs.\s?|(,*)/g, '')}
+                              min={0}
+                              max={paymentForm.amount}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col span={12}>
+                          <Form.Item label="Discount Percentage">
+                            <InputNumber
+                              style={{ width: '100%' }}
+                              value={paymentForm.discountPercentage}
+                              onChange={(value) => {
+                                const percentage = value || 0;
+                                const discountAmount = (paymentForm.amount * percentage) / 100;
+                                setPaymentForm({ 
+                                  ...paymentForm, 
+                                  discountPercentage: percentage,
+                                  discountAmount: Math.round(discountAmount)
+                                });
+                              }}
+                              formatter={(value) => `${value}%`}
+                              parser={(value) => value.replace('%', '')}
+                              min={0}
+                              max={100}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item label="Final Amount">
+                            <Input
+                              value={`Rs. ${(paymentForm.amount - paymentForm.discountAmount).toLocaleString()}`}
+                              disabled
+                              style={{ backgroundColor: '#f5f5f5' }}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Form.Item label="Discount Reason">
+                        <Input.TextArea
+                          value={paymentForm.discountReason}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, discountReason: e.target.value })}
+                          placeholder="Reason for discount (optional)"
+                          rows={2}
+                        />
+                      </Form.Item>
+
+                      <div style={{ marginTop: 16, padding: 12, backgroundColor: '#e6f7ff', borderRadius: 8 }}>
+                        <h4>Payment Summary</h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Original Amount:</span>
+                          <span>Rs. {paymentForm.amount.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span>Discount:</span>
+                          <span style={{ color: '#ff4d4f' }}>-Rs. {paymentForm.discountAmount.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #d9d9d9', paddingTop: 8 }}>
+                          <span>Final Amount:</span>
+                          <span style={{ color: '#52c41a' }}>Rs. {(paymentForm.amount - paymentForm.discountAmount).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </Form>
+                  </div>
+                )}
+              </Modal>
+            </div>
+          )}
+          {selected === 'payment-history' && (
+            <div>
+              <Title level={2} style={{ marginBottom: 24, color: '#11998e' }}>💰 Payment History & Revenue Tracking</Title>
+              
+              {/* Revenue Summary Cards */}
+              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={12} md={6}>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
+                    padding: 20, 
+                    borderRadius: 12, 
+                    color: 'white',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>
+                      {formatCurrency(calculateTotalRevenue(revenuePeriod))}
+                    </div>
+                    <div style={{ fontSize: 14, opacity: 0.9 }}>Total Revenue</div>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>({revenuePeriod.charAt(0).toUpperCase() + revenuePeriod.slice(1)})</div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)', 
+                    padding: 20, 
+                    borderRadius: 12, 
+                    color: 'white',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>
+                      {formatCurrency(calculateCollectedRevenue() + calculateManualRevenue('collected'))}
+                    </div>
+                    <div style={{ fontSize: 14, opacity: 0.9 }}>Collected Revenue</div>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>(Paid Bookings + Manual)</div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)', 
+                    padding: 20, 
+                    borderRadius: 12, 
+                    color: 'white',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>
+                      {formatCurrency(calculateTotalManualCosts())}
+                    </div>
+                    <div style={{ fontSize: 14, opacity: 0.9 }}>Total Costs</div>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>(Manual Expenses)</div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12} md={6}>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', 
+                    padding: 20, 
+                    borderRadius: 12, 
+                    color: 'white',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>
+                      {formatCurrency(calculateNetProfit())}
+                    </div>
+                    <div style={{ fontSize: 14, opacity: 0.9 }}>Net Profit</div>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>(Revenue - Costs)</div>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Period Selection */}
+              <div style={{ marginBottom: 24, textAlign: 'center' }}>
+                <Select
+                  value={revenuePeriod}
+                  onChange={setRevenuePeriod}
+                  style={{ width: 200 }}
+                  options={[
+                    { value: 'daily', label: '📅 Daily' },
+                    { value: 'weekly', label: '📊 Weekly' },
+                    { value: 'monthly', label: '📈 Monthly' },
+                    { value: 'yearly', label: '📊 Yearly' }
+                  ]}
+                />
+              </div>
+
+              {/* Tabs for different payment categories */}
+              <Tabs
+                defaultActiveKey="payment-transactions"
+                items={[
+                  {
+                    key: 'payment-transactions',
+                    label: '💳 Payment Transactions',
+                    children: (
+                      <div>
+                        <Title level={4} style={{ marginBottom: 16 }}>Complete Payment Transaction History</Title>
+                        <Table
+                          dataSource={bookings.filter(b => b.status === 'Confirmed').map(booking => ({
+                            ...booking,
+                            paymentDate: booking.paymentStatus === 'paid' ? booking.updatedAt : null,
+                            paymentMethod: booking.payment?.method || 'Cash',
+                            transactionId: booking.paymentReference || `BK${booking._id.slice(-6)}`,
+                            originalAmount: booking.totalAmount,
+                            discountAmount: booking.discountAmount || 0,
+                            finalAmount: booking.finalAmount || (booking.totalAmount - (booking.discountAmount || 0))
+                          }))}
+                          rowKey="_id"
+                          pagination={{ pageSize: 15 }}
+                          columns={[
+                            {
+                              title: 'Transaction ID',
+                              dataIndex: 'transactionId',
+                              key: 'transactionId',
+                              render: (id) => (
+                                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#1890ff' }}>
+                                  {id}
+                                </span>
+                              )
+                            },
+                            {
+                              title: 'Customer',
+                              dataIndex: 'customerName',
+                              key: 'customerName',
+                              render: (text, record) => (
+                                <div>
+                                  <div style={{ fontWeight: 'bold' }}>{text}</div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>{record.customerEmail}</div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>{record.customerPhone}</div>
+                                </div>
+                              )
+                            },
+                            {
+                              title: 'Room',
+                              dataIndex: 'room',
+                              key: 'room',
+                              render: (_, record) => {
+                                // Handle different room data structures
+                                let roomName = 'N/A';
+                                let roomCategory = '';
+                                
+                                if (record.room) {
+                                  if (typeof record.room === 'object' && record.room.name) {
+                                    roomName = record.room.name;
+                                    roomCategory = record.room.category || '';
+                                  } else if (typeof record.room === 'string') {
+                                    roomName = record.room;
+                                  } else if (record.roomId) {
+                                    roomName = `Room ID: ${record.roomId}`;
+                                  }
+                                }
+                                
+                                return (
+                                  <div style={{ fontSize: 14 }}>
+                                    <div style={{ fontWeight: 'bold' }}>{roomName}</div>
+                                    {roomCategory && (
+                                      <div style={{ fontSize: 12, color: '#666' }}>{roomCategory}</div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                            },
+                            {
+                              title: 'Payment Date',
+                              dataIndex: 'paymentDate',
+                              key: 'paymentDate',
+                              render: (date, record) => {
+                                if (record.paymentStatus === 'paid') {
+                                  return (
+                                    <div>
+                                      <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+                                        {new Date(date).toLocaleDateString()}
+                                      </div>
+                                      <div style={{ fontSize: '12px', color: '#666' }}>
+                                        {new Date(date).toLocaleTimeString()}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <span style={{ color: '#fa8c16', fontStyle: 'italic' }}>
+                                    Pending
+                                  </span>
+                                );
+                              },
+                              sorter: (a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0),
+                              defaultSortOrder: 'descend'
+                            },
+                            {
+                              title: 'Payment Method',
+                              dataIndex: 'paymentMethod',
+                              key: 'paymentMethod',
+                              render: (method) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: method === 'Cash' ? '#f6ffed' : '#e6f7ff',
+                                  color: method === 'Cash' ? '#52c41a' : '#1890ff'
+                                }}>
+                                  {method}
+                                </span>
+                              )
+                            },
+                            {
+                              title: 'Amount Details',
+                              key: 'amountDetails',
+                              render: (_, record) => (
+                                <div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>
+                                    Original: Rs. {record.originalAmount?.toLocaleString()}
+                                  </div>
+                                  {record.discountAmount > 0 && (
+                                    <div style={{ fontSize: '12px', color: '#ff4d4f' }}>
+                                      Discount: -Rs. {record.discountAmount.toLocaleString()}
+                                    </div>
+                                  )}
+                                  <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+                                    Final: Rs. {record.finalAmount?.toLocaleString()}
+                                  </div>
+                                </div>
+                              )
+                            },
+                            {
+                              title: 'Payment Status',
+                              dataIndex: 'paymentStatus',
+                              key: 'paymentStatus',
+                              render: (status) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: status === 'paid' ? '#f6ffed' : '#fff7e6',
+                                  color: status === 'paid' ? '#52c41a' : '#fa8c16'
+                                }}>
+                                  {status === 'paid' ? '✅ Paid' : '⏳ Pending'}
+                                </span>
+                              ),
+                              filters: [
+                                { text: 'Paid', value: 'paid' },
+                                { text: 'Pending', value: 'pending' }
+                              ],
+                              onFilter: (value, record) => record.paymentStatus === value
+                            },
+                            {
+                              title: 'Actions',
+                              key: 'actions',
+                              render: (_, record) => (
+                                <Space>
+                                  {record.paymentStatus !== 'paid' && (
+                                    <Button 
+                                      size="small" 
+                                      type="primary"
+                                      onClick={() => handlePaymentPaid(record._id)}
+                                    >
+                                      Mark Paid
+                                    </Button>
+                                  )}
+                                  <Button 
+                                    size="small"
+                                    onClick={() => {
+                                      // View booking details
+                                      setSelected('bookings-all');
+                                    }}
+                                  >
+                                    View
+                                  </Button>
+                                </Space>
+                              )
+                            }
+                          ]}
+                        />
+                      </div>
+                    )
+                  },
+                  {
+                    key: 'manual-revenue',
+                    label: '💰 Manual Revenue',
+                    children: (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                          <Title level={4}>Manual Revenue History</Title>
+                          <Button 
+                            type="primary" 
+                            onClick={() => setManualRevenueModal(true)}
+                            icon={<PlusOutlined />}
+                          >
+                            Add Revenue Entry
+                          </Button>
+                        </div>
+                        <Table
+                          dataSource={manualRevenues}
+                          rowKey="id"
+                          pagination={{ pageSize: 10 }}
+                          columns={[
+                            {
+                              title: 'Date',
+                              dataIndex: 'date',
+                              key: 'date',
+                              render: (date) => new Date(date).toLocaleDateString(),
+                              sorter: (a, b) => new Date(a.date) - new Date(b.date),
+                              defaultSortOrder: 'descend'
+                            },
+                            {
+                              title: 'Type',
+                              dataIndex: 'type',
+                              key: 'type',
+                              render: (type) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: type === 'collected' ? '#e6f7ff' : 
+                                                 type === 'upcoming' ? '#fff7e6' : '#fff2e8',
+                                  color: type === 'collected' ? '#1890ff' : 
+                                        type === 'upcoming' ? '#fa8c16' : '#ff4d4f'
+                                }}>
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </span>
+                              ),
+                              filters: [
+                                { text: 'Collected', value: 'collected' },
+                                { text: 'Upcoming', value: 'upcoming' }
+                              ],
+                              onFilter: (value, record) => record.type === value
+                            },
+                            {
+                              title: 'Amount',
+                              dataIndex: 'amount',
+                              key: 'amount',
+                              render: (amount, record) => (
+                                <span style={{ 
+                                  color: '#52c41a',
+                                  fontWeight: 'bold'
+                                }}>
+                                  +Rs. {amount.toLocaleString()}
+                                </span>
+                              ),
+                              sorter: (a, b) => a.amount - b.amount
+                            },
+                            {
+                              title: 'Description',
+                              dataIndex: 'description',
+                              key: 'description',
+                              ellipsis: true,
+                              width: 300
+                            },
+                            {
+                              title: 'Actions',
+                              key: 'actions',
+                              render: (_, record) => (
+                                <Space>
+                                  <Button 
+                                    size="small" 
+                                    type="primary"
+                                    onClick={() => {
+                                      setManualRevenueForm({
+                                        type: record.type,
+                                        amount: record.amount,
+                                        description: record.description,
+                                        date: dayjs(record.date),
+                                        editingId: record._id
+                                      });
+                                      setManualRevenueModal(true);
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button 
+                                    size="small" 
+                                    danger
+                                    onClick={async () => {
+                                      try {
+                                        await api.delete(`/api/manual-revenue/${record._id}`, {
+                                          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                        });
+                                        message.success('Revenue entry removed');
+                                        fetchManualRevenue(); // Refresh the list
+                                      } catch (error) {
+                                        console.error('Error removing revenue entry:', error);
+                                        message.error('Failed to remove revenue entry');
+                                      }
+                                    }}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Space>
+                              )
+                            }
+                          ]}
+                        />
+                      </div>
+                    )
+                  },
+                  {
+                    key: 'booking-discounts',
+                    label: '🎫 Booking Discounts',
+                    children: (
+                      <div>
+                        <Title level={4} style={{ marginBottom: 16 }}>Discounts Applied to Bookings</Title>
+                        <Table
+                          dataSource={bookings.filter(b => b.discountAmount > 0)}
+                          rowKey="_id"
+                          pagination={{ pageSize: 10 }}
+                          columns={[
+                            {
+                              title: 'Customer',
+                              dataIndex: 'customerName',
+                              key: 'customerName',
+                              render: (text, record) => (
+                                <div>
+                                  <div style={{ fontWeight: 'bold' }}>{text}</div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>{record.customerEmail}</div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>{record.customerPhone}</div>
+                                </div>
+                              )
+                            },
+                            {
+                              title: 'Room',
+                              dataIndex: 'room',
+                              key: 'room',
+                              render: (_, record) => {
+                                // Handle different room data structures
+                                let roomName = 'N/A';
+                                let roomCategory = '';
+                                
+                                if (record.room) {
+                                  if (typeof record.room === 'object' && record.room.name) {
+                                    roomName = record.room.name;
+                                    roomCategory = record.room.category || '';
+                                  } else if (typeof record.room === 'string') {
+                                    roomName = record.room;
+                                  } else if (record.roomId) {
+                                    roomName = `Room ID: ${record.roomId}`;
+                                  }
+                                }
+                                
+                                return (
+                                  <div style={{ fontSize: 14 }}>
+                                    <div style={{ fontWeight: 'bold' }}>{roomName}</div>
+                                    {roomCategory && (
+                                      <div style={{ fontSize: 12, color: '#666' }}>{roomCategory}</div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                            },
+                            {
+                              title: 'Original Amount',
+                              dataIndex: 'totalAmount',
+                              key: 'totalAmount',
+                              render: (amount) => `Rs. ${amount.toLocaleString()}`
+                            },
+                            {
+                              title: 'Discount',
+                              key: 'discount',
+                              render: (_, record) => (
+                                <div>
+                                  <div style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                                    -Rs. {record.discountAmount?.toLocaleString() || 0}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>
+                                    ({record.discountPercentage || 0}%)
+                                  </div>
+                                </div>
+                              )
+                            },
+                            {
+                              title: 'Final Amount',
+                              dataIndex: 'finalAmount',
+                              key: 'finalAmount',
+                              render: (amount) => `Rs. ${amount?.toLocaleString() || 0}`
+                            },
+                            {
+                              title: 'Discount Reason',
+                              dataIndex: 'discountReason',
+                              key: 'discountReason',
+                              ellipsis: true,
+                              width: 200
+                            },
+                            {
+                              title: 'Status',
+                              dataIndex: 'status',
+                              key: 'status',
+                              render: (status) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: status === 'Confirmed' ? '#e6f7ff' : status === 'Cancelled' ? '#fff2e8' : '#f6ffed',
+                                  color: status === 'Confirmed' ? '#1890ff' : status === 'Cancelled' ? '#fa8c16' : '#52c41a'
+                                }}>
+                                  {status}
+                                </span>
+                              )
+                            }
+                          ]}
+                        />
+                      </div>
+                    )
+                  },
+                  {
+                    key: 'revenue-analytics',
+                    label: '📊 Revenue Analytics',
+                    children: (
+                      <div>
+                        <Title level={4} style={{ marginBottom: 16 }}>Revenue Analytics & Insights</Title>
+                        
+                        {/* Revenue Summary by Period */}
+                        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                          <Col xs={24} sm={12} md={6}>
+                            <Card style={{ textAlign: 'center' }}>
+                              <Statistic
+                                title="Daily Revenue"
+                                value={formatCurrency(calculateRevenueByPeriod('daily'))}
+                                prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
+                                valueStyle={{ color: '#52c41a' }}
+                              />
+                            </Card>
+                          </Col>
+                          <Col xs={24} sm={12} md={6}>
+                            <Card style={{ textAlign: 'center' }}>
+                              <Statistic
+                                title="Weekly Revenue"
+                                value={formatCurrency(calculateRevenueByPeriod('weekly'))}
+                                prefix={<DollarOutlined style={{ color: '#1890ff' }} />}
+                                valueStyle={{ color: '#1890ff' }}
+                              />
+                            </Card>
+                          </Col>
+                          <Col xs={24} sm={12} md={6}>
+                            <Card style={{ textAlign: 'center' }}>
+                              <Statistic
+                                title="Monthly Revenue"
+                                value={formatCurrency(calculateRevenueByPeriod('monthly'))}
+                                prefix={<DollarOutlined style={{ color: '#722ed1' }} />}
+                                valueStyle={{ color: '#722ed1' }}
+                              />
+                            </Card>
+                          </Col>
+                          <Col xs={24} sm={12} md={6}>
+                            <Card style={{ textAlign: 'center' }}>
+                              <Statistic
+                                title="Yearly Revenue"
+                                value={formatCurrency(calculateRevenueByPeriod('yearly'))}
+                                prefix={<DollarOutlined style={{ color: '#fa8c16' }} />}
+                                valueStyle={{ color: '#fa8c16' }}
+                              />
+                            </Card>
+                          </Col>
+                        </Row>
+
+                        {/* Payment Status Distribution */}
+                        <Row gutter={[16, 16]}>
+                          <Col xs={24} md={12}>
+                            <Card title="Payment Status Distribution" style={{ marginBottom: 16 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
+                                    {bookings.filter(b => b.status === 'Confirmed' && b.paymentStatus === 'paid').length}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#666' }}>Paid</div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#fa8c16' }}>
+                                    {bookings.filter(b => b.status === 'Confirmed' && b.paymentStatus !== 'paid').length}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
+                                    {bookings.filter(b => b.status === 'Pending').length}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: '#666' }}>Pending Confirmation</div>
+                                </div>
+                              </div>
+                            </Card>
+                          </Col>
+                          <Col xs={24} md={12}>
+                            <Card title="Revenue Summary" style={{ marginBottom: 16 }}>
+                              <div style={{ lineHeight: 2 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Total Bookings:</span>
+                                  <span style={{ fontWeight: 'bold' }}>{bookings.length}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Confirmed Bookings:</span>
+                                  <span style={{ fontWeight: 'bold', color: '#52c41a' }}>
+                                    {bookings.filter(b => b.status === 'Confirmed').length}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Total Revenue:</span>
+                                  <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
+                                    {formatCurrency(calculateCollectedRevenue())}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>Total Discounts:</span>
+                                  <span style={{ fontWeight: 'bold', color: '#ff4d4f' }}>
+                                    {formatCurrency(bookings.reduce((sum, b) => sum + (b.discountAmount || 0), 0))}
+                                  </span>
+                                </div>
+                              </div>
+                            </Card>
+                          </Col>
+                        </Row>
+                      </div>
+                    )
+                  },
+                  {
+                    key: 'manual-costs',
+                    label: '💸 Manual Costs & Expenses',
+                    children: (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                          <Title level={4}>Manual Costs & Expenses Tracking</Title>
+                          <Button 
+                            type="primary" 
+                            onClick={() => setManualCostModal(true)}
+                            icon={<PlusOutlined />}
+                          >
+                            Add Cost Entry
+                          </Button>
+                        </div>
+                        <Table
+                          dataSource={manualCosts}
+                          rowKey="id"
+                          pagination={{ pageSize: 10 }}
+                          columns={[
+                            {
+                              title: 'Date',
+                              dataIndex: 'date',
+                              key: 'date',
+                              render: (date) => new Date(date).toLocaleDateString(),
+                              sorter: (a, b) => new Date(a.date) - new Date(b.date),
+                              defaultSortOrder: 'descend'
+                            },
+                            {
+                              title: 'Category',
+                              dataIndex: 'category',
+                              key: 'category',
+                              render: (category) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: getCategoryColor(category),
+                                  color: 'white'
+                                }}>
+                                  {category}
+                                </span>
+                              ),
+                              filters: [
+                                { text: 'Maintenance', value: 'Maintenance' },
+                                { text: 'Utilities', value: 'Utilities' },
+                                { text: 'Supplies', value: 'Supplies' },
+                                { text: 'Staff', value: 'Staff' },
+                                { text: 'Marketing', value: 'Marketing' },
+                                { text: 'Other', value: 'Other' }
+                              ],
+                              onFilter: (value, record) => record.category === value
+                            },
+                            {
+                              title: 'Amount',
+                              dataIndex: 'amount',
+                              key: 'amount',
+                              render: (amount) => (
+                                <span style={{ 
+                                  color: '#ff4d4f',
+                                  fontWeight: 'bold'
+                                }}>
+                                  -Rs. {amount.toLocaleString()}
+                                </span>
+                              ),
+                              sorter: (a, b) => a.amount - b.amount
+                            },
+                            {
+                              title: 'Description',
+                              dataIndex: 'description',
+                              key: 'description',
+                              ellipsis: true,
+                              width: 300
+                            },
+                            {
+                              title: 'Payment Method',
+                              dataIndex: 'paymentMethod',
+                              key: 'paymentMethod',
+                              render: (method) => (
+                                <span style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: method === 'Cash' ? '#f6ffed' : '#e6f7ff',
+                                  color: method === 'Cash' ? '#52c41a' : '#1890ff'
+                                }}>
+                                  {method}
+                                </span>
+                              )
+                            },
+                            {
+                              title: 'Actions',
+                              key: 'actions',
+                              render: (_, record) => (
+                                <Button 
+                                  size="small" 
+                                  danger
+                                  onClick={async () => {
+                                    try {
+                                      await api.delete(`/api/manual-costs/${record._id}`, {
+                                        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                                      });
+                                      message.success('Cost entry removed');
+                                      fetchManualCosts(); // Refresh the list
+                                    } catch (error) {
+                                      console.error('Error removing cost entry:', error);
+                                      message.error('Failed to remove cost entry');
+                                    }
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              )
+                            }
+                          ]}
+                        />
+                      </div>
+                    )
+                  }
+                ]}
+              />
             </div>
           )}
           {selected === 'settings' && (
@@ -2359,9 +5400,539 @@ const AdminDashboard = () => {
                 </div>
                 <Button type="primary" onClick={saveMultiComplexFields}>Save Multi Complex Settings</Button>
               </div>
+
+                {/* Room Turnover Management Settings */}
+                <div style={{ marginBottom: 40, padding: 20, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                  <Title level={3} style={{ color: '#11998e', marginBottom: 20 }}>Room Turnover Management</Title>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+                      Cleaning Buffer Time (Hours)
+                    </label>
+                    <p style={{ color: '#666', fontSize: 14, marginBottom: 12 }}>
+                      Time allocated for cleaning, inspection, and maintenance between check-out and next check-in.
+                    </p>
+                    <Select
+                      value={bufferHours}
+                      onChange={setBufferHours}
+                      style={{ width: 200 }}
+                    >
+                      <Select.Option value={1}>1 Hour</Select.Option>
+                      <Select.Option value={2}>2 Hours</Select.Option>
+                      <Select.Option value={3}>3 Hours (Recommended)</Select.Option>
+                      <Select.Option value={4}>4 Hours</Select.Option>
+                      <Select.Option value={5}>5 Hours</Select.Option>
+                    </Select>
+                  </div>
+                  <Button 
+                    type="primary" 
+                    onClick={async () => {
+                      try {
+                        await api.post('/api/rooms/settings/buffer', { bufferHours }, {
+                          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+                        });
+                        message.success('Buffer hours updated successfully!');
+                      } catch (error) {
+                        console.error('Error updating buffer hours:', error);
+                        message.error('Failed to update buffer hours');
+                      }
+                    }}
+                    style={{ backgroundColor: '#11998e', borderColor: '#11998e' }}
+                  >
+                    Save Buffer Settings
+                  </Button>
+              </div>
             </div>
           )}
-          {selected === 'customer-details' && <CustomerDetailsSection selected={selected} />}
+          {selected === 'customer-details' && <CustomerDetailsSection selected={selected} bookings={bookings} setBookings={setBookings} newCustomer={newCustomer} setNewCustomer={setNewCustomer} />}
+          
+          {/* Reviews Management Section */}
+          {selected === 'reviews' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Title level={4}>Reviews Management</Title>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: '#666' }}>Total Reviews: {reviews.length}</span>
+                </div>
+              </div>
+              
+              {reviewsLoading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                  <Spin size="large" />
+                  <div style={{ marginTop: 16 }}>Loading reviews...</div>
+                </div>
+              ) : (
+                <Table
+                  dataSource={reviews}
+                  columns={[
+                    {
+                      title: 'Customer',
+                      key: 'customer',
+                      render: (_, record) => (
+                        <div>
+                          <div style={{ fontWeight: 'bold' }}>{record.customerName}</div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>{record.customerEmail}</div>
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Room',
+                      key: 'room',
+                      render: (_, record) => {
+                        // Handle different room data structures
+                        let roomName = 'N/A';
+                        let roomCategory = '';
+                        
+                        if (record.room) {
+                          if (typeof record.room === 'object' && record.room.name) {
+                            roomName = record.room.name;
+                            roomCategory = record.room.category || '';
+                          } else if (typeof record.room === 'string') {
+                            roomName = record.room;
+                          } else if (record.roomId) {
+                            // Fallback to roomId if room object is not populated
+                            roomName = `Room ID: ${record.roomId}`;
+                          }
+                        }
+                        
+                        return (
+                          <div style={{ fontSize: 14 }}>
+                            <div style={{ fontWeight: 'bold' }}>{roomName}</div>
+                            {roomCategory && (
+                              <div style={{ fontSize: 12, color: '#666' }}>{roomCategory}</div>
+                            )}
+                          </div>
+                        );
+                      }
+                    },
+                    {
+                      title: 'Rating',
+                      key: 'rating',
+                      render: (_, record) => (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontWeight: 'bold' }}>{record.rating}/5</span>
+                          <div style={{ display: 'flex', gap: 1 }}>
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} style={{ color: i < record.rating ? '#fbbf24' : '#d1d5db' }}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Review',
+                      key: 'review',
+                      render: (_, record) => (
+                        <div style={{ maxWidth: 300 }}>
+                          <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+                            {record.review.length > 100 
+                              ? `${record.review.substring(0, 100)}...` 
+                              : record.review
+                            }
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Stay Date',
+                      key: 'stayDate',
+                      render: (_, record) => (
+                        <div style={{ fontSize: 14 }}>
+                          {new Date(record.stayDate).toLocaleDateString()}
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Created',
+                      key: 'createdAt',
+                      render: (_, record) => (
+                        <div style={{ fontSize: 14 }}>
+                          {new Date(record.createdAt).toLocaleDateString()}
+                        </div>
+                      )
+                    },
+                    {
+                      title: 'Actions',
+                      key: 'actions',
+                      render: (_, record) => (
+                        <Space>
+                          <Popconfirm
+                            title="Delete this review?"
+                            description="This action cannot be undone."
+                            onConfirm={() => handleDeleteReview(record._id)}
+                            okText="Yes, Delete"
+                            cancelText="Cancel"
+                          >
+                            <Button type="primary" danger size="small">
+                              Delete
+                            </Button>
+                          </Popconfirm>
+                        </Space>
+                      )
+                    }
+                  ]}
+                  rowKey="_id"
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} reviews`
+                  }}
+                />
+              )}
+            </div>
+          )}
+          
+          {/* Customer Add Modal */}
+          <Modal
+            title="Add Customer to Booking"
+            open={customerModal.open}
+            onCancel={() => {
+              setCustomerModal({ open: false, bookingId: null });
+              setNewCustomer({ name: '', email: '', phone: '', address: '', age: '', relationship: '' });
+            }}
+            onOk={() => handleAddCustomerToBooking(customerModal.bookingId)}
+            okText="Add Customer"
+            okButtonProps={{
+              disabled: !newCustomer.name || !newCustomer.email || !newCustomer.phone || !customerModal.bookingId
+            }}
+            width={600}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ color: '#666', marginBottom: 16 }}>
+                Add a new customer to an existing booking. Please select a booking and fill in the customer details.
+              </p>
+              
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+                  Select Booking *
+                </label>
+                <Select
+                  placeholder="Choose a booking"
+                  style={{ width: '100%' }}
+                  value={customerModal.bookingId}
+                  onChange={(value) => setCustomerModal({ ...customerModal, bookingId: value })}
+                >
+                  {bookings.map(booking => (
+                    <Select.Option key={booking._id} value={booking._id}>
+                      {booking.customerName} - {booking.room?.name} ({new Date(booking.checkIn).toLocaleDateString()})
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            
+            <Form layout="vertical">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Full Name *" required>
+                    <Input
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      placeholder="Enter full name"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Email *" required>
+                    <Input
+                      type="email"
+                      value={newCustomer.email}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      placeholder="Enter email address"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Phone *" required>
+                    <Input
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      placeholder="Enter phone number"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Age">
+                    <InputNumber
+                      value={newCustomer.age}
+                      onChange={(value) => setNewCustomer({ ...newCustomer, age: value })}
+                      placeholder="Enter age"
+                      style={{ width: '100%' }}
+                      min={1}
+                      max={120}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Form.Item label="Address">
+                <Input.TextArea
+                  value={newCustomer.address}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                  placeholder="Enter address"
+                  rows={2}
+                />
+              </Form.Item>
+              
+              <Form.Item label="Relationship">
+                <Input
+                  value={newCustomer.relationship}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, relationship: e.target.value })}
+                  placeholder="e.g., Spouse, Child, Friend"
+                />
+              </Form.Item>
+            </Form>
+          </Modal>
+          
+          {/* Discount Modal */}
+          <Modal
+            title="Apply Discount"
+            open={discountModal}
+            onCancel={() => {
+              setDiscountModal(false);
+              setDiscountForm({ type: 'percentage', value: 0, reason: '' });
+            }}
+            onOk={handleApplyDiscount}
+            okText="Apply Discount"
+            okButtonProps={{
+              disabled: !discountForm.value || !discountForm.reason || !discountModal.booking
+            }}
+            width={500}
+          >
+            {discountModal.booking && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ color: '#666', marginBottom: 16 }}>
+                  Apply discount to booking: <strong>{discountModal.booking.customerName}</strong>
+                </p>
+                <div style={{ background: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>
+                    <strong>Original Amount:</strong> Rs. {discountModal.booking.totalAmount?.toLocaleString()}
+                  </div>
+                  {discountModal.booking.discountAmount > 0 && (
+                    <div style={{ fontSize: 14, marginBottom: 4, color: '#dc3545' }}>
+                      <strong>Current Discount:</strong> Rs. {discountModal.booking.discountAmount?.toLocaleString()} ({discountModal.booking.discountPercentage}%)
+                    </div>
+                  )}
+                  <div style={{ fontSize: 14, fontWeight: 'bold', color: '#11998e' }}>
+                    <strong>Final Amount:</strong> Rs. {(discountModal.booking.finalAmount || discountModal.booking.totalAmount)?.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <Form layout="vertical">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Discount Type *" required>
+                    <Select
+                      value={discountForm.type}
+                      onChange={(value) => setDiscountForm({ ...discountForm, type: value })}
+                      style={{ width: '100%' }}
+                    >
+                      <Select.Option value="percentage">Percentage (%)</Select.Option>
+                      <Select.Option value="amount">Fixed Amount (Rs.)</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label={`Discount ${discountForm.type === 'percentage' ? '(%)' : '(Rs.)'} *`} required>
+                    <InputNumber
+                      value={discountForm.value}
+                      onChange={(value) => setDiscountForm({ ...discountForm, value })}
+                      style={{ width: '100%' }}
+                      min={0}
+                      max={discountForm.type === 'percentage' ? 100 : discountModal.booking?.totalAmount}
+                      placeholder={discountForm.type === 'percentage' ? 'Enter percentage' : 'Enter amount'}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Form.Item label="Reason for Discount *" required>
+                <Input.TextArea
+                  value={discountForm.reason}
+                  onChange={(e) => setDiscountForm({ ...discountForm, reason: e.target.value })}
+                  placeholder="Enter reason for discount (e.g., Loyalty discount, Special offer, etc.)"
+                  rows={3}
+                />
+              </Form.Item>
+              
+              {discountForm.value > 0 && (
+                <div style={{ background: '#f6ffed', padding: 12, borderRadius: 8, marginTop: 16 }}>
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>
+                    <strong>Discount Preview:</strong>
+                  </div>
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>
+                    {discountForm.type === 'percentage' ? (
+                      <>Discount Amount: Rs. {((discountModal.booking?.totalAmount || 0) * discountForm.value / 100).toLocaleString()}</>
+                    ) : (
+                      <>Discount Percentage: {((discountForm.value / (discountModal.booking?.totalAmount || 1)) * 100).toFixed(1)}%</>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 'bold', color: '#11998e' }}>
+                    New Final Amount: Rs. {
+                      discountForm.type === 'percentage' 
+                        ? ((discountModal.booking?.totalAmount || 0) * (1 - discountForm.value / 100)).toLocaleString()
+                        : ((discountModal.booking?.totalAmount || 0) - discountForm.value).toLocaleString()
+                    }
+                  </div>
+                </div>
+              )}
+            </Form>
+          </Modal>
+          
+          {/* QR Code Generator Modal */}
+          <QRCodeGenerator 
+            visible={qrCodeModal}
+            onClose={() => setQrCodeModal(false)}
+          />
+
+          {/* Manual Revenue Modal */}
+          <Modal
+            title={manualRevenueForm.editingId ? "Edit Manual Revenue Entry" : "Add Manual Revenue Entry"}
+            open={manualRevenueModal}
+            onCancel={() => {
+              setManualRevenueModal(false);
+              setManualRevenueForm({ type: 'collected', amount: 0, description: '', date: dayjs() });
+            }}
+            onOk={handleAddManualRevenue}
+            okText={manualRevenueForm.editingId ? "Update Revenue" : "Add Revenue"}
+            okButtonProps={{
+              disabled: !manualRevenueForm.amount || !manualRevenueForm.description
+            }}
+            width={500}
+          >
+            <Form layout="vertical">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Revenue Type *" required>
+                    <Select
+                      value={manualRevenueForm.type}
+                      onChange={(value) => setManualRevenueForm({ ...manualRevenueForm, type: value })}
+                      style={{ width: '100%' }}
+                    >
+                      <Select.Option value="collected">Collected</Select.Option>
+                      <Select.Option value="upcoming">Upcoming</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Amount (Rs.) *" required>
+                    <InputNumber
+                      value={manualRevenueForm.amount}
+                      onChange={(value) => setManualRevenueForm({ ...manualRevenueForm, amount: value })}
+                      style={{ width: '100%' }}
+                      min={0}
+                      placeholder="Enter amount"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Form.Item label="Description *" required>
+                <Input.TextArea
+                  value={manualRevenueForm.description}
+                  onChange={(e) => setManualRevenueForm({ ...manualRevenueForm, description: e.target.value })}
+                  placeholder="Enter description (e.g., Cash payment, Bank transfer, Special discount, etc.)"
+                  rows={3}
+                />
+              </Form.Item>
+              
+              <Form.Item label="Date">
+                <DatePicker
+                  value={manualRevenueForm.date}
+                  onChange={(date) => setManualRevenueForm({ ...manualRevenueForm, date: date })}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Form>
+          </Modal>
+
+          {/* Manual Cost Modal */}
+          <Modal
+            title="Add Manual Cost Entry"
+            open={manualCostModal}
+            onCancel={() => {
+              setManualCostModal(false);
+              setManualCostForm({ category: 'Maintenance', amount: 0, description: '', date: dayjs(), paymentMethod: 'Cash' });
+            }}
+            onOk={handleAddManualCost}
+            okText="Add Cost"
+            okButtonProps={{
+              disabled: !manualCostForm.amount || !manualCostForm.description
+            }}
+            width={500}
+          >
+            <Form layout="vertical">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Cost Category *" required>
+                    <Select
+                      value={manualCostForm.category}
+                      onChange={(value) => setManualCostForm({ ...manualCostForm, category: value })}
+                      style={{ width: '100%' }}
+                    >
+                      <Select.Option value="Maintenance">Maintenance</Select.Option>
+                      <Select.Option value="Utilities">Utilities</Select.Option>
+                      <Select.Option value="Supplies">Supplies</Select.Option>
+                      <Select.Option value="Staff">Staff</Select.Option>
+                      <Select.Option value="Marketing">Marketing</Select.Option>
+                      <Select.Option value="Other">Other</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Amount (Rs.) *" required>
+                    <InputNumber
+                      value={manualCostForm.amount}
+                      onChange={(value) => setManualCostForm({ ...manualCostForm, amount: value })}
+                      style={{ width: '100%' }}
+                      min={0}
+                      placeholder="Enter amount"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Form.Item label="Description *" required>
+                <Input.TextArea
+                  value={manualCostForm.description}
+                  onChange={(e) => setManualCostForm({ ...manualCostForm, description: e.target.value })}
+                  placeholder="Enter description (e.g., AC repair, Electricity bill, Cleaning supplies, etc.)"
+                  rows={3}
+                />
+              </Form.Item>
+              
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Date">
+                    <DatePicker
+                      value={manualCostForm.date}
+                      onChange={(date) => setManualCostForm({ ...manualCostForm, date: date })}
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Payment Method">
+                    <Select
+                      value={manualCostForm.paymentMethod}
+                      onChange={(value) => setManualCostForm({ ...manualCostForm, paymentMethod: value })}
+                      style={{ width: '100%' }}
+                    >
+                      <Select.Option value="Cash">Cash</Select.Option>
+                      <Select.Option value="Card">Card</Select.Option>
+                      <Select.Option value="Bank Transfer">Bank Transfer</Select.Option>
+                      <Select.Option value="Other">Other</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+          </Modal>
         </Content>
       </Layout>
     </Layout>

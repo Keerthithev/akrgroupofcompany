@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Room = require('../models/Room');
+const Review = require('../models/Review');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 function requireAdmin(req, res, next) {
@@ -18,8 +19,35 @@ function requireAdmin(req, res, next) {
 
 // GET all rooms
 router.get('/', async (req, res) => {
-  const rooms = await Room.find();
-  res.json(rooms);
+  try {
+    const rooms = await Room.find();
+    
+    // Fetch reviews for each room
+    const roomsWithReviews = await Promise.all(
+      rooms.map(async (room) => {
+        const reviews = await Review.find({ roomId: room._id }).sort({ createdAt: -1 });
+        const roomObj = room.toObject();
+        roomObj.reviews = reviews;
+        
+        // Calculate average rating and review count
+        if (reviews.length > 0) {
+          const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+          roomObj.averageRating = (totalRating / reviews.length).toFixed(1);
+          roomObj.reviewCount = reviews.length;
+        } else {
+          roomObj.averageRating = 0;
+          roomObj.reviewCount = 0;
+        }
+        
+        return roomObj;
+      })
+    );
+    
+    res.json(roomsWithReviews);
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // GET single room by ID
@@ -27,7 +55,23 @@ router.get('/:id', async (req, res) => {
   try {
     const room = await Room.findById(req.params.id);
     if (!room) return res.status(404).json({ error: 'Room not found' });
-    res.json(room);
+    
+    // Fetch reviews for this room
+    const reviews = await Review.find({ roomId: room._id }).sort({ createdAt: -1 });
+    const roomObj = room.toObject();
+    roomObj.reviews = reviews;
+    
+    // Calculate average rating and review count
+    if (reviews.length > 0) {
+      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      roomObj.averageRating = (totalRating / reviews.length).toFixed(1);
+      roomObj.reviewCount = reviews.length;
+    } else {
+      roomObj.averageRating = 0;
+      roomObj.reviewCount = 0;
+    }
+    
+    res.json(roomObj);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }

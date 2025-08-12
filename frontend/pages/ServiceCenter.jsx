@@ -137,9 +137,9 @@ const ServiceCenter = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={SERVICE_CENTER_LOGO}
-                  alt="AKR Service Center Logo"
+              <img
+                src={SERVICE_CENTER_LOGO}
+                alt="AKR Service Center Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
                 />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -150,8 +150,8 @@ const ServiceCenter = () => {
                 </div>
                 <div className="text-xs text-gray-500 font-medium">
                   Trusted Vehicle Solutions
-                </div>
               </div>
+            </div>
             </motion.div>
 
             {/* Mobile Navigation */}
@@ -530,7 +530,7 @@ const ServiceCenter = () => {
                       <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{service.description}</p>
                     </motion.div>
                   ))}
-                </div>
+            </div>
               </motion.div>
             </motion.div>
           </div>

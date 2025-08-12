@@ -7,6 +7,8 @@ import api from '../lib/axios';
 const BookingModal = ({ isOpen, onClose, room }) => {
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
+  const [checkInTime, setCheckInTime] = useState('14:00'); // Default 2 PM
+  const [checkOutTime, setCheckOutTime] = useState('11:00'); // Default 11 AM
   const [guests, setGuests] = useState(1);
   const [unavailableDates, setUnavailableDates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,9 +26,39 @@ const BookingModal = ({ isOpen, onClose, room }) => {
 
   // Booking calculation - use discounted price if available
   const roomRate = room?.discountedPrice || room?.price || 5000;
+  
+  // Calculate number of nights professionally
   const numberOfNights = checkInDate && checkOutDate 
-    ? Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)) 
+    ? (() => {
+        // Professional calculation: Check-out date minus Check-in date
+        // This gives us the exact number of nights (not days)
+        const checkIn = new Date(checkInDate);
+        checkIn.setHours(0, 0, 0, 0);
+        const checkOut = new Date(checkOutDate);
+        checkOut.setHours(0, 0, 0, 0);
+        
+        const diffTime = checkOut.getTime() - checkIn.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        
+        // Professional booking logic:
+        // - Same day booking = 1 night (minimum)
+        // - Different days = exact night calculation
+        // - Handles edge cases properly
+        return Math.max(1, Math.floor(diffDays));
+      })()
     : 0;
+
+  // Calculate stay duration for display
+  const getStayDuration = () => {
+    if (numberOfNights === 1) return '1 night';
+    if (numberOfNights < 7) return `${numberOfNights} nights`;
+    if (numberOfNights === 7) return '1 week';
+    if (numberOfNights < 30) return `${numberOfNights} nights (${Math.ceil(numberOfNights / 7)} weeks)`;
+    if (numberOfNights === 30) return '1 month';
+    if (numberOfNights < 365) return `${numberOfNights} nights (${Math.ceil(numberOfNights / 30)} months)`;
+    return `${numberOfNights} nights (${Math.ceil(numberOfNights / 365)} years)`;
+  };
+    
   const totalAmount = numberOfNights * roomRate;
 
   // Fetch unavailable dates when modal opens
@@ -35,6 +67,26 @@ const BookingModal = ({ isOpen, onClose, room }) => {
       fetchUnavailableDates();
     }
   }, [isOpen, room?._id]);
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCheckInDate(null);
+      setCheckOutDate(null);
+      setCheckInTime('14:00');
+      setCheckOutTime('11:00');
+      setGuests(1);
+      setError('');
+      setSuccess('');
+      setUserDetails({
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        customerAddress: '',
+        specialRequests: ''
+      });
+    }
+  }, [isOpen]);
 
   const fetchUnavailableDates = async () => {
     try {
@@ -57,6 +109,15 @@ const BookingModal = ({ isOpen, onClose, room }) => {
     });
   };
 
+  // Check if a specific date and time is unavailable
+  const isDateTimeUnavailable = (date, time) => {
+    const dateString = date.toISOString().split('T')[0];
+    return unavailableDates.some(unavailableDate => {
+      const unavailableDateString = unavailableDate.toISOString().split('T')[0];
+      return dateString === unavailableDateString;
+    });
+  };
+
   // Handle date selection
   const handleDateChange = (dates) => {
     const [start, end] = dates;
@@ -65,15 +126,39 @@ const BookingModal = ({ isOpen, onClose, room }) => {
     setError('');
   };
 
-  // Validate date selection
+  // Validate date and time selection professionally
   const validateDates = () => {
     if (!checkInDate || !checkOutDate) {
       setError('Please select both check-in and check-out dates');
       return false;
     }
 
+    // Professional validation for different stay types
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkIn = new Date(checkInDate);
+    checkIn.setHours(0, 0, 0, 0);
+
+    // Check if check-in is in the past
+    if (checkIn < today) {
+      setError('Check-in date cannot be in the past');
+      return false;
+    }
+
+    // Check if check-out is after check-in
     if (checkInDate >= checkOutDate) {
       setError('Check-out date must be after check-in date');
+      return false;
+    }
+
+    // Professional stay duration validation
+    const maxStayDays = 365; // Maximum 1 year stay
+    const checkOut = new Date(checkOutDate);
+    checkOut.setHours(0, 0, 0, 0);
+    const stayDuration = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (stayDuration > maxStayDays) {
+      setError(`Maximum stay duration is ${maxStayDays} days. Please contact us for longer stays.`);
       return false;
     }
 
@@ -85,6 +170,20 @@ const BookingModal = ({ isOpen, onClose, room }) => {
         return false;
       }
       currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Validate times
+    if (!checkInTime || !checkOutTime) {
+      setError('Please select both check-in and check-out times');
+      return false;
+    }
+
+    // If same day, check-out time must be after check-in time
+    if (checkInDate.toDateString() === checkOutDate.toDateString()) {
+      if (checkInTime >= checkOutTime) {
+        setError('Check-out time must be after check-in time for same-day bookings');
+        return false;
+      }
     }
 
     return true;
@@ -108,6 +207,8 @@ const BookingModal = ({ isOpen, onClose, room }) => {
         roomId: room._id,
         checkIn: checkInDate.toISOString().split('T')[0],
         checkOut: checkOutDate.toISOString().split('T')[0],
+        checkInTime: checkInTime,
+        checkOutTime: checkOutTime,
         guests: guests,
         nights: numberOfNights,
         totalAmount,
@@ -197,11 +298,67 @@ const BookingModal = ({ isOpen, onClose, room }) => {
             <p className="text-lg font-bold text-blue-600 mt-2">Rs. {roomRate.toLocaleString()}/night</p>
           </div>
 
-          {/* Date Picker */}
+          {/* Professional Date Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Check-in and Check-out Dates
+              📅 Select Check-in and Check-out Dates
             </label>
+            
+            {/* Quick Stay Duration Buttons */}
+            <div className="mb-3">
+              <p className="text-xs text-gray-600 mb-2">Quick Select:</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    setCheckInDate(today);
+                    setCheckOutDate(tomorrow);
+                  }}
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition"
+                >
+                  1 Night
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const weekLater = new Date(today);
+                    weekLater.setDate(weekLater.getDate() + 7);
+                    setCheckInDate(today);
+                    setCheckOutDate(weekLater);
+                  }}
+                  className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition"
+                >
+                  1 Week
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const monthLater = new Date(today);
+                    monthLater.setDate(monthLater.getDate() + 30);
+                    setCheckInDate(today);
+                    setCheckOutDate(monthLater);
+                  }}
+                  className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition"
+                >
+                  1 Month
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const weekend = new Date(today);
+                    weekend.setDate(weekend.getDate() + 2);
+                    setCheckInDate(today);
+                    setCheckOutDate(weekend);
+                  }}
+                  className="px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition"
+                >
+                  Weekend
+                </button>
+              </div>
+            </div>
+            
             <DatePicker
               selected={checkInDate}
               onChange={handleDateChange}
@@ -218,6 +375,90 @@ const BookingModal = ({ isOpen, onClose, room }) => {
               }
               className="w-full"
             />
+            
+            {/* Professional Booking Info */}
+            <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+              <div className="flex items-center gap-1 mb-1">
+                <span>ℹ️</span>
+                <span className="font-medium">Professional Booking System</span>
+              </div>
+              <div className="space-y-1">
+                <div>• Supports stays from 1 night to 1 year</div>
+                <div>• Accurate night calculation</div>
+                <div>• Real-time availability checking</div>
+                <div>• Flexible check-in/check-out times</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Check-in and Check-out Times
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Check-in Time
+                </label>
+                <select
+                  value={checkInTime}
+                  onChange={(e) => setCheckInTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="06:00">6:00 AM</option>
+                  <option value="07:00">7:00 AM</option>
+                  <option value="08:00">8:00 AM</option>
+                  <option value="09:00">9:00 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                  <option value="17:00">5:00 PM</option>
+                  <option value="18:00">6:00 PM</option>
+                  <option value="19:00">7:00 PM</option>
+                  <option value="20:00">8:00 PM</option>
+                  <option value="21:00">9:00 PM</option>
+                  <option value="22:00">10:00 PM</option>
+                  <option value="23:00">11:00 PM</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Check-out Time
+                </label>
+                <select
+                  value={checkOutTime}
+                  onChange={(e) => setCheckOutTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="06:00">6:00 AM</option>
+                  <option value="07:00">7:00 AM</option>
+                  <option value="08:00">8:00 AM</option>
+                  <option value="09:00">9:00 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                  <option value="17:00">5:00 PM</option>
+                  <option value="18:00">6:00 PM</option>
+                  <option value="19:00">7:00 PM</option>
+                  <option value="20:00">8:00 PM</option>
+                  <option value="21:00">9:00 PM</option>
+                  <option value="22:00">10:00 PM</option>
+                  <option value="23:00">11:00 PM</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              ⏰ Standard check-in: 2:00 PM | Standard check-out: 11:00 AM
+            </p>
           </div>
 
           {/* Guests Selection */}
@@ -312,42 +553,83 @@ const BookingModal = ({ isOpen, onClose, room }) => {
             </div>
           </div>
 
-          {/* Booking Summary */}
+          {/* Professional Booking Summary */}
           {checkInDate && checkOutDate && numberOfNights > 0 && (
-            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6 border border-blue-200">
               <div className="flex items-center gap-2 mb-3">
                 <FaCalculator className="text-blue-600" />
-                <h4 className="font-semibold text-gray-800">Booking Summary</h4>
+                <h4 className="font-semibold text-gray-800">📋 Professional Booking Summary</h4>
               </div>
+              
+              {/* Stay Duration Badge */}
+              <div className="mb-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  🏨 {getStayDuration()} Stay
+                </span>
+              </div>
+              
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Check-in:</span>
-                  <span className="font-medium">{checkInDate.toLocaleDateString()}</span>
+                  <span className="text-gray-600">📅 Check-in:</span>
+                  <span className="font-medium">{checkInDate.toLocaleDateString()} at {checkInTime}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Check-out:</span>
-                  <span className="font-medium">{checkOutDate.toLocaleDateString()}</span>
+                  <span className="text-gray-600">📅 Check-out:</span>
+                  <span className="font-medium">{checkOutDate.toLocaleDateString()} at {checkOutTime}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Nights:</span>
-                  <span className="font-medium">{numberOfNights}</span>
+                  <span className="text-gray-600">🌙 Total Nights:</span>
+                  <span className="font-medium">{numberOfNights} {numberOfNights === 1 ? 'night' : 'nights'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Guests:</span>
-                  <span className="font-medium">{guests}</span>
+                  <span className="text-gray-600">👥 Guests:</span>
+                  <span className="font-medium">{guests} {guests === 1 ? 'guest' : 'guests'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Room Rate:</span>
+                  <span className="text-gray-600">💰 Rate per Night:</span>
                   <span className="font-medium">Rs. {roomRate.toLocaleString()}</span>
+                </div>
+                
+                {/* Professional Pricing Breakdown */}
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Pricing Breakdown:</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>Rs. {roomRate.toLocaleString()} × {numberOfNights} nights</span>
+                    <span>Rs. {totalAmount.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2 mt-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Total:</span>
-                    <span className="font-bold">Rs. {totalAmount.toLocaleString()}</span>
+                      <span className="text-gray-700 font-medium">💳 Total Amount:</span>
+                      <span className="font-bold text-lg text-blue-600">Rs. {totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600 text-xs mt-1">
+                      <span className="font-medium">💳 Payment Method:</span>
+                      <span className="font-bold">Pay on arrival</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-green-600">
-                    <span className="font-medium">Payment:</span>
-                    <span className="font-bold">Pay on arrival</span>
+                </div>
+                
+                {/* Professional Stay Information */}
+                <div className="mt-3 p-2 bg-white rounded border border-gray-200">
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <div className="flex items-center gap-1">
+                      <span>✅</span>
+                      <span>Professional booking system</span>
+                    </div>
+                                         <div className="flex items-center gap-1">
+                       <span>✅</span>
+                       <span>Professional night calculation</span>
+                     </div>
+                    <div className="flex items-center gap-1">
+                      <span>✅</span>
+                      <span>Flexible check-in/check-out times</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>✅</span>
+                      <span>Real-time availability checking</span>
+                    </div>
                   </div>
                 </div>
               </div>

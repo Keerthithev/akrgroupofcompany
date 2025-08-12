@@ -14,6 +14,7 @@ import ServiceCenter from "./pages/ServiceCenter";
 import PartyHall from "./pages/PartyHall";
 import Hotel from "./pages/Hotel";
 import RoomDetails from "./pages/RoomDetails";
+import ReviewForm from "./pages/ReviewForm";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 
@@ -55,7 +56,8 @@ const App = () => (
         <Route path="/servicecenter" element={<ServiceCenter />} />
         <Route path="/partyhall" element={<PartyHall />} />
         <Route path="/hotel" element={<Hotel />} />
-        <Route path="/hotel/room/:id" element={<RoomDetails />} />
+        <Route path="/hotel/room/:roomId" element={<RoomDetails />} />
+        <Route path="/review/:bookingId/:token" element={<ReviewForm />} />
         
         {/* Admin Routes */}
         <Route path="/multicomplex/admin/dashboard" element={<AdminDashboard />} />

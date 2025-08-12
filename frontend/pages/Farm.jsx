@@ -106,12 +106,12 @@ const Farm = () => {
         const response = await api.get("/api/settings");
         const settings = response.data;
         const farmImages = settings.farmSection?.images || [];
-        setBanners(farmImages.length > 0 ? farmImages : []);
+      setBanners(farmImages.length > 0 ? farmImages : []);
         setHomepageLogo(settings.homepageLogo || "");
       } catch (error) {
         console.error("Error fetching settings:", error);
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
@@ -142,11 +142,11 @@ const Farm = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={FARM_LOGO}
-                  alt="AKR Farm Logo"
+              <img
+                src={FARM_LOGO}
+                alt="AKR Farm Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -373,7 +373,7 @@ const Farm = () => {
               </motion.div>
             ))}
           </motion.div>
-        </div>
+                </div>
       </motion.section>
 
       {/* Services Section */}
@@ -446,12 +446,12 @@ const Farm = () => {
                   <div className="flex items-start space-x-3 sm:space-x-4 mb-3">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
                       <span className="text-lg sm:text-xl">{service.icon}</span>
-                    </div>
+                </div>
                     <div className="flex-1">
                       <h4 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2">{service.title}</h4>
                       <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">{service.description}</p>
-                    </div>
-                  </div>
+              </div>
+            </div>
                   <ul className="text-xs text-gray-500 space-y-1 ml-12 sm:ml-16">
                     {service.features.map((feature, fIndex) => (
                       <li key={fIndex} className="flex items-center space-x-2">

@@ -12,6 +12,9 @@ const bookingsRoutes = require('./routes/bookings');
 const usersRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const productsRoutes = require('./routes/products');
+const reviewsRoutes = require('./routes/reviews');
+const manualRevenueRoutes = require('./routes/manualRevenue');
+const manualCostsRoutes = require('./routes/manualCosts');
 
 // Load env vars
 dotenv.config({ path: './.env' });
@@ -25,6 +28,7 @@ const allowedOrigins = [
   'https://akrsonspvtltd.netlify.app',
   'https://comfy-hotteok-35dfd8.netlify.app',
   'http://localhost:8080', // your local frontend
+  'http://localhost:8082', // your current local frontend
   'https://akr.lk',
 ];
 app.use(cors({
@@ -48,6 +52,9 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/manual-revenue', manualRevenueRoutes);
+app.use('/api/manual-costs', manualCostsRoutes);
 
 // Error Handler (uncomment and implement if needed)
 // app.use(errorHandler);

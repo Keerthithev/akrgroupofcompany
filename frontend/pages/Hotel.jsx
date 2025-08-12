@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
 import api from "../lib/axios";
 import MobileNavigation from "../components/MobileNavigation";
-import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock } from 'react-icons/fa';
+import { FaBed, FaUser, FaCalendarAlt, FaCheckCircle, FaFacebook, FaInstagram, FaTwitter, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock, FaFilter, FaList, FaTh } from 'react-icons/fa';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AvailabilityChecker from '../components/AvailabilityChecker';
 
 const MEALS = [
   'Self catering',
@@ -17,17 +18,14 @@ const MEALS = [
 ];
 
 const AMENITIES = [
-  'Free WiFi',
-  '24/7 Reception',
+  'WiFi',
+  'AC',
+  'TV',
+  'Mini Bar',
   'Room Service',
-  'Swimming Pool',
-  'Restaurant',
-  'Air Conditioning',
-  'Parking',
-  'Laundry Service',
-  'Spa and wellness centre',
-  'Free cancellation',
-  '5 stars'
+  'Free Breakfast',
+  'Work Desk',
+  'Gym'
 ];
 
 const Footer = ({ homepageLogo }) => (
@@ -90,8 +88,12 @@ const Hotel = () => {
 
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [selectedAmenities, setSelectedAmenities] = useState([]);
-  const [roomDetailsModal, setRoomDetailsModal] = useState({ open: false, room: null });
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('price-low');
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [availabilityStatus, setAvailabilityStatus] = useState({});
+  const [availabilityDetails, setAvailabilityDetails] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -142,14 +144,45 @@ const Hotel = () => {
   };
 
 
+  // Filter and sort rooms
   const filteredRooms = useMemo(() => {
-    return rooms.filter(room => {
-      const price = room.discountedPrice || room.price;
-      const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
-      const matchesAmenities = selectedAmenities.length === 0 || selectedAmenities.every(a => room.amenities?.includes(a));
-      return matchesPrice && matchesAmenities;
-    });
-  }, [rooms, priceRange, selectedAmenities]);
+    let filtered = rooms;
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(room => room.category === selectedCategory);
+    }
+    
+    // Filter by amenities
+    if (selectedAmenities.length > 0) {
+      filtered = filtered.filter(room => {
+        // Check if room has all selected amenities
+        return selectedAmenities.every(selectedAmenity => 
+          room.amenities && room.amenities.includes(selectedAmenity)
+        );
+      });
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'price-low':
+        filtered = [...filtered].sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
+        break;
+      case 'price-high':
+        filtered = [...filtered].sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
+        break;
+      case 'name':
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'category':
+        filtered = [...filtered].sort((a, b) => a.category.localeCompare(b.category));
+        break;
+      default:
+        break;
+    }
+    
+    return filtered;
+  }, [rooms, sortBy, selectedCategory, selectedAmenities]);
 
   if (loading) return <LoadingSpinner fullScreen={true} text="Loading hotel experience..." />;
 
@@ -177,15 +210,6 @@ const Hotel = () => {
             {/* Search Bar */}
             {/* Removed search bar as requested */}
 
-            {/* CTA Button */}
-            <button 
-              onClick={() => document.getElementById('rooms-section')?.scrollIntoView({ behavior: 'smooth' })}
-              className="hidden md:flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 items-center space-x-2"
-            >
-              <FaBed className="w-4 h-4" />
-              <span>Book Now</span>
-            </button>
-
             {/* Mobile Navigation */}
             <div className="md:hidden">
               <MobileNavigation />
@@ -196,17 +220,14 @@ const Hotel = () => {
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
-        {/* Background Image */}
+        {/* Background Image - Only Main Image */}
         <div className="absolute inset-0">
           {hotelInfo.images.length > 0 ? (
-            hotelInfo.images.map((img, i) => (
               <img
-                key={img}
-                src={img}
+              src={hotelInfo.images[0]}
                 alt="Hotel Background"
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}
+              className="absolute inset-0 w-full h-full object-cover"
               />
-            ))
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-green-800"></div>
           )}
@@ -215,18 +236,16 @@ const Hotel = () => {
 
         {/* Hero Content */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 lg:py-24">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left Content */}
-            <div className="text-white">
+          <div className="text-center text-white">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4 sm:mb-6" style={{ color: hotelInfo.headingColor }}>
                 {hotelInfo.heading}
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 leading-relaxed" style={{ color: hotelInfo.subheadingColor }}>
+            <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 leading-relaxed max-w-3xl mx-auto" style={{ color: hotelInfo.subheadingColor }}>
                 {hotelInfo.subheading}
               </p>
               
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <button 
                   onClick={() => document.getElementById('rooms-section')?.scrollIntoView({ behavior: 'smooth' })}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -244,29 +263,12 @@ const Hotel = () => {
               </div>
 
               {/* Amenities Badges */}
-              <div className="flex flex-wrap gap-2 sm:gap-3 mt-6 sm:mt-8">
+            <div className="flex flex-wrap gap-2 sm:gap-3 mt-6 sm:mt-8 justify-center">
                 {hotelInfo.amenities.slice(0, 4).map((amenity, i) => (
                   <span key={i} className="bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-white/30">
                     {amenity}
                   </span>
                 ))}
-              </div>
-            </div>
-
-            {/* Right Content - Staff/Management Images */}
-            <div className="hidden md:block">
-              <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                {hotelInfo.images.slice(0, 4).map((img, i) => (
-                  <div key={i} className="relative group">
-                    <img
-                      src={img}
-                      alt={`Hotel ${i + 1}`}
-                      className="w-full h-32 sm:h-40 lg:h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -301,6 +303,25 @@ const Hotel = () => {
           </div>
         </div>
 
+        {/* Availability Checker */}
+        <div className="mb-8">
+          <AvailabilityChecker 
+            rooms={rooms} 
+            onAvailabilityCheck={(results) => {
+              // Update room availability status
+              const updatedRooms = rooms.map(room => {
+                const result = results.find(r => r.room._id === room._id);
+                return {
+                  ...room,
+                  availabilityStatus: result ? (result.isAvailable ? 'available' : 'unavailable') : 'unknown',
+                  availabilityDetails: result?.conflictDetails || null
+                };
+              });
+              setRooms(updatedRooms);
+            }}
+          />
+        </div>
+
         {/* Mobile Filter Button */}
         <div className="lg:hidden mb-6">
           <button
@@ -325,6 +346,31 @@ const Hotel = () => {
                 </svg>
                 Filter Rooms
               </h3>
+              
+              {/* Location Section */}
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center">
+                  <FaMapMarkerAlt className="w-4 h-4 mr-2" />
+                  Location
+                </h4>
+                <div className="text-center">
+                  <div className="w-full h-24 bg-green-100 rounded-lg mb-3 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
+                      <div className="text-xs text-green-700">AKR Multicomplex</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-green-700 mb-2">Main street Murunkan, Mannar</div>
+                  <a 
+                    href="https://maps.google.com/?q=AKR+multicomplex+Murunkan+Mannar" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded font-medium transition-colors"
+                  >
+                    View on Google Maps
+                  </a>
+                </div>
+              </div>
               
               {/* Price Range */}
               <div className="mb-6">
@@ -382,41 +428,123 @@ const Hotel = () => {
           {/* Room cards */}
           <main className="lg:col-span-3">
             {/* Results Header */}
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Available Rooms ({filteredRooms.length})
-              </h2>
-              <p className="text-gray-600">
-                Discover comfortable accommodations on the second floor
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Mannar: {filteredRooms.length} properties found
+                </h1>
+                <p className="text-gray-600 mt-1">Discover comfortable accommodations on the second floor</p>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Sort by:</span>
+                  <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="price-low">Price (lowest first)</option>
+                    <option value="price-high">Price (highest first)</option>
+                    <option value="name">Name</option>
+                    <option value="category">Category</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-1 bg-gray-100 rounded p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                  >
+                    <FaList className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
+                  >
+                    <FaTh className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Room Cards - Professional Style */}
-            <div className="space-y-4">
+            {/* Sticky Category Bar */}
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 mb-6 hidden md:block">
+              <div className="flex items-center gap-1 overflow-x-auto py-3">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === 'all'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Rooms ({rooms.length})
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Economy')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === 'Economy'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Economy ({rooms.filter(room => room.category === 'Economy').length})
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Business')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === 'Business'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Business ({rooms.filter(room => room.category === 'Business').length})
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('First-Class')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === 'First-Class'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  First-Class ({rooms.filter(room => room.category === 'First-Class').length})
+                </button>
+              </div>
+            </div>
+
+            {/* Room Cards - Mobile Responsive Design */}
+            <div className="space-y-8">
+              {/* Desktop View - Grid Layout */}
+              <div className="hidden md:block">
               {filteredRooms.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-gray-500 text-lg mb-2">No rooms match your filters.</div>
                   <button 
                     onClick={() => {
-                      setPriceRange([0, 30000]);
-                      setSelectedAmenities([]);
+                        setSelectedCategory('all');
                     }}
                     className="text-green-600 hover:text-green-700 font-medium"
                   >
                     Clear all filters
                   </button>
                 </div>
-              ) : filteredRooms.map(room => (
-                <div key={room._id} className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200">
-                  <div className="flex flex-col md:flex-row">
+                ) : (
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                    {filteredRooms.map(room => (
+                      <div key={room._id} className={`bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200 ${
+                        viewMode === 'grid' ? 'flex flex-col' : ''
+                      }`}>
+                        <div className={viewMode === 'grid' ? 'flex flex-col' : 'flex flex-col md:flex-row'}>
                     {/* Image Section - Mobile responsive */}
-                    <div className="relative w-full md:w-80 h-48 md:h-60 flex-shrink-0">
+                          <div className={`relative ${viewMode === 'grid' ? 'w-full h-48' : 'w-full md:w-64 h-48 md:h-56'} flex-shrink-0`}>
                       {room.images && room.images.length > 1 ? (
                         <RoomImageCarousel images={room.images} roomName={room.name} />
                       ) : room.images && room.images.length > 0 ? (
-                        <img src={room.images[0]} alt={room.name} className="w-full h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none" />
+                              <img src={room.images[0]} alt={room.name} className={`w-full h-full object-cover ${viewMode === 'grid' ? 'rounded-t-lg' : 'rounded-t-lg md:rounded-l-lg md:rounded-t-none'}`} />
                       ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 rounded-t-lg md:rounded-l-lg md:rounded-t-none">
+                              <div className={`w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 ${viewMode === 'grid' ? 'rounded-t-lg' : 'rounded-t-lg md:rounded-l-lg md:rounded-t-none'}`}>
                           <FaBed className="w-8 h-8" />
                         </div>
                       )}
@@ -425,30 +553,80 @@ const Hotel = () => {
                       <div className="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded font-bold shadow-md">
                         Second Floor
                       </div>
-                      
-                      {/* Heart Icon */}
-                      <button className="absolute top-3 right-3 bg-white/80 hover:bg-white text-gray-600 hover:text-red-500 rounded-full p-1.5 shadow-md transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      </button>
                     </div>
                     
                     {/* Content Section */}
-                    <div className="flex-1 p-4 md:p-6 flex flex-col justify-between">
+                          <div className={`flex-1 p-4 md:p-6 flex flex-col ${viewMode === 'grid' ? 'justify-between flex-1' : 'justify-between'}`}>
                       <div>
                         {/* Header */}
                         <div className="mb-3">
-                          <h3 className="text-lg md:text-xl font-bold text-green-700 mb-1">{room.name}</h3>
+                                <div className="flex items-start justify-between mb-2">
+                                  <h3 className="text-lg md:text-xl font-bold text-green-700">{room.name}</h3>
+                                  {/* Stars in top right corner */}
+                                  <div className="flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => {
+                                      const rating = room.reviewCount > 0 ? parseFloat(room.averageRating) || 0 : 0;
+                                      const starValue = i + 1;
+                                      let fill = "none";
+                                      
+                                      if (starValue <= rating) {
+                                        fill = "currentColor"; // Full star
+                                      } else if (starValue - rating < 1 && starValue - rating > 0) {
+                                        fill = "currentColor"; // Partial star (simplified as full for now)
+                                      }
+                                      
+                                      return (
+                                        <svg key={i} className="w-4 h-4 text-yellow-400" fill={fill} stroke="currentColor" viewBox="0 0 20 20">
+                                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-medium">Available</span>
+                                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                    room.availabilityStatus === 'available' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : room.availabilityStatus === 'unavailable'
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {room.availabilityStatus === 'available' 
+                                      ? 'Available' 
+                                      : room.availabilityStatus === 'unavailable'
+                                      ? 'Not Available'
+                                      : 'Available'
+                                    }
+                                  </span>
                             {room.discountedPrice && (
                               <span className="bg-green-200 text-green-800 text-xs px-2 py-1 rounded font-medium">Special Offer</span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="text-green-600">Mannar, Sri Lanka</span>
+                                <div className="text-sm text-gray-600 mb-2">
+                                  <span className="text-green-600">Mannar Show on map • km from centre</span>
+                                </div>
+                                
+                                {/* Rating Text Display */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm font-semibold text-gray-800">
+                                    {room.reviewCount > 0 
+                                      ? `Good ${room.averageRating}`
+                                      : 'No reviews yet'
+                                    }
+                                  </span>
+                                  {room.reviewCount > 0 && (
+                                    <span className="text-sm text-gray-600">
+                                      Based on {room.reviewCount} review{room.reviewCount !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Availability Details */}
+                                {room.availabilityStatus === 'unavailable' && room.availabilityDetails && (
+                                  <div className="text-xs text-red-600 mb-2">
+                                    {room.availabilityDetails}
                           </div>
+                                )}
                         </div>
                         
                         {/* Room Details */}
@@ -460,7 +638,7 @@ const Hotel = () => {
                         
                         {/* Amenities */}
                         {room.amenities && room.amenities.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
+                                <div className="flex flex-wrap gap-2 mb-3">
                             {room.amenities.slice(0, 3).map((amenity, i) => (
                               <span key={i} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
                                 {amenity}
@@ -479,32 +657,216 @@ const Hotel = () => {
                       </div>
                       
                       {/* Footer */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 border-t border-green-100 gap-3">
-                        <div className="flex-1">
-                          <div className="text-xs text-gray-500 mb-1">per night</div>
+                            <div className="pt-3 border-t border-gray-100">
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
                           {room.discountedPrice ? (
-                            <div>
-                              <span className="text-gray-400 line-through text-sm">LKR {room.price?.toLocaleString()}</span>
-                              <div className="text-xl md:text-2xl font-bold text-green-700">LKR {room.discountedPrice?.toLocaleString()}</div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg md:text-xl font-bold text-green-600">
+                                        LKR {room.discountedPrice.toLocaleString()}
+                                      </span>
+                                      <span className="text-sm text-gray-500 line-through">
+                                        LKR {room.price.toLocaleString()}
+                                      </span>
                             </div>
                           ) : (
-                            <div className="text-xl md:text-2xl font-bold text-green-700">LKR {room.price?.toLocaleString()}</div>
+                                    <span className="text-lg md:text-xl font-bold text-green-600">
+                                      LKR {room.price.toLocaleString()}
+                                    </span>
                           )}
+                                  <div className="text-xs text-gray-500">per night</div>
                         </div>
                         
                         <button 
                           onClick={() => {
-                            setRoomDetailsModal({ open: true, room });
-                          }}
-                          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded font-semibold transition-colors duration-200 text-sm"
-                        >
-                          See availability &gt;
-                        </button>
+                                    navigate(`/hotel/room/${room._id}`);
+                                  }}
+                                  disabled={room.availabilityStatus === 'unavailable'}
+                                  className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm ${
+                                    room.availabilityStatus === 'unavailable'
+                                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                      : 'bg-green-600 hover:bg-green-700 text-white'
+                                  }`}
+                                >
+                                  {room.availabilityStatus === 'unavailable' ? 'Not Available' : 'View Details'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+
+              {/* Mobile View - Category Sections with Horizontal Scroll */}
+              <div className="md:hidden">
+                {filteredRooms.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <div className="text-gray-500 text-lg mb-2">No rooms match your filters.</div>
+                    <button 
+                      onClick={() => {
+                        setSelectedCategory('all');
+                        setSelectedAmenities([]);
+                      }}
+                      className="text-green-600 hover:text-green-700 font-medium"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                ) : (
+                  ['Economy', 'Business', 'First-Class'].map(category => {
+                    const categoryRooms = filteredRooms.filter(room => room.category === category);
+                    if (categoryRooms.length === 0) return null;
+                    
+                    return (
+                      <div key={category} className="mb-8">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">{category} Rooms</h2>
+                        <div className="overflow-x-auto">
+                          <div className="flex gap-4 px-4 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {categoryRooms.map(room => (
+                              <div key={room._id} className="bg-white rounded-lg shadow-md border border-gray-200 flex-shrink-0 w-80">
+                                {/* Image Section */}
+                                <div className="relative w-full h-48">
+                                  {room.images && room.images.length > 0 ? (
+                                    <img src={room.images[0]} alt={room.name} className="w-full h-full object-cover rounded-t-lg" />
+                                  ) : (
+                                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 rounded-t-lg">
+                                      <FaBed className="w-8 h-8" />
+                                    </div>
+                                  )}
+                                  
+                                  {/* Second Floor Badge */}
+                                  <div className="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded font-bold shadow-md">
+                                    Second Floor
+                                  </div>
+                                  
+                                  {/* Stars in top right corner */}
+                                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => {
+                                      const rating = room.reviewCount > 0 ? parseFloat(room.averageRating) || 0 : 0;
+                                      const starValue = i + 1;
+                                      let fill = "none";
+                                      
+                                      if (starValue <= rating) {
+                                        fill = "currentColor";
+                                      } else if (starValue - rating < 1 && starValue - rating > 0) {
+                                        fill = "currentColor";
+                                      }
+                                      
+                                      return (
+                                        <svg key={i} className="w-3 h-3 text-yellow-400" fill={fill} stroke="currentColor" viewBox="0 0 20 20">
+                                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                
+                                {/* Content Section */}
+                                <div className="p-4">
+                                  <div className="mb-3">
+                                    <h3 className="text-lg font-bold text-green-700 mb-2">{room.name}</h3>
+                                    
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                        room.availabilityStatus === 'available' 
+                                          ? 'bg-green-100 text-green-700' 
+                                          : room.availabilityStatus === 'unavailable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : 'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {room.availabilityStatus === 'available' 
+                                          ? 'Available' 
+                                          : room.availabilityStatus === 'unavailable'
+                                          ? 'Not Available'
+                                          : 'Available'
+                                        }
+                                      </span>
+                                      {room.discountedPrice && (
+                                        <span className="bg-green-200 text-green-800 text-xs px-2 py-1 rounded font-medium">Special Offer</span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Rating Text */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-sm font-semibold text-gray-800">
+                                        {room.reviewCount > 0 
+                                          ? `Good ${room.averageRating}`
+                                          : 'No reviews yet'
+                                        }
+                                      </span>
+                                      {room.reviewCount > 0 && (
+                                        <span className="text-sm text-gray-600">
+                                          Based on {room.reviewCount} review{room.reviewCount !== 1 ? 's' : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Room Details */}
+                                    <div className="text-gray-600 text-sm mb-2">
+                                      {room.beds} • {room.maxGuests} guests • {room.size} m²
+                                    </div>
+                                    
+                                    {/* Amenities */}
+                                    {room.amenities && room.amenities.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mb-3">
+                                        {room.amenities.slice(0, 2).map((amenity, i) => (
+                                          <span key={i} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded border border-green-200">
+                                            {amenity}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Footer */}
+                                  <div className="border-t border-gray-100 pt-3">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div>
+                                        {room.discountedPrice ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-lg font-bold text-green-600">
+                                              LKR {room.discountedPrice.toLocaleString()}
+                                            </span>
+                                            <span className="text-sm text-gray-500 line-through">
+                                              LKR {room.price.toLocaleString()}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-lg font-bold text-green-600">
+                                            LKR {room.price.toLocaleString()}
+                                          </span>
+                                        )}
+                                        <div className="text-xs text-gray-500">per night</div>
+                                      </div>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          navigate(`/hotel/room/${room._id}`);
+                                        }}
+                                        disabled={room.availabilityStatus === 'unavailable'}
+                                        className={`px-4 py-2 rounded font-semibold transition-colors duration-200 text-sm ${
+                                          room.availabilityStatus === 'unavailable'
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-green-600 hover:bg-green-700 text-white'
+                                        }`}
+                                      >
+                                        {room.availabilityStatus === 'unavailable' ? 'Not Available' : 'View Details'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </main>
         </div>
@@ -515,7 +877,6 @@ const Hotel = () => {
         onClose={() => setBookingModal({ open: false, room: null })} 
         room={bookingModal.room} 
       />
-      <RoomDetailsModal open={roomDetailsModal.open} room={roomDetailsModal.room} onClose={() => setRoomDetailsModal({ open: false, room: null })} handleBookNow={handleBookNow} />
       <Footer homepageLogo={homepageLogo} />
 
       {/* Mobile Filter Sidebar */}
@@ -633,86 +994,5 @@ function RoomImageCarousel({ images, roomName }) {
     </div>
   );
 }
-
-const RoomDetailsModal = ({ open, room, onClose, handleBookNow }) => {
-  const [imgIdx, setImgIdx] = useState(0);
-  const imgCount = room?.images?.length || 0;
-  if (!room) return null;
-  return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 ${open ? '' : 'hidden'}`}> 
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-0 relative animate-fadeIn overflow-hidden">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-green-700 text-2xl font-bold z-10"
-          onClick={onClose}
-          aria-label="Close"
-        >×</button>
-        {/* Image carousel */}
-        <div className="relative w-full h-64 md:h-80 bg-gray-100 flex items-center justify-center">
-          {imgCount > 0 ? (
-            <img src={room.images[imgIdx]} alt={room.name} className="w-full h-full object-cover rounded-t-2xl" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
-          )}
-          {imgCount > 1 && (
-            <>
-              <button className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 text-green-700 rounded-full p-1 shadow hover:bg-green-100" onClick={e => { e.stopPropagation(); setImgIdx(i => (i - 1 + imgCount) % imgCount); }}>&lt;</button>
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 text-green-700 rounded-full p-1 shadow hover:bg-green-100" onClick={e => { e.stopPropagation(); setImgIdx(i => (i + 1) % imgCount); }}>&gt;</button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {room.images.map((_, i) => (
-                  <span key={i} className={`inline-block w-2 h-2 rounded-full ${i === imgIdx ? 'bg-green-600' : 'bg-green-200'}`}></span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        {/* Details */}
-        <div className="p-6 flex flex-col md:flex-row gap-8">
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-2xl font-bold text-blue-900 mb-0">{room.name}</h2>
-              <span className="bg-gray-200 text-xs px-2 py-1 rounded font-semibold">{room.type}</span>
-              <span className="bg-blue-700 text-white text-xs px-2 py-1 rounded font-bold">Second Floor</span>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-gray-700 mb-2">
-              <span>{room.beds}</span>
-              <span>• {room.maxGuests} guests</span>
-              {room.size && <span>• {room.size} m²</span>}
-              {room.view && <span>• {room.view} view</span>}
-            </div>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {room.amenities && room.amenities.map((a, i) => (
-                <span key={i} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1"><FaCheckCircle className="text-green-500" /> {a}</span>
-              ))}
-            </div>
-            <div className="text-gray-700 text-base mb-2">{room.description}</div>
-            <div className="flex items-center gap-3 mt-2">
-              {room.discountedPrice ? (
-                <>
-                  <span className="text-gray-400 line-through text-lg">LKR {room.price?.toLocaleString()}</span>
-                  <span className="text-green-700 font-bold text-2xl">LKR {room.discountedPrice?.toLocaleString()}</span>
-                </>
-              ) : (
-                <span className="text-green-700 font-bold text-2xl">LKR {room.price?.toLocaleString()}</span>
-              )}
-              <span className="text-xs text-gray-500">+ taxes and charges</span>
-            </div>
-            <div className="mt-4">
-              <button className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition text-base" onClick={() => { onClose(); handleBookNow(room); }}>Book Now</button>
-            </div>
-          </div>
-          {/* Review score and highlights (stub) */}
-          <div className="w-full md:w-64 flex flex-col gap-2 items-center md:items-end">
-            <div className="bg-gray-100 rounded-xl p-4 w-full flex flex-col items-center md:items-end">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-gray-300 text-gray-700 font-bold px-2 py-1 rounded text-sm">No reviews yet</span>
-              </div>
-              <div className="text-xs text-gray-500">Be the first to review this room!</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default Hotel; 

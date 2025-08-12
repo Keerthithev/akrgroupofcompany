@@ -205,7 +205,7 @@ const Header = () => (
           alt="AKR Shopping Logo"
           className="w-10 h-10 rounded-full object-cover border-2 border-green-500"
         />
-        <span className="text-2xl font-extrabold text-green-700 tracking-tight">AKR Shopping</span>
+      <span className="text-2xl font-extrabold text-green-700 tracking-tight">AKR Shopping</span>
       </div>
       <nav className="hidden md:flex space-x-6 text-gray-700 font-medium">
         <a href="/" className="hover:text-green-600 transition">Home</a>
@@ -419,11 +419,11 @@ const Shopping = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={SHOPPING_LOGO}
-                  alt="AKR Shopping Logo"
+              <img
+                src={SHOPPING_LOGO}
+                alt="AKR Shopping Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -727,7 +727,7 @@ const Shopping = () => {
                 </motion.div>
               ))}
             </motion.div>
-          </div>
+            </div>
 
           {/* Additional Categories - Compact */}
           <motion.div 
@@ -845,7 +845,7 @@ const Shopping = () => {
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-1">{benefit.title}</h4>
                       <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{benefit.description}</p>
-                    </div>
+                </div>
                   </motion.div>
                 ))}
               </div>
@@ -922,7 +922,7 @@ const Shopping = () => {
                       <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{service.description}</p>
                     </motion.div>
                   ))}
-                </div>
+            </div>
               </motion.div>
             </motion.div>
           </div>

@@ -216,11 +216,11 @@ const Home = () => {
               transition={{ duration: 0.5 }}
               className="flex items-center space-x-3 sm:space-x-4"
             >
-              <img
-                src="/images/image copy 2.png"
-                alt="AKR Group Logo"
+                <img
+                  src="/images/image copy 2.png"
+                  alt="AKR Group Logo"
                 className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-green-500"
-              />
+                />
               <div>
                 <div className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900">AKR GROUP OF COMPANIES</div>
                 <div className="text-xs sm:text-sm text-gray-600">Excellence in every venture</div>
@@ -301,7 +301,7 @@ const Home = () => {
               </Button>
             </Dropdown>
           </motion.div>
-        </div>
+            </div>
 
         {/* Hero Section */}
         <section className="relative overflow-hidden min-h-screen pt-16 lg:pt-0">
@@ -435,12 +435,12 @@ const Home = () => {
                         className="w-1.5 h-4 bg-white/80 rounded-full mt-2"
                       />
                     </motion.div>
-                  </div>
+              </div>
                 </motion.div>
               </motion.div>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* AKR Group Companies Section */}
         <motion.section 
@@ -451,7 +451,7 @@ const Home = () => {
           viewport={{ once: true }}
           variants={staggerContainer}
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div 
               className="text-center mb-16"
               variants={fadeInUp}
@@ -661,8 +661,8 @@ const Home = () => {
                       <div className="flex items-center">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
                         <span>AKR Easy Credit (Pvt) Ltd</span>
-                      </div>
-                    </div>
+            </div>
+                </div>
                     <Paragraph className="text-blue-700 text-lg leading-relaxed mt-6">
                       With each endeavor, we aim to set new standards of quality, reliability, and innovation.
                     </Paragraph>
@@ -831,8 +831,8 @@ const Home = () => {
                             <Paragraph className="text-gray-700 text-base leading-relaxed mb-0">
                               We grow responsibly, with a focus on long-term impact and environmental stewardship.
                             </Paragraph>
-                          </div>
-                        </div>
+            </div>
+          </div>
                       </Col>
                     </Row>
                   </Card>
@@ -896,15 +896,15 @@ const Home = () => {
                           <a href="tel:0773111266" className="text-blue-700 hover:text-blue-800 underline">
                             0773111266
                           </a>
-                        </div>
+                  </div>
                         <div className="flex items-center justify-center gap-2">
                           <MailOutlined className="text-blue-600" />
                           <a href="mailto:antonrojarstalin@gmail.com" className="text-blue-700 hover:text-blue-800 underline">
                             antonrojarstalin@gmail.com
                           </a>
-                        </div>
-                      </div>
-                    </div>
+            </div>
+          </div>
+        </div>
                   </Card>
                 </motion.div>
               </Col>
@@ -936,7 +936,7 @@ const Home = () => {
                               antonfloridagamini@gmail.com
                             </a>
                           </div>
-                        </div>
+          </div>
                       </Col>
                       
                       <Col xs={24} md={8}>
@@ -955,8 +955,8 @@ const Home = () => {
                             <a href="mailto:antonandrewrajan29@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
                               antonandrewrajan29@gmail.com
                             </a>
-                          </div>
-                        </div>
+                  </div>
+                  </div>
                       </Col>
                       
                       <Col xs={24} md={8}>
@@ -975,8 +975,8 @@ const Home = () => {
                             <a href="mailto:antonanburajan14@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
                               antonanburajan14@gmail.com
                             </a>
-                          </div>
-                        </div>
+                  </div>
+                </div>
                       </Col>
                     </Row>
                   </Card>
@@ -988,7 +988,7 @@ const Home = () => {
           </div>
         </motion.section>
 
-        {/* Footer */}
+      {/* Footer */}
         <Footer className="bg-gradient-to-r from-green-700 to-green-400 text-white pt-10 pb-6 mt-16" id="contact">
           <div className="max-w-7xl mx-auto px-6">
             <Row gutter={[32, 32]}>
@@ -1013,9 +1013,9 @@ const Home = () => {
                     </a>
                     <a href="#" className="hover:text-green-200 transition-colors">
                       <LinkedinOutlined className="text-xl" />
-                    </a>
-                  </div>
-                </div>
+                </a>
+              </div>
+            </div>
               </Col>
               
               <Col xs={24} sm={12} lg={6}>
@@ -1023,8 +1023,8 @@ const Home = () => {
                   <div className="font-semibold mb-1">Contact</div>
                   <div className="flex items-center gap-2">
                     <EnvironmentOutlined />
-                    <span>Main street Murunkan, Mannar</span>
-                  </div>
+                  <span>Main street Murunkan, Mannar</span>
+                </div>
                   <div className="flex items-center gap-2">
                     <PhoneOutlined />
                     <a href="tel:0773111266" className="underline hover:text-green-200">0773111266</a>
@@ -1032,7 +1032,7 @@ const Home = () => {
                   <div className="flex items-center gap-2">
                     <MailOutlined />
                     <a href="mailto:akrfuture@gmail.com" className="underline hover:text-green-200">akrfuture@gmail.com</a>
-                  </div>
+                </div>
                 </div>
               </Col>
               
@@ -1042,11 +1042,11 @@ const Home = () => {
                   <div className="flex items-center gap-2">
                     <ClockCircleOutlined />
                     <span>Mon - Sat: 8:00 AM - 8:00 PM</span>
-                  </div>
+              </div>
                   <div className="flex items-center gap-2">
                     <ClockCircleOutlined />
                     <span>Sunday: 9:00 AM - 6:00 PM</span>
-                  </div>
+            </div>
                 </div>
               </Col>
               

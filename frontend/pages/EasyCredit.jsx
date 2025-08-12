@@ -106,7 +106,7 @@ const EasyCredit = () => {
         const response = await api.get("/api/settings");
         const settings = response.data;
         const easyCreditImages = settings.easyCreditSection?.images || [];
-        setBanners(easyCreditImages.length > 0 ? easyCreditImages : []);
+      setBanners(easyCreditImages.length > 0 ? easyCreditImages : []);
         setHomepageLogo(settings.homepageLogo || "");
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -142,11 +142,11 @@ const EasyCredit = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="relative">
-                <img
-                  src={EASY_CREDIT_LOGO}
-                  alt="AKR Easy Credit Logo"
+              <img
+                src={EASY_CREDIT_LOGO}
+                alt="AKR Easy Credit Logo"
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-green-500 shadow-md"
-                />
+              />
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
@@ -185,7 +185,7 @@ const EasyCredit = () => {
               repeat: Infinity,
               ease: "linear"
             }}
-          />
+            />
           <motion.div
             className="absolute top-0 right-10 w-48 h-48 md:w-64 md:h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-20"
             animate={{ 
@@ -255,8 +255,8 @@ const EasyCredit = () => {
               <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full mb-4">
                 <FaCheckCircle className="w-3 h-3 text-blue-600 mr-2" />
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">Flexible Credit Solutions & Financial Services</span>
-              </div>
-              
+          </div>
+
               <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">
                 Empowering with 
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"> Financial Freedom</span>
@@ -268,7 +268,7 @@ const EasyCredit = () => {
               
               <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6">
                 Our commitment to transparency, competitive rates, and quick approval processes ensures that you can access the financial resources you need with confidence and peace of mind.
-              </p>
+            </p>
               
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {[
@@ -287,7 +287,7 @@ const EasyCredit = () => {
                   >
                     <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center`}>
                       <item.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${item.color}`} />
-                    </div>
+                </div>
                     <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.label}</span>
                   </motion.div>
                 ))}
@@ -426,14 +426,14 @@ const EasyCredit = () => {
                   title: "Quick Approval",
                   description: "Fast and efficient loan processing and approval system",
                   features: ["Fast processing", "Online application", "Quick disbursement", "Minimal documentation"]
-                },
-                {
+              },
+              {
                   icon: "📊",
-                  title: "Financial Consultation",
+                title: "Financial Consultation",
                   description: "Expert financial advice and credit counseling services",
                   features: ["Financial planning", "Credit counseling", "Investment advice", "Risk assessment"]
-                }
-              ].map((service, index) => (
+              }
+            ].map((service, index) => (
                 <motion.div
                   key={index}
                   variants={fadeInUp}
@@ -450,8 +450,8 @@ const EasyCredit = () => {
                     <div className="flex-1">
                       <h4 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2">{service.title}</h4>
                       <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">{service.description}</p>
-                    </div>
-                  </div>
+                </div>
+              </div>
                   <ul className="text-xs text-gray-500 space-y-1 ml-12 sm:ml-16">
                     {service.features.map((feature, fIndex) => (
                       <li key={fIndex} className="flex items-center space-x-2">
@@ -461,7 +461,7 @@ const EasyCredit = () => {
                     ))}
                   </ul>
                 </motion.div>
-              ))}
+            ))}
             </motion.div>
           </div>
         </div>
@@ -510,13 +510,13 @@ const EasyCredit = () => {
                       </div>
                     </motion.div>
                   ))}
-                </div>
+          </div>
               </motion.div>
               
               <motion.div variants={fadeInRight}>
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 sm:mb-6">Why Choose Us</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {[
+            {[
                     { icon: "💳", title: "Flexible Terms", description: "Customized credit solutions" },
                     { icon: "⚡", title: "Quick Approval", description: "Fast processing times" },
                     { icon: "💰", title: "Competitive Rates", description: "Best interest rates" },

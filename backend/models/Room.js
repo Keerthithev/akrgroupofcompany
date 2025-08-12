@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const RoomSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  category: { type: String, enum: ["Economy", "Business", "First-Class"], required: true },
   type: { type: String, required: true }, // e.g. Double, Twin, Suite
   beds: { type: String, required: true }, // e.g. 1 double, 2 single
   maxGuests: { type: Number, required: true },
@@ -17,6 +18,11 @@ const RoomSchema = new mongoose.Schema({
   capacity: { type: Number, default: 1 },
   amenities: [String],
   isAvailable: { type: Boolean, default: true },
+  status: { type: String, enum: ['Available', 'Occupied', 'Cleaning'], default: 'Available' },
+  cleaningEndTime: { type: Date },
+  lastBookingEnd: { type: Date },
+  rating: { type: Number, default: 0, min: 0, max: 5 },
+  reviewCount: { type: Number, default: 0 },
 });
 
 module.exports = mongoose.model('Room', RoomSchema); 

@@ -185,7 +185,7 @@ const WineStore = () => {
               repeat: Infinity,
               ease: "linear"
             }}
-          />
+            />
           <motion.div
             className="absolute top-0 right-10 w-48 h-48 md:w-64 md:h-64 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-20"
             animate={{ 
@@ -268,7 +268,7 @@ const WineStore = () => {
               
               <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed mb-6">
                 From traditional Ceylon Arrack to premium international spirits, our collection caters to all preferences and occasions, ensuring you find the perfect choice for your taste and celebration.
-              </p>
+            </p>
               
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {[
@@ -682,7 +682,7 @@ const WineStore = () => {
               whileInView="visible"
               viewport={{ once: true, margin: "-30px" }}
             >
-              {[
+            {[
                 {
                   icon: "🍷",
                   title: "Fine Wines",
