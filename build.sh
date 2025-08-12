@@ -1,13 +1,42 @@
 #!/bin/bash
 
-# Build the project
+# Exit on any error
+set -e
+
+echo "Starting build process..."
+
+# Navigate to frontend directory
 cd frontend
+
+# Install dependencies
+echo "Installing dependencies..."
+npm install
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "Error: node_modules directory was not created"
+    exit 1
+fi
+
+# Build the project
+echo "Building the project..."
 npm run build
 
-# Copy CSS file to a different location to avoid Netlify routing issues
-cp dist/assets/index-eKBDyv6r.css dist/styles.css
+# Check if dist directory exists
+if [ ! -d "dist" ]; then
+    echo "Error: dist directory was not created"
+    echo "Build failed. Checking for errors..."
+    exit 1
+fi
 
-# Update the HTML to use the new CSS location
-sed -i '' 's|/assets/index-eKBDyv6r.css|/styles.css|g' dist/index.html
+echo "Build completed successfully!"
+echo "Dist directory contents:"
+ls -la dist/
 
-echo "Build completed with CSS fix" 
+# Verify index.html exists
+if [ ! -f "dist/index.html" ]; then
+    echo "Error: index.html was not created"
+    exit 1
+fi
+
+echo "Build verification completed successfully!" 
