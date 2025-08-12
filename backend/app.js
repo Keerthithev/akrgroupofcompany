@@ -30,6 +30,7 @@ const allowedOrigins = [
   'http://localhost:8080', // your local frontend
   'http://localhost:8082', // your current local frontend
   'https://akr.lk',
+  'https://akrgroup.netlify.app'
 ];
 app.use(cors({
   origin: allowedOrigins,
