@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaBed, FaCheckCircle, FaArrowLeft, FaMapMarkerAlt, FaStar } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { FaBed, FaCheckCircle, FaArrowLeft, FaMapMarkerAlt, FaStar, FaPlay, FaPause } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../lib/axios';
 import BookingModal from '../components/BookingModal';
 import ReviewModal from '../components/ReviewModal';
@@ -18,6 +18,9 @@ const RoomDetails = () => {
   const [bookingModal, setBookingModal] = useState({ open: false, room: null });
   const [reviewModal, setReviewModal] = useState({ open: false, room: null });
   const [homepageLogo, setHomepageLogo] = useState("");
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showThumbnails, setShowThumbnails] = useState(false);
+  const slideshowRef = useRef(null);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -41,6 +44,37 @@ const RoomDetails = () => {
       fetchRoom();
     }
   }, [roomId, navigate]);
+
+  // Auto-play slideshow
+  useEffect(() => {
+    if (!room?.images || room.images.length <= 1 || !isPlaying) return;
+
+    const interval = setInterval(() => {
+      setImgIdx((prev) => (prev + 1) % room.images.length);
+    }, 4000); // Change image every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [room?.images, isPlaying]);
+
+  // Pause slideshow when user hovers
+  const handleMouseEnter = () => setIsPlaying(false);
+  const handleMouseLeave = () => setIsPlaying(true);
+
+  const nextImage = () => {
+    if (room?.images) {
+      setImgIdx((prev) => (prev + 1) % room.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (room?.images) {
+      setImgIdx((prev) => (prev - 1 + room.images.length) % room.images.length);
+    }
+  };
+
+  const selectImage = (index) => {
+    setImgIdx(index);
+  };
 
   const handleBookNow = (room) => {
     setBookingModal({ open: true, room });
@@ -106,56 +140,97 @@ const RoomDetails = () => {
           className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Image Section */}
-          <div className="relative w-full h-64 md:h-96 lg:h-[500px] bg-gray-100">
-          {imgCount > 0 ? (
-              <img 
+          <div 
+            className="relative w-full h-64 md:h-96 lg:h-[500px] bg-gray-100 overflow-hidden"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            ref={slideshowRef}
+          >
+            {/* Main Image with Animation */}
+            <AnimatePresence mode="wait">
+              <motion.img 
+                key={imgIdx}
                 src={room.images[imgIdx]} 
-                alt={room.name} 
-                className="w-full h-full object-cover transition-opacity duration-500" 
+                alt={`${room.name} - Image ${imgIdx + 1}`}
+                className="w-full h-full object-cover"
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
               />
-          ) : (
+            </AnimatePresence>
+            
+            {/* Fallback for no images */}
+            {imgCount === 0 && (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <FaBed className="w-16 h-16" />
               </div>
-          )}
+            )}
             
-            {/* Image Navigation */}
-          {imgCount > 1 && (
-            <>
+            {/* Navigation Arrows */}
+            {imgCount > 1 && (
+              <>
                 <button 
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full p-3 shadow-lg transition-colors"
-                  onClick={() => setImgIdx((i) => (i - 1 + imgCount) % imgCount)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-110 z-10"
+                  onClick={prevImage}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full p-3 shadow-lg transition-colors"
-                  onClick={() => setImgIdx((i) => (i + 1) % imgCount)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-110 z-10"
+                  onClick={nextImage}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
-                
-                {/* Image Indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+              </>
+            )}
+            
+            {/* Slideshow Controls */}
+            {imgCount > 1 && (
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                <button
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className="bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-110"
+                >
+                  {isPlaying ? <FaPause className="w-4 h-4" /> : <FaPlay className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setShowThumbnails(!showThumbnails)}
+                  className="bg-white/90 hover:bg-white text-gray-600 hover:text-green-700 rounded-full px-3 py-2 shadow-lg transition-all duration-200 hover:scale-110 text-sm font-medium"
+                >
+                  {showThumbnails ? 'Hide' : 'Show'} Thumbnails
+                </button>
+              </div>
+            )}
+            
+            {/* Image Indicators */}
+            {imgCount > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                 {room.images.map((_, i) => (
-                    <button
-                      key={i}
-                      className={`w-3 h-3 rounded-full transition-colors ${
-                        i === imgIdx ? 'bg-white' : 'bg-white/50'
-                      }`}
-                      onClick={() => setImgIdx(i)}
-                    />
+                  <button
+                    key={i}
+                    className={`w-3 h-3 rounded-full transition-all duration-200 hover:scale-125 ${
+                      i === imgIdx ? 'bg-white shadow-lg' : 'bg-white/50 hover:bg-white/75'
+                    }`}
+                    onClick={() => selectImage(i)}
+                  />
                 ))}
               </div>
-            </>
-          )}
+            )}
+            
+            {/* Image Counter */}
+            {imgCount > 1 && (
+              <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
+                {imgIdx + 1} / {imgCount}
+              </div>
+            )}
 
             {/* Category Badge */}
-            <div className="absolute top-4 left-4">
+            <div className="absolute top-4 left-4 z-10">
               <span className={`px-3 py-1 rounded-full text-sm font-bold text-white shadow-lg ${
                 room.category === 'Economy' ? 'bg-blue-600' :
                 room.category === 'Business' ? 'bg-green-600' : 'bg-yellow-600'
@@ -164,6 +239,36 @@ const RoomDetails = () => {
               </span>
             </div>
           </div>
+
+          {/* Thumbnails Section */}
+          {showThumbnails && imgCount > 1 && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-gray-50 p-4 border-t border-gray-200"
+            >
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {room.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => selectImage(index)}
+                    className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 hover:scale-105 ${
+                      index === imgIdx 
+                        ? 'border-green-500 shadow-lg' 
+                        : 'border-gray-300 hover:border-green-400'
+                    }`}
+                  >
+                    <img 
+                      src={image} 
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Content Section */}
           <div className="p-6 lg:p-8">

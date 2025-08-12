@@ -21,7 +21,12 @@ async function main() {
         maxGuests: 1,
         size: 20,
         description: 'Affordable and comfortable single room for budget travelers',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 2500,
         discountedPrice: 2000,
         breakfastIncluded: false,
@@ -40,7 +45,12 @@ async function main() {
         maxGuests: 2,
         size: 25,
         description: 'Budget-friendly double room with essential amenities',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 3500,
         discountedPrice: 3000,
         breakfastIncluded: false,
@@ -59,7 +69,12 @@ async function main() {
         maxGuests: 2,
         size: 30,
         description: 'Comfortable twin room perfect for business travelers',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 4500,
         discountedPrice: 4000,
         breakfastIncluded: false,
@@ -78,7 +93,12 @@ async function main() {
         maxGuests: 2,
         size: 35,
         description: 'Spacious business room with modern amenities and city view',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 5000,
         discountedPrice: 4500,
         breakfastIncluded: true,
@@ -97,7 +117,12 @@ async function main() {
         maxGuests: 4,
         size: 50,
         description: 'Luxury suite with separate living area and premium amenities',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 8000,
         discountedPrice: 7200,
         breakfastIncluded: true,
@@ -116,7 +141,12 @@ async function main() {
         maxGuests: 2,
         size: 40,
         description: 'Premium deluxe room with luxury amenities and stunning views',
-        images: ['/images/hotel.jpg'],
+        images: [
+          '/images/hotel.jpg',
+          '/images/Hotel & Rooms.jpg',
+          '/images/PHOTO-2025-07-15-21-49-15.jpg',
+          '/images/PHOTO-2025-07-15-21-49-51.jpg'
+        ],
         price: 7000,
         discountedPrice: 6300,
         breakfastIncluded: true,
