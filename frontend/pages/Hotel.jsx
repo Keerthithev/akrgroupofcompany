@@ -693,11 +693,11 @@ const Hotel = () => {
                                 <div className="mb-0.5">
                                   <div className="text-gray-600 text-sm">
                                     <span className="font-medium">{room.type}</span> • {room.size && `${room.size} m²`} {room.maxGuests && `${room.maxGuests} guests`}
-                                  </div>
+                          </div>
                                   {room.cancellationPolicy && (
                                     <div className="text-gray-500 text-xs">📋 {room.cancellationPolicy}</div>
                                   )}
-                                </div>
+                        </div>
                         
                                 {/* Availability Details */}
                                 {room.availabilityStatus === 'unavailable' && room.availabilityDetails && (

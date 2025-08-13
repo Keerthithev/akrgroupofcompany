@@ -343,19 +343,6 @@ const Home = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2 }}
               >
-                {/* Professional Badge */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.8, delay: 0.1 }}
-                  className="mb-8"
-                >
-                  <div className="inline-flex items-center px-6 py-3 bg-white/15 backdrop-blur-md rounded-full border border-white/25 shadow-lg">
-                    <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
-                    <span className="text-sm font-semibold text-white tracking-wide">Established 1978</span>
-                  </div>
-                </motion.div>
-
                 {/* Main Heading */}
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -380,7 +367,7 @@ const Home = () => {
                   className="mb-12 sm:mb-16 md:mb-20"
                 >
                   <Paragraph 
-                    className="text-gray-100 mb-6 sm:mb-8 text-lg sm:text-xl md:text-2xl lg:text-3xl leading-relaxed max-w-4xl mx-auto font-light drop-shadow-lg"
+                    className="text-gray-100 mb-6 sm:mb-8 text-base sm:text-lg md:text-xl lg:text-2xl leading-relaxed max-w-4xl mx-auto font-light drop-shadow-lg"
                     style={{ color: settings.akrGroupSubheadingColor || '#f3f4f6' }}
                   >
                     {settings.akrGroupSubheading || 'A legacy of excellence spanning over four decades, delivering quality services across diverse industries while building stronger communities.'}
@@ -392,14 +379,12 @@ const Home = () => {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.2, delay: 0.7 }}
-                  className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 justify-center items-center mb-16"
+                  className="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8 justify-center items-center"
                 >
                   <Button 
-                    type="primary" 
                     size="large"
                     onClick={() => document.getElementById('companies-section')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="h-12 sm:h-14 md:h-16 px-8 sm:px-12 md:px-16 text-base sm:text-lg md:text-xl font-bold shadow-2xl hover:shadow-3xl transform hover:-translate-y-1 transition-all duration-300 border-0 w-full sm:w-auto"
-                    style={{ background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)', borderColor: '#52c41a' }}
+                    className="h-12 sm:h-14 md:h-16 px-8 sm:px-12 md:px-16 text-base sm:text-lg md:text-xl font-bold shadow-2xl hover:shadow-3xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto bg-transparent text-green-500 border-2 border-green-500 hover:bg-green-500 hover:text-white"
                   >
                     Explore
                   </Button>
@@ -411,31 +396,6 @@ const Home = () => {
                   >
                     Our Legacy
                   </Button>
-                </motion.div>
-
-
-
-                {/* Enhanced Scroll Indicator */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 1.2, delay: 1.1 }}
-                  className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-                >
-                  <div className="flex flex-col items-center text-white/80">
-                    <span className="text-sm font-medium mb-3 tracking-wide">Scroll to explore</span>
-                    <motion.div
-                      animate={{ y: [0, 8, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-8 h-12 border-2 border-white/40 rounded-full flex justify-center backdrop-blur-sm"
-                    >
-                      <motion.div
-                        animate={{ y: [0, 16, 0] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-1.5 h-4 bg-white/80 rounded-full mt-2"
-                      />
-                    </motion.div>
-              </div>
                 </motion.div>
               </motion.div>
           </div>
@@ -840,146 +800,117 @@ const Home = () => {
               </Col>
             </Row>
 
-            {/* Leadership Team */}
+            {/* Leadership Section */}
             <motion.div 
               className="text-center mb-12"
               variants={fadeInUp}
             >
-              <Title level={2} className="mb-6 text-gray-900">
-                Our Leadership Team
+              <Title level={1} className="mb-3 text-gray-900 font-bold">
+                Our Leadership
+              </Title>
+              <Title level={2} className="mb-8 text-gray-600 font-light tracking-wide">
+                Visionary Leaders Driving Excellence
               </Title>
             </motion.div>
-            
-            <Row gutter={[32, 32]} className="mb-16">
-              {/* Founder */}
+
+            <Row gutter={[48, 48]} align="top" className="mb-12">
+              {/* Left Side - Founder and Board */}
               <Col xs={24} lg={12}>
                 <motion.div variants={fadeInUp}>
-                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 h-full">
-                    <div className="text-center">
-                      <Avatar 
-                        size={80} 
-                        icon={<UserOutlined />} 
-                        className="mb-4 bg-gradient-to-r from-purple-500 to-purple-600"
-                        style={{ color: 'white' }}
-                      />
-                      <Title level={3} className="text-purple-800 mb-2">
-                        Founder of AKR
-                      </Title>
-                      <Title level={4} className="text-purple-700 mb-3">
-                        S. Anton
-                      </Title>
+                  {/* Founder */}
+                  <div className="mb-8">
+                    <div className="flex items-start gap-6 mb-6">
+                      <div className="flex-shrink-0">
+                        <img
+                          src="/images/founderappa.jpg"
+                          alt="Founder of AKR - S. Anton"
+                          className="w-36 h-44 object-cover rounded-xl shadow-lg"
+                        />
+                      </div>
+                      <div className="flex-1 pt-1">
+                        <div className="mb-3">
+                          <Title level={2} className="text-gray-900 mb-1 font-bold">
+                            Founder of AKR
+                          </Title>
+                          <Title level={3} className="text-gray-700 mb-3 font-semibold">
+                            S. Anton
+                          </Title>
+                        </div>
+                        <Paragraph className="text-gray-600 leading-relaxed">
+                          The visionary who started it all in 1978, building AKR from humble beginnings to a regional powerhouse.
+                        </Paragraph>
+                      </div>
                     </div>
-                  </Card>
-                </motion.div>
-              </Col>
-              
-              {/* CEO */}
-              <Col xs={24} lg={12}>
-                <motion.div variants={scaleIn}>
-                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 h-full">
-                    <div className="text-center">
-                      <Avatar 
-                        size={80} 
-                        icon={<UserOutlined />} 
-                        className="mb-4 bg-gradient-to-r from-blue-500 to-blue-600"
-                        style={{ color: 'white' }}
-                      />
-                      <Title level={3} className="text-blue-800 mb-2">
-                        CEO of AKR
-                      </Title>
-                      <Title level={4} className="text-blue-700 mb-3">
-                        Anton Rojar Stalin
-                      </Title>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <PhoneOutlined className="text-blue-600" />
-                          <a href="tel:0773111266" className="text-blue-700 hover:text-blue-800 underline">
-                            0773111266
-                          </a>
                   </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <MailOutlined className="text-blue-600" />
-                          <a href="mailto:antonrojarstalin@gmail.com" className="text-blue-700 hover:text-blue-800 underline">
-                            antonrojarstalin@gmail.com
-                          </a>
+
+                  {/* Board of Directors */}
+                  <div>
+                    <Title level={3} className="text-gray-900 mb-6 font-bold">
+                      Board of Directors
+                    </Title>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <Title level={4} className="text-gray-800 mb-1 font-semibold">
+                          1. ANTON FLOREDA GAMINI
+                        </Title>
+                        <Text className="text-gray-600">
+                          antonfloridagamini@gmail.com
+                        </Text>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <Title level={4} className="text-gray-800 mb-1 font-semibold">
+                          2. Anton Andrew Rajan
+                        </Title>
+                        <Text className="text-gray-600">
+                          antonandrewrajan29@gmail.com
+                        </Text>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <Title level={4} className="text-gray-800 mb-1 font-semibold">
+                          3. Anton Anbu Rajan
+                        </Title>
+                        <Text className="text-gray-600">
+                          antonanburajan14@gmail.com
+                        </Text>
             </div>
           </div>
         </div>
-                  </Card>
                 </motion.div>
               </Col>
-            </Row>
 
-            {/* Directors Board */}
-            <Row gutter={[32, 32]} className="mb-16">
-              <Col xs={24}>
-                <motion.div variants={fadeInUp}>
-                  <Card className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
-                    <Title level={3} className="text-green-800 mb-8 text-center">
-                      Directors Board
-                    </Title>
-                    <Row gutter={[24, 24]}>
-                      <Col xs={24} md={8}>
-                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
-                          <Avatar 
-                            size={60} 
-                            icon={<UserOutlined />} 
-                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
-                            style={{ color: 'white' }}
-                          />
-                          <Title level={5} className="text-green-800 mb-2">
-                            1. ANTON FLOREDA GAMINI
-                          </Title>
-                          <div className="flex items-center justify-center gap-2">
-                            <MailOutlined className="text-green-600" />
-                            <a href="mailto:antonfloridagamini@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
-                              antonfloridagamini@gmail.com
-                            </a>
-                          </div>
-          </div>
-                      </Col>
-                      
-                      <Col xs={24} md={8}>
-                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
-                          <Avatar 
-                            size={60} 
-                            icon={<UserOutlined />} 
-                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
-                            style={{ color: 'white' }}
-                          />
-                          <Title level={5} className="text-green-800 mb-2">
-                            2. Anton Andrew Rajan
-                          </Title>
-                          <div className="flex items-center justify-center gap-2">
-                            <MailOutlined className="text-green-600" />
-                            <a href="mailto:antonandrewrajan29@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
-                              antonandrewrajan29@gmail.com
-                            </a>
+              {/* Right Side - CEO */}
+              <Col xs={24} lg={12}>
+                <motion.div variants={scaleIn}>
+                  <div className="text-center">
+                    <div className="mb-6">
+                      <img
+                        src="/images/rojan.jpg"
+                        alt="CEO of AKR - Anton Rojar Stalin"
+                        className="w-72 h-80 object-cover rounded-xl shadow-lg mx-auto"
+                    />
                   </div>
+                    <div className="mb-6">
+                      <Title level={2} className="text-gray-900 mb-2 font-bold">
+                        CEO of AKR
+                      </Title>
+                      <Title level={3} className="text-gray-700 mb-4 font-semibold">
+                        Anton Rojar Stalin
+                      </Title>
+                    </div>
+                    <div className="space-y-3 text-gray-600 mb-6">
+                      <div className="flex items-center justify-center gap-3">
+                        <PhoneOutlined className="text-gray-500" />
+                        <Text className="text-lg font-medium">0773111266</Text>
+                      </div>
+                      <div className="flex items-center justify-center gap-3">
+                        <MailOutlined className="text-gray-500" />
+                        <Text className="text-lg font-medium">antonrojarstalin@gmail.com</Text>
+                      </div>
                   </div>
-                      </Col>
-                      
-                      <Col xs={24} md={8}>
-                        <div className="text-center p-4 bg-white rounded-lg border border-green-200">
-                          <Avatar 
-                            size={60} 
-                            icon={<UserOutlined />} 
-                            className="mb-3 bg-gradient-to-r from-green-500 to-green-600"
-                            style={{ color: 'white' }}
-                          />
-                          <Title level={5} className="text-green-800 mb-2">
-                            3. Anton Anbu Rajan
-                          </Title>
-                          <div className="flex items-center justify-center gap-2">
-                            <MailOutlined className="text-green-600" />
-                            <a href="mailto:antonanburajan14@gmail.com" className="text-green-700 hover:text-green-800 underline text-sm">
-                              antonanburajan14@gmail.com
-                            </a>
+                    <Paragraph className="text-gray-600 leading-relaxed max-w-md mx-auto">
+                      Leading AKR Group into the future with innovative vision and unwavering commitment to community development and sustainable growth.
+                    </Paragraph>
                   </div>
-                </div>
-                      </Col>
-                    </Row>
-                  </Card>
                 </motion.div>
               </Col>
             </Row>
