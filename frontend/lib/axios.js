@@ -15,9 +15,14 @@ const api = axios.create({
 // Add request interceptor for auth tokens
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Check for construction admin token first, then regular admin token
+    const constructionToken = localStorage.getItem('constructionAdminToken');
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (constructionToken) {
+      config.headers.Authorization = `Bearer ${constructionToken}`;
+    } else if (adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`;
     }
     return config;
   },
@@ -32,6 +37,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('adminToken');
+      localStorage.removeItem('constructionAdminToken');
+      localStorage.removeItem('adminRole');
       window.location.href = '/admin-login';
     }
     return Promise.reject(error);

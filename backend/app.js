@@ -15,6 +15,7 @@ const productsRoutes = require('./routes/products');
 const reviewsRoutes = require('./routes/reviews');
 const manualRevenueRoutes = require('./routes/manualRevenue');
 const manualCostsRoutes = require('./routes/manualCosts');
+const constructionAdminRoutes = require('./routes/constructionAdmin');
 
 // Load env vars
 dotenv.config({ path: './.env' });
@@ -45,6 +46,16 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
+// Health check endpoint for ping services
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Routes
 app.use('/api/settings', settingsRoutes);
 app.use('/api/rooms', roomsRoutes);
@@ -56,6 +67,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/manual-revenue', manualRevenueRoutes);
 app.use('/api/manual-costs', manualCostsRoutes);
+app.use('/api/construction-admin', constructionAdminRoutes);
 
 // Error Handler (uncomment and implement if needed)
 // app.use(errorHandler);

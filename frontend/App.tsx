@@ -7,6 +7,7 @@ import ScrollToTopButton from "./components/ScrollToTopButton";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
+import ConstructionAdminDashboard from "./pages/ConstructionAdminDashboard";
 import Shopping from "./pages/Shopping";
 import Gym from "./pages/Gym";
 import Theater from "./pages/Theater";
@@ -64,6 +65,7 @@ const App = () => (
         <Route path="/multicomplex/admin-login" element={<AdminLogin />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/construction-admin/dashboard" element={<ConstructionAdminDashboard />} />
         
         {/* Payment Routes */}
         <Route path="/payment/success" element={<PaymentSuccess />} />

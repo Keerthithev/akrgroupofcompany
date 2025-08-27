@@ -1,0 +1,17 @@
+{
+  "name": "render-ping-service",
+  "version": "1.0.0",
+  "description": "Ping service to keep Render backend awake",
+  "main": "ping-service.js",
+  "scripts": {
+    "start": "node ping-service.js",
+    "dev": "node ping-service.js"
+  },
+  "keywords": ["ping", "render", "keep-alive", "backend"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
