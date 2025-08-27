@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure axios base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || 'https://akrgroupofcompany.onrender.com';
+const baseURL = import.meta.env.VITE_API_URL || 'https://akrgroupofcompany-bjvw.onrender.com';
 
 // Create axios instance with base URL
 const api = axios.create({

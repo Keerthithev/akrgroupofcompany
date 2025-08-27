@@ -206,7 +206,7 @@ const ConstructionAdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('constructionAdminToken');
     localStorage.removeItem('adminRole');
-    navigate('/admin/login');
+    navigate('/admin-login');
   };
 
   const handleAddLog = () => {

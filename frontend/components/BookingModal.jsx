@@ -247,6 +247,9 @@ const BookingModal = ({ isOpen, onClose, room }) => {
       }, 3000);
 
     } catch (error) {
+      console.error('Booking creation error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       setError(error.response?.data?.error || 'Failed to create booking. Please try again.');
       setLoading(false);
     }
