@@ -276,10 +276,18 @@ router.post('/', async (req, res) => {
     // Send admin notification email
     try {
       console.log('🔄 Attempting to send admin notification email...');
+      console.log('📧 Admin email details:', {
+        bookingId: booking._id,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        roomName: room.name,
+        adminEmail: 'keerthiganthevarasa@gmail.com'
+      });
       await sendAdminNotificationEmail(booking, room);
       console.log('✅ Admin notification email sent successfully');
     } catch (error) {
       console.error('❌ Failed to send admin notification email:', error);
+      console.error('❌ Error details:', error.message);
       // Don't fail the booking if email fails
     }
     
@@ -943,13 +951,38 @@ async function sendAdminNotificationEmail(booking, room) {
       `
     };
 
-    // Send email
-    console.log('Sending admin notification email to: keerthiganthevarasa@gmail.com');
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Admin notification email sent successfully:', result.messageId);
+    // Send email with retry logic
+    console.log('📧 Sending admin notification email to: keerthiganthevarasa@gmail.com');
+    
+    let emailSent = false;
+    let lastError = null;
+    
+    // Try up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`📧 Admin email attempt ${attempt}/3...`);
+        const result = await transporter.sendMail(mailOptions);
+        console.log('✅ Admin notification email sent successfully:', result.messageId);
+        emailSent = true;
+        break;
+      } catch (error) {
+        console.error(`❌ Admin email attempt ${attempt} failed:`, error.message);
+        lastError = error;
+        
+        if (attempt < 3) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    
+    if (!emailSent) {
+      console.error('❌ All admin email attempts failed:', lastError);
+      throw new Error(`Failed to send admin notification email: ${lastError.message}`);
+    }
     
   } catch (error) {
-    console.error('Admin notification email sending error:', error);
+    console.error('❌ Admin notification email sending error:', error);
     throw error;
   }
 }
