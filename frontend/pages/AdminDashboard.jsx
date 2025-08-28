@@ -451,10 +451,9 @@ const AdminDashboard = () => {
     }
   };
 
+  // Auto-send confirmation email after confirming booking
   const handleConfirmBooking = async (bookingId) => {
     try {
-      console.log('🔄 Confirming booking:', bookingId);
-      
       const response = await api.put(`/api/bookings/${bookingId}`, {
         status: 'Confirmed',
         paymentStatus: 'pending' // This ensures it goes to Upcoming Revenue
@@ -463,7 +462,25 @@ const AdminDashboard = () => {
       });
       
       console.log('✅ Booking confirmed successfully:', response.data);
-      message.success('Booking confirmed successfully!');
+      
+      // Send confirmation email to customer
+      const booking = bookings.find(b => b._id === bookingId);
+      if (booking && booking.customerEmail) {
+        try {
+          await api.post('/api/bookings/send-confirmation', {
+            bookingId: booking._id,
+            customerEmail: booking.customerEmail,
+            customerName: booking.customerName
+          });
+          message.success('Booking confirmed and confirmation email sent!');
+        } catch (emailErr) {
+          console.error('❌ Error sending confirmation email:', emailErr);
+          message.warning('Booking confirmed, but failed to send confirmation email');
+        }
+      } else {
+        message.success('Booking confirmed successfully!');
+      }
+      
       fetchBookings(); // Refresh bookings
     } catch (error) {
       console.error('❌ Error confirming booking:', error);
@@ -528,7 +545,25 @@ const AdminDashboard = () => {
       });
       
       console.log('✅ Payment marked as paid successfully:', response.data);
-      message.success(`Payment marked as paid! Amount ${formatCurrency(finalAmount)} moved to Collected Revenue.`);
+
+      // Send payment confirmation email to customer
+      if (booking.customerEmail) {
+        try {
+          await api.post('/api/bookings/send-payment-confirmation', {
+            bookingId: booking._id,
+            customerEmail: booking.customerEmail,
+            customerName: booking.customerName,
+            paymentAmount: finalAmount
+          });
+          message.success(`Payment marked as paid and email sent! Amount ${formatCurrency(finalAmount)} moved to Collected Revenue.`);
+        } catch (emailErr) {
+          console.error('❌ Error sending payment confirmation email:', emailErr);
+          message.warning(`Payment marked as paid, but failed to send payment email. Amount ${formatCurrency(finalAmount)} moved to Collected Revenue.`);
+        }
+      } else {
+        message.success(`Payment marked as paid! Amount ${formatCurrency(finalAmount)} moved to Collected Revenue.`);
+      }
+
       fetchBookings(); // Refresh bookings
     } catch (error) {
       console.error('❌ Error marking payment as paid:', error);
@@ -2192,6 +2227,25 @@ const AdminDashboard = () => {
     api.get('/api/rooms').then(res => setRooms(res.data));
   }, []);
 
+  const handleSendReviewInvite = async (bookingId) => {
+    try {
+      const booking = bookings.find(b => b._id === bookingId);
+      if (!booking) {
+        message.error('Booking not found');
+        return;
+      }
+
+      await api.post(`/api/bookings/${bookingId}/send-review-invitation`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+
+      message.success('Review invitation sent to customer!');
+    } catch (error) {
+      console.error('Error sending review invitation:', error);
+      message.error(error.response?.data?.error || 'Failed to send review invitation');
+    }
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider 
@@ -2926,6 +2980,12 @@ const AdminDashboard = () => {
                               Payment Paid
                             </Button>
                           )}
+                          <Button 
+                            size="small"
+                            onClick={() => handleSendReviewInvite(record._id)}
+                          >
+                            Send Review Invite
+                          </Button>
                           <Button 
                             size="small"
                             onClick={() => setSelected('bookings-all')}
@@ -4525,6 +4585,12 @@ const AdminDashboard = () => {
                             💰 Payment Paid
                           </Button>
                         )}
+                        <Button 
+                          size="small"
+                          onClick={() => handleSendReviewInvite(record._id)}
+                        >
+                          Send Review Invite
+                        </Button>
                         <Button 
                           size="small"
                           onClick={() => setBookingModal({ open: true, booking: record })}
