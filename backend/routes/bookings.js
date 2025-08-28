@@ -900,15 +900,18 @@ async function sendAdminNotificationEmail(booking, room) {
       port: process.env.SMTP_PORT || 587,
       secure: false,
       auth: {
-        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        user: process.env.SMTP_USER || 'rooms@akr.lk',
         pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
     // Email content
     const mailOptions = {
       from: `"${process.env.SMTP_FROM_NAME || 'AKR Group Hotel'}" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
-      to: 'keerthiganthevarasa@gmail.com', // Admin email
+      to: process.env.ADMIN_EMAIL || 'rooms@akr.lk', // Admin email
       subject: '🔔 New Hotel Room Booking Request - AKR Group Hotel',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -980,7 +983,7 @@ async function sendAdminNotificationEmail(booking, room) {
     };
 
     // Send email with retry logic
-    console.log('📧 Sending admin notification email to: keerthiganthevarasa@gmail.com');
+    console.log('📧 Sending admin notification email to:', process.env.ADMIN_EMAIL || 'rooms@akr.lk');
     
     let emailSent = false;
     let lastError = null;
