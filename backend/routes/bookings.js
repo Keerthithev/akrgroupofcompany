@@ -587,7 +587,10 @@ router.post('/send-confirmation', async (req, res) => {
       secure: false, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
-        pass: process.env.EMAIL_PASS || 'YOUR_NEW_APP_PASSWORD'
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
@@ -652,17 +655,103 @@ router.post('/send-confirmation', async (req, res) => {
       `
     };
 
-    // Send email
-    console.log('Attempting to send email to:', customerEmail);
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', result.messageId);
+    // Send email with retry logic
+    console.log('📧 Attempting to send email to:', customerEmail);
     
-    res.json({ message: 'Confirmation email sent successfully' });
+    let emailSent = false;
+    let lastError = null;
+    
+    // Try up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`📧 Email attempt ${attempt}/3...`);
+        const result = await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent successfully:', result.messageId);
+        emailSent = true;
+        break;
+      } catch (error) {
+        console.error(`❌ Email attempt ${attempt} failed:`, error.message);
+        lastError = error;
+        
+        if (attempt < 3) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    
+    if (emailSent) {
+      res.json({ message: 'Confirmation email sent successfully' });
+    } else {
+      console.error('❌ All email attempts failed:', lastError);
+      res.json({ message: 'Booking confirmed but email failed to send. Please check your email settings.' });
+    }
     
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     // Don't fail the booking if email fails
     res.json({ message: 'Booking confirmed but email failed to send' });
+  }
+});
+
+// Test email functionality
+router.post('/test-email', async (req, res) => {
+  try {
+    const { to } = req.body;
+    
+    if (!to) {
+      return res.status(400).json({ error: 'Email address is required' });
+    }
+    
+    console.log('🧪 Testing email functionality...');
+    
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
+        pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+    
+    const testMailOptions = {
+      from: `"AKR Hotel Test" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
+      to: to,
+      subject: 'Test Email - AKR Hotel System',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2>Test Email from AKR Hotel</h2>
+          <p>This is a test email to verify that the email system is working correctly.</p>
+          <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+          <p><strong>Environment:</strong> ${process.env.NODE_ENV || 'production'}</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">
+            This is an automated test email. Please ignore if you received this by mistake.
+          </p>
+        </div>
+      `
+    };
+    
+    const result = await transporter.sendMail(testMailOptions);
+    console.log('✅ Test email sent successfully:', result.messageId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Test email sent successfully',
+      messageId: result.messageId 
+    });
+    
+  } catch (error) {
+    console.error('❌ Test email failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Email configuration issue. Check Gmail app password and settings.'
+    });
   }
 });
 

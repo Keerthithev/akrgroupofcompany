@@ -16,6 +16,7 @@ const reviewsRoutes = require('./routes/reviews');
 const manualRevenueRoutes = require('./routes/manualRevenue');
 const manualCostsRoutes = require('./routes/manualCosts');
 const constructionAdminRoutes = require('./routes/constructionAdmin');
+const emailTestRoutes = require('./routes/emailTest');
 
 // Load env vars
 dotenv.config({ path: './.env' });
@@ -68,6 +69,7 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/manual-revenue', manualRevenueRoutes);
 app.use('/api/manual-costs', manualCostsRoutes);
 app.use('/api/construction-admin', constructionAdminRoutes);
+app.use('/api/email-test', emailTestRoutes);
 
 // Error Handler (uncomment and implement if needed)
 // app.use(errorHandler);
