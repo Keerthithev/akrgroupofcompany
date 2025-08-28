@@ -782,6 +782,9 @@ router.post('/send-contact-soon', async (req, res) => {
       auth: {
         user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
         pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
@@ -851,15 +854,40 @@ router.post('/send-contact-soon', async (req, res) => {
       `
     };
 
-    // Send email
-    console.log('Attempting to send "contact soon" email to:', customerEmail);
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Contact soon email sent successfully:', result.messageId);
+    // Send email with retry logic
+    console.log('📧 Attempting to send "contact soon" email to:', customerEmail);
     
-    res.json({ message: 'Contact soon email sent successfully' });
+    let emailSent = false;
+    let lastError = null;
+    
+    // Try up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`📧 Contact soon email attempt ${attempt}/3...`);
+        const result = await transporter.sendMail(mailOptions);
+        console.log('✅ Contact soon email sent successfully:', result.messageId);
+        emailSent = true;
+        break;
+      } catch (error) {
+        console.error(`❌ Contact soon email attempt ${attempt} failed:`, error.message);
+        lastError = error;
+        
+        if (attempt < 3) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    
+    if (emailSent) {
+      res.json({ message: 'Contact soon email sent successfully' });
+    } else {
+      console.error('❌ All contact soon email attempts failed:', lastError);
+      res.json({ message: 'Booking received but email failed to send' });
+    }
     
   } catch (error) {
-    console.error('Contact soon email sending error:', error);
+    console.error('❌ Contact soon email sending error:', error);
     res.json({ message: 'Booking received but email failed to send' });
   }
 });
