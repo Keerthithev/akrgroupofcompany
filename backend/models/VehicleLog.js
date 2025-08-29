@@ -12,16 +12,30 @@ const VehicleLogSchema = new mongoose.Schema({
   workingKm: { type: Number },
   description: { type: String },
   duties: [{ type: String }], // Duties performed on this trip
+  
+  // New fields for items and delivery
+  itemsLoading: [{ type: String }], // Items being loaded (sand, salli, etc.)
+  customerName: { type: String }, // Customer name for delivery
+  customerPhone: { type: String }, // Customer phone number
+  deliveryAddress: { type: String }, // Delivery address
+  
+  // Enhanced payment structure
   payments: {
-    credit: { type: String },
-    cash: { type: Number },
-    total: { type: Number }
+    credit: { type: Number, default: 0 }, // Credit amount
+    cash: { type: Number, default: 0 }, // Cash amount
+    total: { type: Number, default: 0 }, // Total amount (cash + credit)
+    paymentMethod: { type: String, enum: ['cash', 'credit', 'mixed'], default: 'cash' },
+    creditStatus: { type: String, enum: ['pending', 'partial', 'completed'], default: 'pending' },
+    creditPaidAmount: { type: Number, default: 0 }, // Amount paid against credit
+    creditRemaining: { type: Number, default: 0 } // Remaining credit amount
   },
+  
   fuel: {
     liters: { type: Number },
     startMeter: { type: Number },
     endMeter: { type: Number },
-    totalKm: { type: Number }
+    totalKm: { type: Number },
+    fuelEfficiency: { type: Number } // KM per liter
   },
   expenses: [{
     description: { type: String },
@@ -32,6 +46,39 @@ const VehicleLogSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+});
+
+// Pre-save middleware to calculate totals and update credit status
+VehicleLogSchema.pre('save', function(next) {
+  // Calculate working kilometers if start and end meters are provided
+  if (this.startMeter && this.endMeter) {
+    this.workingKm = this.endMeter - this.startMeter;
+  }
+  
+  // Calculate total payment
+  if (this.payments) {
+    this.payments.total = (this.payments.cash || 0) + (this.payments.credit || 0);
+    
+    // Calculate remaining credit
+    this.payments.creditRemaining = (this.payments.credit || 0) - (this.payments.creditPaidAmount || 0);
+    
+    // Update credit status
+    if (this.payments.creditRemaining <= 0) {
+      this.payments.creditStatus = 'completed';
+    } else if (this.payments.creditPaidAmount > 0) {
+      this.payments.creditStatus = 'partial';
+    } else {
+      this.payments.creditStatus = 'pending';
+    }
+  }
+  
+  // Calculate fuel efficiency if fuel data is provided
+  if (this.fuel && this.fuel.liters && this.fuel.totalKm) {
+    this.fuel.fuelEfficiency = this.fuel.totalKm / this.fuel.liters;
+  }
+  
+  this.updatedAt = new Date();
+  next();
 });
 
 module.exports = mongoose.model('VehicleLog', VehicleLogSchema); 

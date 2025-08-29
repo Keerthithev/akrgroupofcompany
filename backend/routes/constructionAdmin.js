@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const ConstructionAdmin = require('../models/ConstructionAdmin');
 const VehicleLog = require('../models/VehicleLog');
 const Employee = require('../models/Employee');
+const Customer = require('../models/Customer');
+const Item = require('../models/Item');
+const CreditPayment = require('../models/CreditPayment');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -64,6 +67,41 @@ router.get('/dashboard', requireConstructionAdmin, async (req, res) => {
       return sum + logExpenses + (log.payments.total || 0);
     }, 0);
     
+    // Calculate credit information
+    const totalCredit = monthlyLogs.reduce((sum, log) => sum + (log.payments.credit || 0), 0);
+    const totalCash = monthlyLogs.reduce((sum, log) => sum + (log.payments.cash || 0), 0);
+    const totalPayments = monthlyLogs.reduce((sum, log) => sum + (log.payments.total || 0), 0);
+    
+    // Get credit overview
+    const customers = await Customer.find({ status: 'active' });
+    const allVehicleLogs = await VehicleLog.find({ 'payments.credit': { $gt: 0 } }).populate('employeeId', 'name employeeId');
+    
+    const creditOverview = customers.map(customer => {
+      const customerLogs = allVehicleLogs.filter(log => log.customerName === customer.name);
+      const customerTotalCredit = customerLogs.reduce((sum, log) => sum + (log.payments.credit || 0), 0);
+      const customerTotalPaid = customerLogs.reduce((sum, log) => sum + (log.payments.creditPaidAmount || 0), 0);
+      const customerRemainingCredit = customerTotalCredit - customerTotalPaid;
+      
+      // Get unique employees who delivered to this customer
+      const deliveryEmployees = [...new Set(customerLogs.map(log => ({
+        name: log.employeeName || 'Unknown',
+        employeeId: log.employeeId || 'N/A'
+      })))];
+      
+      return {
+        customerId: customer._id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        totalCredit: customerTotalCredit,
+        totalPaid: customerTotalPaid,
+        remainingCredit: customerRemainingCredit,
+        creditStatus: customerRemainingCredit > 0 ? 'pending' : 'completed',
+        deliveryEmployees,
+        totalDeliveries: customerLogs.length,
+        lastPayment: customerLogs.length > 0 ? customerLogs[0].date : null
+      };
+    }).filter(customer => customer.remainingCredit > 0);
+    
     const recentLogs = await VehicleLog.find().sort({ date: -1 }).limit(5);
     const recentEmployees = await Employee.find({ status: 'active' }).sort({ createdAt: -1 }).limit(5);
     
@@ -73,6 +111,10 @@ router.get('/dashboard', requireConstructionAdmin, async (req, res) => {
       totalVehicles,
       totalEmployees,
       totalExpenses,
+      totalCredit,
+      totalCash,
+      totalPayments,
+      creditOverview,
       recentLogs,
       recentEmployees
     });
@@ -118,6 +160,31 @@ router.get('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
 router.post('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
   try {
     const vehicleLog = new VehicleLog(req.body);
+    
+    // Auto-calculate working kilometers if start and end meters are provided
+    if (vehicleLog.startMeter && vehicleLog.endMeter) {
+      vehicleLog.workingKm = vehicleLog.endMeter - vehicleLog.startMeter;
+    }
+    
+    // Auto-calculate fuel total kilometers if fuel data is provided
+    if (vehicleLog.fuel && vehicleLog.fuel.startMeter && vehicleLog.fuel.endMeter) {
+      vehicleLog.fuel.totalKm = vehicleLog.fuel.endMeter - vehicleLog.fuel.startMeter;
+    }
+    
+    // Auto-calculate total payment
+    if (vehicleLog.payments) {
+      vehicleLog.payments.total = (vehicleLog.payments.cash || 0) + (vehicleLog.payments.credit || 0);
+      
+      // Set payment method
+      if (vehicleLog.payments.cash > 0 && vehicleLog.payments.credit > 0) {
+        vehicleLog.payments.paymentMethod = 'mixed';
+      } else if (vehicleLog.payments.credit > 0) {
+        vehicleLog.payments.paymentMethod = 'credit';
+      } else {
+        vehicleLog.payments.paymentMethod = 'cash';
+      }
+    }
+    
     await vehicleLog.save();
     res.status(201).json(vehicleLog);
   } catch (error) {
@@ -128,9 +195,35 @@ router.post('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
 // PUT /api/construction-admin/vehicle-logs/:id
 router.put('/vehicle-logs/:id', requireConstructionAdmin, async (req, res) => {
   try {
+    const updateData = { ...req.body, updatedAt: Date.now() };
+    
+    // Auto-calculate working kilometers if start and end meters are provided
+    if (updateData.startMeter && updateData.endMeter) {
+      updateData.workingKm = updateData.endMeter - updateData.startMeter;
+    }
+    
+    // Auto-calculate fuel total kilometers if fuel data is provided
+    if (updateData.fuel && updateData.fuel.startMeter && updateData.fuel.endMeter) {
+      updateData.fuel.totalKm = updateData.fuel.endMeter - updateData.fuel.startMeter;
+    }
+    
+    // Auto-calculate total payment
+    if (updateData.payments) {
+      updateData.payments.total = (updateData.payments.cash || 0) + (updateData.payments.credit || 0);
+      
+      // Set payment method
+      if (updateData.payments.cash > 0 && updateData.payments.credit > 0) {
+        updateData.payments.paymentMethod = 'mixed';
+      } else if (updateData.payments.credit > 0) {
+        updateData.payments.paymentMethod = 'credit';
+      } else {
+        updateData.payments.paymentMethod = 'cash';
+      }
+    }
+    
     const vehicleLog = await VehicleLog.findByIdAndUpdate(
       req.params.id,
-      { ...req.body, updatedAt: Date.now() },
+      updateData,
       { new: true }
     );
     if (!vehicleLog) return res.status(404).json({ error: 'Vehicle log not found' });
@@ -460,6 +553,218 @@ router.get('/reports/summary', requireConstructionAdmin, async (req, res) => {
       dutyStats
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Customer Management Routes
+// GET /api/construction-admin/customers
+router.get('/customers', requireConstructionAdmin, async (req, res) => {
+  try {
+    const customers = await Customer.find().sort({ name: 1 });
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/customers
+router.post('/customers', requireConstructionAdmin, async (req, res) => {
+  try {
+    const customer = new Customer(req.body);
+    await customer.save();
+    res.status(201).json(customer);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/construction-admin/customers/:id
+router.put('/customers/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    res.json(customer);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/construction-admin/customers/:id
+router.delete('/customers/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const customer = await Customer.findByIdAndDelete(req.params.id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    res.json({ message: 'Customer deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Item Management Routes
+// GET /api/construction-admin/items
+router.get('/items', requireConstructionAdmin, async (req, res) => {
+  try {
+    const items = await Item.find().sort({ name: 1 });
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/items
+router.post('/items', requireConstructionAdmin, async (req, res) => {
+  try {
+    const item = new Item(req.body);
+    await item.save();
+    res.status(201).json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/construction-admin/items/:id
+router.put('/items/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const item = await Item.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/construction-admin/items/:id
+router.delete('/items/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const item = await Item.findByIdAndDelete(req.params.id);
+    if (!item) return res.status(500).json({ error: 'Item not found' });
+    res.json({ message: 'Item deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Credit Payment Routes
+// GET /api/construction-admin/credit-payments
+router.get('/credit-payments', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { customerId, status } = req.query;
+    let query = {};
+    if (customerId) query.customerId = customerId;
+    if (status) query.status = status;
+    
+    const payments = await CreditPayment.find(query)
+      .populate('customerId', 'name phone')
+      .populate('vehicleLogId', 'vehicleNumber date')
+      .sort({ paymentDate: -1 });
+    res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/credit-payments
+// POST /api/construction-admin/credit-payments
+router.post('/credit-payments', requireConstructionAdmin, async (req, res) => {
+  try {
+    const payment = new CreditPayment({
+      ...req.body,
+      adminId: req.constructionAdmin.username
+    });
+    await payment.save();
+    
+    // Update customer's total paid amount
+    const customer = await Customer.findById(req.body.customerId);
+    if (customer) {
+      customer.totalPaid += req.body.paymentAmount;
+      await customer.save();
+    }
+    
+    // Update vehicle log's credit paid amount
+    if (req.body.vehicleLogId) {
+      const vehicleLog = await VehicleLog.findById(req.body.vehicleLogId);
+      if (vehicleLog) {
+        vehicleLog.payments.creditPaidAmount += req.body.paymentAmount;
+        await vehicleLog.save();
+      }
+    }
+    
+    res.status(201).json(payment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/credit-overview
+router.get('/credit-overview', requireConstructionAdmin, async (req, res) => {
+  try {
+    const customers = await Customer.find({ status: 'active' });
+    console.log('Found customers:', customers.map(c => ({ name: c.name, phone: c.phone })));
+    
+    // Get all vehicle logs with credit payments
+    const vehicleLogs = await VehicleLog.find({ 'payments.credit': { $gt: 0 } }).populate('employeeId', 'name employeeId');
+    console.log('Found vehicle logs with credit:', vehicleLogs.length);
+    console.log('Sample vehicle log:', vehicleLogs[0] ? {
+      customerName: vehicleLogs[0].customerName,
+      employeeName: vehicleLogs[0].employeeName,
+      employeeId: vehicleLogs[0].employeeId,
+      payments: vehicleLogs[0].payments
+    } : 'No logs');
+    
+    const creditOverview = customers.map(customer => {
+      // Try to find vehicle logs for this customer
+      let customerLogs = [];
+      
+      // First try exact match by customer name
+      customerLogs = vehicleLogs.filter(log => log.customerName === customer.name);
+      
+      // If no exact match, try to find logs that might be for this customer
+      // This is a fallback for existing data that doesn't have customer names
+      if (customerLogs.length === 0) {
+        // For now, we'll create a sample entry to show the customer exists
+        // In a real scenario, you'd want to update existing vehicle logs with customer information
+        console.log(`No vehicle logs found for customer: ${customer.name}`);
+      }
+      
+      const totalCredit = customerLogs.reduce((sum, log) => sum + (log.payments.credit || 0), 0);
+      const totalPaid = customerLogs.reduce((sum, log) => sum + (log.payments.creditPaidAmount || 0), 0);
+      const remainingCredit = totalCredit - totalPaid;
+      
+      // Get unique employees who delivered to this customer
+      const deliveryEmployees = [...new Set(customerLogs.map(log => ({
+        name: log.employeeName || 'Unknown',
+        employeeId: log.employeeId || 'N/A'
+      })))];
+      
+      // If no delivery employees found, show appropriate message
+      if (deliveryEmployees.length === 0) {
+        console.log(`No delivery employees found for customer: ${customer.name}`);
+      }
+      
+      return {
+        customerId: customer._id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        totalCredit,
+        totalPaid,
+        remainingCredit,
+        creditStatus: remainingCredit > 0 ? 'pending' : 'completed',
+        lastPayment: customerLogs.length > 0 ? customerLogs[0].date : null,
+        deliveryEmployees,
+        totalDeliveries: customerLogs.length
+      };
+    }).filter(customer => customer.remainingCredit > 0);
+    
+    console.log('Credit overview result:', creditOverview.map(c => ({
+      name: c.customerName,
+      credit: c.remainingCredit,
+      employees: c.deliveryEmployees.length
+    })));
+    
+    res.json(creditOverview);
+  } catch (error) {
+    console.error('Credit overview error:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -31,11 +31,15 @@ import { BarChart, LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 const { Sider, Content, Header } = Layout;
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 const SECTIONS = [
   { key: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
   { key: 'employees', label: 'Employees', icon: <TeamOutlined /> },
   { key: 'vehicle-logs', label: 'Vehicle Logs', icon: <CarOutlined /> },
+  { key: 'customers', label: 'Customers', icon: <UserOutlined /> },
+  { key: 'items', label: 'Items', icon: <FileTextOutlined /> },
+  { key: 'credit-management', label: 'Credit Management', icon: <DollarOutlined /> },
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
   { key: 'settings', label: 'Settings', icon: <SettingOutlined /> },
 ];
@@ -50,20 +54,32 @@ const ConstructionAdminDashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [employeePositions, setEmployeePositions] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [items, setItems] = useState([]);
+  const [creditPayments, setCreditPayments] = useState([]);
+  const [creditOverview, setCreditOverview] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [employeePagination, setEmployeePagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
   const [employeeFilters, setEmployeeFilters] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
   const [employeeModalVisible, setEmployeeModalVisible] = useState(false);
+  const [customerModalVisible, setCustomerModalVisible] = useState(false);
+  const [itemModalVisible, setItemModalVisible] = useState(false);
+  const [creditPaymentModalVisible, setCreditPaymentModalVisible] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeHistory, setEmployeeHistory] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [vehicleHistory, setVehicleHistory] = useState(null);
   const [form] = Form.useForm();
   const [employeeForm] = Form.useForm();
+  const [customerForm] = Form.useForm();
+  const [itemForm] = Form.useForm();
+  const [creditPaymentForm] = Form.useForm();
 
   useEffect(() => {
     checkAuth();
@@ -71,6 +87,9 @@ const ConstructionAdminDashboard = () => {
     loadVehicles();
     loadEmployees();
     loadEmployeePositions();
+    loadCustomers();
+    loadItems();
+    loadCreditOverview();
   }, []);
 
   useEffect(() => {
@@ -149,6 +168,39 @@ const ConstructionAdminDashboard = () => {
       setEmployeePositions(response.data);
     } catch (error) {
       message.error('Failed to load employee positions');
+    }
+  };
+
+  const loadCustomers = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/customers', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setCustomers(response.data);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    }
+  };
+
+  const loadItems = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/items', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setItems(response.data);
+    } catch (error) {
+      console.error('Error loading items:', error);
+    }
+  };
+
+  const loadCreditOverview = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/credit-overview', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setCreditOverview(response.data);
+    } catch (error) {
+      console.error('Error loading credit overview:', error);
     }
   };
 
@@ -321,6 +373,125 @@ const ConstructionAdminDashboard = () => {
       loadDashboardData();
     } catch (error) {
       message.error('Failed to save employee');
+    }
+  };
+
+  const handleCustomerSubmit = async (values) => {
+    try {
+      if (editingCustomer) {
+        await api.put(`/api/construction-admin/customers/${editingCustomer._id}`, values, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+        });
+        message.success('Customer updated successfully');
+      } else {
+        await api.post('/api/construction-admin/customers', values, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+        });
+        message.success('Customer created successfully');
+      }
+      
+      setCustomerModalVisible(false);
+      loadCustomers();
+      loadCreditOverview();
+    } catch (error) {
+      message.error('Failed to save customer');
+    }
+  };
+
+  const handleDeleteCustomer = async (id) => {
+    try {
+      await api.delete(`/api/construction-admin/customers/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      message.success('Customer deleted successfully');
+      loadCustomers();
+      loadCreditOverview();
+    } catch (error) {
+      message.error('Failed to delete customer');
+    }
+  };
+
+  const handleItemSubmit = async (values) => {
+    try {
+      if (editingItem) {
+        await api.put(`/api/construction-admin/items/${editingItem._id}`, values, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+        });
+        message.success('Item updated successfully');
+      } else {
+        await api.post('/api/construction-admin/items', values, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+        });
+        message.success('Item created successfully');
+      }
+      
+      setItemModalVisible(false);
+      loadItems();
+    } catch (error) {
+      message.error('Failed to save item');
+    }
+  };
+
+  const handleDeleteItem = async (id) => {
+    try {
+      await api.delete(`/api/construction-admin/items/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      message.success('Item deleted successfully');
+      loadItems();
+    } catch (error) {
+      message.error('Failed to delete item');
+    }
+  };
+
+  const handleCreditPaymentSubmit = async (values) => {
+    try {
+      // Validate required fields
+      if (!values.customerId || !values.paymentAmount || !values.paymentDate) {
+        message.error('Please fill in all required fields');
+        return;
+      }
+  
+      // Validate payment amount
+      if (values.paymentAmount <= 0) {
+        message.error('Payment amount must be greater than 0');
+        return;
+      }
+  
+      // Ensure originalCreditAmount is included
+      if (!values.originalCreditAmount && values.originalCreditAmount !== 0) {
+        message.error('Original credit amount is required');
+        return;
+      }
+  
+      const paymentData = {
+        customerId: values.customerId,
+        customerName: values.customerName,
+        paymentAmount: parseFloat(values.paymentAmount),
+        paymentDate: values.paymentDate?.toDate() || new Date(),
+        paymentMethod: values.paymentMethod || 'cash',
+        referenceNumber: values.referenceNumber || '',
+        notes: values.notes || '',
+        originalCreditAmount: parseFloat(values.originalCreditAmount), // Add this field
+      };
+  
+      console.log('Submitting credit payment:', paymentData);
+  
+      const response = await api.post('/api/construction-admin/credit-payments', paymentData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      
+      console.log('Credit payment response:', response.data);
+      
+      message.success('Credit payment recorded successfully');
+      setCreditPaymentModalVisible(false);
+      creditPaymentForm.resetFields();
+      loadCreditOverview();
+      loadDashboardData();
+    } catch (error) {
+      console.error('Credit payment error:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to record credit payment';
+      message.error(errorMessage);
     }
   };
 
@@ -639,11 +810,67 @@ const ConstructionAdminDashboard = () => {
       ),
     },
     {
+      title: 'Items Loading',
+      dataIndex: 'itemsLoading',
+      key: 'itemsLoading',
+      width: 150,
+      render: (items) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {items?.map(item => (
+            <Tag key={item} size="small" color="blue">{item}</Tag>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: 'Customer',
+      dataIndex: 'customerName',
+      key: 'customerName',
+      width: 120,
+    },
+    {
+      title: 'Payment Method',
+      dataIndex: 'payments',
+      key: 'paymentMethod',
+      width: 120,
+      render: (payments) => {
+        const method = payments?.paymentMethod || 'cash';
+        const color = method === 'cash' ? 'green' : method === 'credit' ? 'red' : 'orange';
+        return <Tag color={color} size="small">{method.toUpperCase()}</Tag>;
+      },
+    },
+    {
+      title: 'Cash',
+      dataIndex: 'payments',
+      key: 'cash',
+      width: 100,
+      render: (payments) => `Rs. ${payments?.cash || 0}`,
+    },
+    {
+      title: 'Credit',
+      dataIndex: 'payments',
+      key: 'credit',
+      width: 100,
+      render: (payments) => `Rs. ${payments?.credit || 0}`,
+    },
+    {
       title: 'Total Payment',
       dataIndex: 'payments',
       key: 'totalPayment',
       width: 120,
       render: (payments) => `Rs. ${payments?.total || 0}`,
+    },
+    {
+      title: 'Credit Status',
+      dataIndex: 'payments',
+      key: 'creditStatus',
+      width: 120,
+      render: (payments) => {
+        if (!payments?.credit || payments.credit === 0) return '-';
+        const status = payments.creditStatus || 'pending';
+        const color = status === 'completed' ? 'green' : status === 'partial' ? 'orange' : 'red';
+        return <Tag color={color} size="small">{status.toUpperCase()}</Tag>;
+      },
     },
     {
       title: 'Fuel (L)',
@@ -837,11 +1064,125 @@ const ConstructionAdminDashboard = () => {
             />
           </Card>
         </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Credit"
+              value={dashboardData?.totalCredit || 0}
+              prefix={<DollarOutlined />}
+              suffix="Rs."
+              valueStyle={{ color: '#cf1322' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Cash"
+              value={dashboardData?.totalCash || 0}
+              prefix={<DollarOutlined />}
+              suffix="Rs."
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Payments"
+              value={dashboardData?.totalPayments || 0}
+              prefix={<DollarOutlined />}
+              suffix="Rs."
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
       </Row>
 
       <Divider />
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <Card title="Credit Overview" size="small">
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>Total Pending Credit:</span>
+                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#cf1322' }}>
+                  Rs. {creditOverview?.reduce((sum, customer) => sum + customer.remainingCredit, 0) || 0}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>Customers with Pending Credit:</span>
+                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+                  {creditOverview?.length || 0}
+                </span>
+              </div>
+            </div>
+            
+            {/* Customer Credit Details Table */}
+            {creditOverview && creditOverview.length > 0 ? (
+              <div>
+                <Divider style={{ margin: '12px 0' }}>Customer Credit Details</Divider>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {creditOverview.map((customer, index) => (
+                    <div 
+                      key={customer.customerId} 
+                      style={{ 
+                        padding: '12px', 
+                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
+                        border: '1px solid #e8e8e8',
+                        borderRadius: '6px',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1890ff', marginBottom: '4px' }}>
+                            {customer.customerName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                            📞 {customer.customerPhone}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#cf1322', fontWeight: 'bold' }}>
+                            Credit: Rs. {customer.remainingCredit?.toLocaleString() || 0}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flex: 1 }}>
+                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                            🚚 Delivery Employee:
+                          </div>
+                          {customer.deliveryEmployees?.map((employee, empIndex) => (
+                            <div key={empIndex} style={{ fontSize: '11px', color: '#1890ff', marginBottom: '2px' }}>
+                              👤 {employee.name} ({employee.employeeId})
+                            </div>
+                          )) || (
+                            <div style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>
+                              No employee info
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#999', fontStyle: 'italic', padding: '20px 0' }}>
+                No pending credits
+              </div>
+            )}
+            
+            <Divider style={{ margin: '16px 0' }} />
+            <Button 
+              type="primary" 
+              size="small"
+              onClick={() => setSelectedSection('credit-management')}
+              style={{ width: '100%' }}
+            >
+              View Full Credit Details
+            </Button>
+          </Card>
+        </Col>
         <Col xs={24} lg={12}>
           <Card title="Recent Vehicle Logs">
                     <Table
@@ -1448,6 +1789,380 @@ const ConstructionAdminDashboard = () => {
   );
   };
 
+  const renderCustomers = () => (
+    <div>
+      <Card>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={6}>
+            <Input
+              placeholder="Search customers..."
+              prefix={<SearchOutlined />}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Filter by Status"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            >
+              <Select.Option value="active">Active</Select.Option>
+              <Select.Option value="inactive">Inactive</Select.Option>
+              <Select.Option value="blocked">Blocked</Select.Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingCustomer(null);
+                customerForm.resetFields();
+                setCustomerModalVisible(true);
+              }}
+              style={{ width: '100%' }}
+            >
+              Add Customer
+            </Button>
+          </Col>
+        </Row>
+
+        <Table
+          dataSource={customers}
+          columns={[
+            { title: 'Name', dataIndex: 'name', key: 'name' },
+            { title: 'Phone', dataIndex: 'phone', key: 'phone' },
+            { title: 'Email', dataIndex: 'email', key: 'email' },
+            { title: 'Address', dataIndex: 'address', key: 'address' },
+            { title: 'Credit Limit', dataIndex: 'creditLimit', key: 'creditLimit', 
+              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            { title: 'Total Credit', dataIndex: 'totalCredit', key: 'totalCredit',
+              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            { title: 'Total Paid', dataIndex: 'totalPaid', key: 'totalPaid',
+              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            { title: 'Remaining Credit', dataIndex: 'remainingCredit', key: 'remainingCredit',
+              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            { title: 'Status', dataIndex: 'status', key: 'status',
+              render: (status) => (
+                <Tag color={status === 'active' ? 'green' : status === 'inactive' ? 'red' : 'orange'} size="small">
+                  {status?.toUpperCase()}
+                </Tag>
+              ) },
+            { title: 'Actions', key: 'actions',
+              render: (_, record) => (
+                <Space>
+                  <Button 
+                    type="link" 
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditingCustomer(record);
+                      customerForm.setFieldsValue(record);
+                      setCustomerModalVisible(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Popconfirm
+                    title="Are you sure you want to delete this customer?"
+                    onConfirm={() => handleDeleteCustomer(record._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="link" danger icon={<DeleteOutlined />}>
+                      Delete
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ) }
+          ]}
+          pagination={false}
+          rowKey="_id"
+          scroll={{ x: 1200 }}
+        />
+      </Card>
+    </div>
+  );
+
+  const renderItems = () => (
+    <div>
+      <Card>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={6}>
+            <Input
+              placeholder="Search items..."
+              prefix={<SearchOutlined />}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Filter by Category"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+            >
+              <Select.Option value="construction">Construction</Select.Option>
+              <Select.Option value="supplies">Supplies</Select.Option>
+              <Select.Option value="materials">Materials</Select.Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingItem(null);
+                itemForm.resetFields();
+                setItemModalVisible(true);
+              }}
+              style={{ width: '100%' }}
+            >
+              Add Item
+            </Button>
+          </Col>
+        </Row>
+
+        <Table
+          dataSource={items}
+          columns={[
+            { title: 'Name', dataIndex: 'name', key: 'name' },
+            { title: 'Category', dataIndex: 'category', key: 'category' },
+            { title: 'Unit', dataIndex: 'unit', key: 'unit' },
+            { title: 'Price per Unit', dataIndex: 'pricePerUnit', key: 'pricePerUnit',
+              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            { title: 'Description', dataIndex: 'description', key: 'description' },
+            { title: 'Status', dataIndex: 'status', key: 'status',
+              render: (status) => (
+                <Tag color={status === 'active' ? 'green' : 'red'} size="small">
+                  {status?.toUpperCase()}
+                </Tag>
+              ) },
+            { title: 'Actions', key: 'actions',
+              render: (_, record) => (
+                <Space>
+                  <Button 
+                    type="link" 
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditingItem(record);
+                      itemForm.setFieldsValue(record);
+                      setItemModalVisible(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Popconfirm
+                    title="Are you sure you want to delete this item?"
+                    onConfirm={() => handleDeleteItem(record._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="link" danger icon={<DeleteOutlined />}>
+                      Delete
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ) }
+          ]}
+          pagination={false}
+          rowKey="_id"
+          scroll={{ x: 1000 }}
+        />
+      </Card>
+    </div>
+  );
+
+  const renderCreditManagement = () => (
+    <div>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card title="Credit Overview" size="small">
+            <Statistic
+              title="Total Pending Credit"
+              value={creditOverview.reduce((sum, customer) => sum + customer.remainingCredit, 0)}
+              prefix="Rs."
+              valueStyle={{ color: '#cf1322' }}
+            />
+            <Divider />
+            <Statistic
+              title="Customers with Pending Credit"
+              value={creditOverview.length}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Quick Actions" size="small">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  creditPaymentForm.resetFields();
+                  setCreditPaymentModalVisible(true);
+                }}
+                style={{ width: '100%' }}
+              >
+                Record Credit Payment
+              </Button>
+              <Button 
+                type="default" 
+                icon={<UserOutlined />}
+                onClick={() => setSelectedSection('customers')}
+                style={{ width: '100%' }}
+              >
+                Manage Customers
+              </Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      <Card title="Pending Credit Details" style={{ marginTop: 16 }}>
+        <Table
+          dataSource={creditOverview}
+          columns={[
+            { 
+              title: 'Customer Information', 
+              key: 'customerInfo',
+              width: 250,
+              render: (_, record) => (
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1890ff' }}>
+                    {record.customerName}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    📞 {record.customerPhone}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                    🚚 {record.totalDeliveries || 0} deliveries
+                  </div>
+                </div>
+              )
+            },
+            { 
+              title: 'Credit Summary', 
+              key: 'creditSummary',
+              width: 300,
+              render: (_, record) => (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Total Credit:</span>
+                    <span style={{ fontWeight: 'bold', color: '#cf1322' }}>
+                      Rs. {record.totalCredit?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Total Paid:</span>
+                    <span style={{ fontWeight: 'bold', color: '#3f8600' }}>
+                      Rs. {record.totalPaid?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', color: '#666' }}>Remaining:</span>
+                    <span style={{ fontWeight: 'bold', color: '#cf1322', fontSize: '14px' }}>
+                      Rs. {record.remainingCredit?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                </div>
+              )
+            },
+            { 
+              title: 'Delivery Employees', 
+              key: 'deliveryEmployees',
+              width: 200,
+              render: (_, record) => (
+                <div>
+                  {record.deliveryEmployees?.map((employee, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: '4px', 
+                      padding: '4px 8px', 
+                      backgroundColor: '#f5f5f5', 
+                      borderRadius: '4px',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
+                        👤 {employee.name}
+                      </div>
+                      <div style={{ color: '#666', fontSize: '11px' }}>
+                        ID: {employee.employeeId}
+                      </div>
+                    </div>
+                  )) || (
+                    <div style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>
+                      No employee info
+                    </div>
+                  )}
+                </div>
+              )
+            },
+            { 
+              title: 'Status', 
+              key: 'status',
+              width: 120,
+              render: (_, record) => (
+                <div style={{ textAlign: 'center' }}>
+                  <Tag 
+                    color={record.creditStatus === 'pending' ? 'red' : 'orange'} 
+                    size="small"
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    {record.creditStatus?.toUpperCase() || 'PENDING'}
+                  </Tag>
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                    {record.lastPayment ? 
+                      `Last: ${dayjs(record.lastPayment).format('DD/MM/YYYY')}` : 
+                      'No payments'
+                    }
+                  </div>
+                </div>
+              )
+            },
+            { 
+              title: 'Actions', 
+              key: 'actions',
+              width: 150,
+              render: (_, record) => (
+                <div style={{ textAlign: 'center' }}>
+                 <Button 
+  type="primary" 
+  size="small"
+  icon={<DollarOutlined />}
+  onClick={() => {
+    creditPaymentForm.setFieldsValue({
+      customerId: record.customerId,
+      customerName: record.customerName,
+      originalCreditAmount: record.remainingCredit || 0 // Ensure this is set
+    });
+    setCreditPaymentModalVisible(true);
+  }}
+  style={{ marginBottom: '8px', width: '100%' }}
+>
+  Record Payment
+</Button>
+                  <Button 
+                    type="default" 
+                    size="small"
+                    icon={<UserOutlined />}
+                    onClick={() => setSelectedSection('customers')}
+                    style={{ width: '100%' }}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              )
+            }
+          ]}
+          pagination={false}
+          rowKey="customerId"
+          scroll={{ x: 1200 }}
+        />
+      </Card>
+    </div>
+  );
+
   const renderSettings = () => (
     <div>
       <Card title="Company Settings">
@@ -1478,6 +2193,12 @@ const ConstructionAdminDashboard = () => {
         return renderEmployees();
       case 'vehicle-logs':
         return renderVehicleLogs();
+      case 'customers':
+        return renderCustomers();
+      case 'items':
+        return renderItems();
+      case 'credit-management':
+        return renderCreditManagement();
       case 'reports':
         return renderReports();
       case 'settings':
@@ -1581,15 +2302,101 @@ const ConstructionAdminDashboard = () => {
             </Col>
           </Row>
 
+          <Divider>Items & Delivery</Divider>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="itemsLoading" label="Items Loading">
+                <Select
+                  mode="multiple"
+                  placeholder="Select items (sand, salli, etc.)"
+                  style={{ width: '100%' }}
+                  showSearch
+                  allowClear
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {items.map(item => (
+                    <Option key={item._id} value={item.name}>
+                      {item.name} ({item.unit})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="customerName" label="Customer Name">
+                <Select
+                  placeholder="Select customer or type new one"
+                  style={{ width: '100%' }}
+                  showSearch
+                  allowClear
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  }
+                  onSelect={(value) => {
+                    const customer = customers.find(c => c.name === value);
+                    if (customer) {
+                      form.setFieldsValue({
+                        customerPhone: customer.phone,
+                        deliveryAddress: customer.address
+                      });
+                    }
+                  }}
+                >
+                  {customers.map(customer => (
+                    <Option key={customer._id} value={customer.name}>
+                      {customer.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="customerPhone" label="Customer Phone">
+                <Input placeholder="Customer phone number" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="deliveryAddress" label="Delivery Address">
+                <Input.TextArea rows={2} placeholder="Delivery address" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item name="startMeter" label="Start Meter (KM)">
-                <InputNumber style={{ width: '100%' }} placeholder="Start meter reading" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Start meter reading"
+                  onChange={(value) => {
+                    const endMeter = form.getFieldValue('endMeter');
+                    if (value && endMeter) {
+                      const workingKm = endMeter - value;
+                      form.setFieldsValue({ workingKm: workingKm > 0 ? workingKm : 0 });
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item name="endMeter" label="End Meter (KM)">
-                <InputNumber style={{ width: '100%' }} placeholder="End meter reading" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="End meter reading"
+                  onChange={(value) => {
+                    const startMeter = form.getFieldValue('startMeter');
+                    if (value && startMeter) {
+                      const workingKm = value - startMeter;
+                      form.setFieldsValue({ workingKm: workingKm > 0 ? workingKm : 0 });
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1610,7 +2417,11 @@ const ConstructionAdminDashboard = () => {
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <Form.Item name="workingKm" label="Working (KM)">
-                <InputNumber style={{ width: '100%' }} placeholder="Distance traveled" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Auto-calculated distance"
+                  disabled
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -1641,19 +2452,48 @@ const ConstructionAdminDashboard = () => {
           <Divider>Payments</Divider>
 
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item name={['payments', 'credit']} label="Credit">
-                <Input placeholder="Credit payment" />
+            <Col xs={24} sm={6}>
+              <Form.Item name={['payments', 'credit']} label="Credit Amount">
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Credit amount" 
+                  onChange={(value) => {
+                    const cash = form.getFieldValue(['payments', 'cash']) || 0;
+                    const total = (value || 0) + cash;
+                    form.setFieldsValue({ payments: { ...form.getFieldValue('payments'), total } });
+                  }}
+                />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name={['payments', 'cash']} label="Cash">
-                <InputNumber style={{ width: '100%' }} placeholder="Cash amount" />
+            <Col xs={24} sm={6}>
+              <Form.Item name={['payments', 'cash']} label="Cash Amount">
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Cash amount"
+                  onChange={(value) => {
+                    const credit = form.getFieldValue(['payments', 'credit']) || 0;
+                    const total = (value || 0) + credit;
+                    form.setFieldsValue({ payments: { ...form.getFieldValue('payments'), total } });
+                  }}
+                />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name={['payments', 'total']} label="Total">
-                <InputNumber style={{ width: '100%' }} placeholder="Total payment" />
+            <Col xs={24} sm={6}>
+              <Form.Item name={['payments', 'total']} label="Total Amount">
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Total (auto-calculated)"
+                  disabled
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={6}>
+              <Form.Item name={['payments', 'paymentMethod']} label="Payment Method">
+                <Select placeholder="Select method">
+                  <Option value="cash">Cash</Option>
+                  <Option value="credit">Credit</Option>
+                  <Option value="mixed">Mixed</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -1668,17 +2508,41 @@ const ConstructionAdminDashboard = () => {
             </Col>
             <Col xs={24} sm={6}>
               <Form.Item name={['fuel', 'startMeter']} label="Start Meter">
-                <InputNumber style={{ width: '100%' }} placeholder="Start meter" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Start meter"
+                  onChange={(value) => {
+                    const endMeter = form.getFieldValue(['fuel', 'endMeter']) || 0;
+                    if (value && endMeter) {
+                      const totalKm = endMeter - value;
+                      form.setFieldsValue({ fuel: { ...form.getFieldValue('fuel'), totalKm } });
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={6}>
               <Form.Item name={['fuel', 'endMeter']} label="End Meter">
-                <InputNumber style={{ width: '100%' }} placeholder="End meter" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="End meter"
+                  onChange={(value) => {
+                    const startMeter = form.getFieldValue(['fuel', 'startMeter']) || 0;
+                    if (value && startMeter) {
+                      const totalKm = value - startMeter;
+                      form.setFieldsValue({ fuel: { ...form.getFieldValue('fuel'), totalKm } });
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={6}>
               <Form.Item name={['fuel', 'totalKm']} label="Total (KM)">
-                <InputNumber style={{ width: '100%' }} placeholder="Total km" />
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  placeholder="Auto-calculated"
+                  disabled
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -2049,6 +2913,329 @@ const ConstructionAdminDashboard = () => {
            </div>
          )}
        </Modal>
+
+       {/* Customer Modal */}
+       <Modal
+         title={editingCustomer ? 'Edit Customer' : 'Add Customer'}
+         open={customerModalVisible}
+         onCancel={() => setCustomerModalVisible(false)}
+         footer={null}
+         width={800}
+       >
+         <Form
+           form={customerForm}
+           layout="vertical"
+           onFinish={handleCustomerSubmit}
+         >
+           <Row gutter={16}>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="name"
+                 label="Customer Name"
+                 rules={[{ required: true, message: 'Please enter customer name' }]}
+               >
+                 <Input placeholder="Customer full name" />
+               </Form.Item>
+             </Col>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="phone"
+                 label="Phone Number"
+                 rules={[{ required: true, message: 'Please enter phone number' }]}
+               >
+                 <Input placeholder="Phone number" />
+               </Form.Item>
+             </Col>
+           </Row>
+
+           <Row gutter={16}>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="email"
+                 label="Email"
+                 rules={[{ type: 'email', message: 'Please enter valid email' }]}
+               >
+                 <Input placeholder="Email address" />
+               </Form.Item>
+             </Col>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="creditLimit"
+                 label="Credit Limit"
+               >
+                 <InputNumber style={{ width: '100%' }} placeholder="Credit limit amount" />
+               </Form.Item>
+             </Col>
+           </Row>
+
+           <Form.Item name="address" label="Address">
+             <Input.TextArea rows={3} placeholder="Full address" />
+           </Form.Item>
+
+           <Form.Item name="notes" label="Notes">
+             <Input.TextArea rows={2} placeholder="Additional notes" />
+           </Form.Item>
+
+           {/* Credit Status Summary */}
+           <Divider>Credit Status Summary</Divider>
+           <Row gutter={16} style={{ marginBottom: 16 }}>
+             <Col xs={24}>
+               <Alert
+                 message="Payment Information"
+                 description={
+                   <div>
+                     <p><strong>Customer:</strong> {creditPaymentForm.getFieldValue('customerName') || 'Not selected'}</p>
+                     <p><strong>Payment Amount:</strong> Rs. {creditPaymentForm.getFieldValue('paymentAmount') || 0}</p>
+                     <p><strong>Payment Date:</strong> {creditPaymentForm.getFieldValue('paymentDate')?.format('DD/MM/YYYY') || 'Not selected'}</p>
+                   </div>
+                 }
+                 type="info"
+                 showIcon
+               />
+             </Col>
+           </Row>
+
+           <Form.Item style={{ textAlign: 'right', marginTop: 16 }}>
+             <Space>
+               <Button onClick={() => setCustomerModalVisible(false)}>
+                 Cancel
+               </Button>
+               <Button type="primary" htmlType="submit">
+                 {editingCustomer ? 'Update' : 'Create'}
+               </Button>
+             </Space>
+           </Form.Item>
+         </Form>
+       </Modal>
+
+       {/* Item Modal */}
+       <Modal
+         title={editingItem ? 'Edit Item' : 'Add Item'}
+         open={itemModalVisible}
+         onCancel={() => setItemModalVisible(false)}
+         footer={null}
+         width={800}
+       >
+         <Form
+           form={itemForm}
+           layout="vertical"
+           onFinish={handleItemSubmit}
+         >
+           <Row gutter={16}>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="name"
+                 label="Item Name"
+                 rules={[{ required: true, message: 'Please enter item name' }]}
+               >
+                 <Input placeholder="Item name (e.g., Sand, Salli)" />
+               </Form.Item>
+             </Col>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="category"
+                 label="Category"
+                 rules={[{ required: true, message: 'Please select category' }]}
+               >
+                 <Select placeholder="Select category">
+                   <Option value="construction">Construction</Option>
+                   <Option value="supplies">Supplies</Option>
+                   <Option value="materials">Materials</Option>
+                 </Select>
+               </Form.Item>
+             </Col>
+           </Row>
+
+           <Row gutter={16}>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="unit"
+                 label="Unit"
+                 rules={[{ required: true, message: 'Please enter unit' }]}
+               >
+                 <Input placeholder="e.g., tons, kg, pieces, liters" />
+               </Form.Item>
+             </Col>
+             <Col xs={24} sm={12}>
+               <Form.Item
+                 name="pricePerUnit"
+                 label="Price per Unit"
+               >
+                 <InputNumber style={{ width: '100%' }} placeholder="Price per unit" />
+               </Form.Item>
+             </Col>
+           </Row>
+
+           <Form.Item name="description" label="Description">
+             <Input.TextArea rows={2} placeholder="Item description" />
+           </Form.Item>
+
+           <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select status' }]}>
+             <Select placeholder="Select status">
+               <Option value="active">Active</Option>
+               <Option value="inactive">Inactive</Option>
+             </Select>
+           </Form.Item>
+
+           <Form.Item style={{ textAlign: 'right', marginTop: 16 }}>
+             <Space>
+               <Button onClick={() => setItemModalVisible(false)}>
+                 Cancel
+               </Button>
+               <Button type="primary" htmlType="submit">
+                 {editingItem ? 'Update' : 'Create'}
+               </Button>
+             </Space>
+           </Form.Item>
+         </Form>
+       </Modal>
+
+       {/* Credit Payment Modal */}
+       <Modal
+  title="Record Credit Payment"
+  open={creditPaymentModalVisible}
+  onCancel={() => {
+    setCreditPaymentModalVisible(false);
+    creditPaymentForm.resetFields();
+  }}
+  footer={null}
+  width={600}
+  destroyOnClose
+>
+  <Form
+    form={creditPaymentForm}
+    layout="vertical"
+    onFinish={handleCreditPaymentSubmit}
+  >
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="customerId"
+          label="Customer"
+          rules={[{ required: true, message: 'Please select customer' }]}
+        >
+          <Select 
+            placeholder="Select customer"
+            onChange={(value) => {
+              const customer = customers.find(c => c._id === value);
+              if (customer) {
+                creditPaymentForm.setFieldsValue({ 
+                  customerName: customer.name,
+                  originalCreditAmount: customer.remainingCredit || 0 // Set originalCreditAmount
+                });
+              }
+            }}
+          >
+            {customers.map(customer => (
+              <Option key={customer._id} value={customer._id}>
+                {customer.name}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+      </Col>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="customerName"
+          label="Customer Name"
+        >
+          <Input placeholder="Customer name" disabled />
+        </Form.Item>
+      </Col>
+    </Row>
+
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="originalCreditAmount"
+          label="Original Credit Amount"
+          rules={[{ required: true, message: 'Original credit amount is required' }]}
+        >
+          <InputNumber 
+            style={{ width: '100%' }} 
+            placeholder="Original credit amount"
+            disabled // Make it read-only since it's auto-populated
+            precision={2}
+          />
+        </Form.Item>
+      </Col>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="paymentAmount"
+          label="Payment Amount"
+          rules={[
+            { required: true, message: 'Please enter payment amount' },
+            { type: 'number', min: 0.01, message: 'Amount must be greater than 0' }
+          ]}
+        >
+          <InputNumber 
+            style={{ width: '100%' }} 
+            placeholder="Payment amount"
+            min={0.01}
+            step={0.01}
+            precision={2}
+          />
+        </Form.Item>
+      </Col>
+    </Row>
+
+    <Row gutter={16}>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="paymentDate"
+          label="Payment Date"
+          rules={[{ required: true, message: 'Please select payment date' }]}
+        >
+          <DatePicker 
+            style={{ width: '100%' }}
+            defaultValue={dayjs()}
+          />
+        </Form.Item>
+      </Col>
+      <Col xs={24} sm={12}>
+        <Form.Item
+          name="paymentMethod"
+          label="Payment Method"
+          rules={[{ required: true, message: 'Please select payment method' }]}
+          initialValue="cash"
+        >
+          <Select placeholder="Select payment method">
+            <Option value="cash">Cash</Option>
+            <Option value="bank_transfer">Bank Transfer</Option>
+            <Option value="cheque">Cheque</Option>
+            <Option value="other">Other</Option>
+          </Select>
+        </Form.Item>
+      </Col>
+    </Row>
+
+    <Row gutter={16}>
+      <Col xs={24}>
+        <Form.Item
+          name="referenceNumber"
+          label="Reference Number"
+        >
+          <Input placeholder="Cheque no., transaction ID, etc." />
+        </Form.Item>
+      </Col>
+    </Row>
+
+    <Form.Item name="notes" label="Notes">
+      <Input.TextArea rows={2} placeholder="Additional notes" />
+    </Form.Item>
+
+    <Form.Item style={{ textAlign: 'right', marginTop: 16 }}>
+      <Space>
+        <Button onClick={() => setCreditPaymentModalVisible(false)}>
+          Cancel
+        </Button>
+        <Button type="primary" htmlType="submit">
+          Record Payment
+        </Button>
+      </Space>
+    </Form.Item>
+  </Form>
+</Modal>
      </Layout>
    );
    };

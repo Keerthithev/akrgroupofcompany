@@ -5711,20 +5711,14 @@ const AdminDashboard = () => {
                       title: 'Room',
                       key: 'room',
                       render: (_, record) => {
-                        // Handle different room data structures
-                        let roomName = 'N/A';
-                        let roomCategory = '';
+                        // Prefer populated roomId from backend; fallback to legacy fields
+                        const populatedRoom = record.roomId && typeof record.roomId === 'object' ? record.roomId : null;
+                        let roomName = populatedRoom?.name || (record.room && typeof record.room === 'object' ? record.room.name : (typeof record.room === 'string' ? record.room : 'N/A'));
+                        let roomCategory = populatedRoom?.category || (record.room && typeof record.room === 'object' ? (record.room.category || '') : '');
                         
-                        if (record.room) {
-                          if (typeof record.room === 'object' && record.room.name) {
-                            roomName = record.room.name;
-                            roomCategory = record.room.category || '';
-                          } else if (typeof record.room === 'string') {
-                            roomName = record.room;
-                          } else if (record.roomId) {
-                            // Fallback to roomId if room object is not populated
-                            roomName = `Room ID: ${record.roomId}`;
-                          }
+                        // As a last resort, show short id if nothing else
+                        if (roomName === 'N/A' && record.roomId && typeof record.roomId === 'string') {
+                          roomName = `Room ID: ${record.roomId.substring(0,6)}…`;
                         }
                         
                         return (
