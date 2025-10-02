@@ -41,6 +41,13 @@ const VehicleLogSchema = new mongoose.Schema({
     description: { type: String },
     amount: { type: Number }
   }],
+  salary: [{ // Added salary field
+    item: { type: String },
+    amount: { type: Number }
+  }],
+  setCashTaken: { type: Number, default: 0 }, // Added setCashTaken
+  yesterdayBalance: { type: Number, default: 0 }, // Added yesterdayBalance
+  salaryDeductedFromBalance: { type: Number, default: 0 }, // Track salary deducted from balance
   driverSignature: { type: String },
   supervisorSignature: { type: String },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
@@ -63,7 +70,9 @@ VehicleLogSchema.pre('save', function(next) {
     this.payments.creditRemaining = (this.payments.credit || 0) - (this.payments.creditPaidAmount || 0);
     
     // Update credit status
-    if (this.payments.creditRemaining <= 0) {
+    if ((this.payments.credit || 0) === 0) {
+      this.payments.creditStatus = 'completed';
+    } else if (this.payments.creditRemaining <= 0) {
       this.payments.creditStatus = 'completed';
     } else if (this.payments.creditPaidAmount > 0) {
       this.payments.creditStatus = 'partial';

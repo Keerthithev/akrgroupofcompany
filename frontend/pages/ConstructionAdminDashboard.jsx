@@ -20,7 +20,8 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   TeamOutlined,
-  HistoryOutlined
+  HistoryOutlined,
+  SaveOutlined
 } from '@ant-design/icons';
 import api from "../lib/axios";
 import dayjs from 'dayjs';
@@ -39,6 +40,7 @@ const SECTIONS = [
   { key: 'vehicle-logs', label: 'Vehicle Logs', icon: <CarOutlined /> },
   { key: 'customers', label: 'Customers', icon: <UserOutlined /> },
   { key: 'items', label: 'Items', icon: <FileTextOutlined /> },
+  { key: 'add-vehicle', label: 'Add Vehicle', icon: <PlusOutlined /> },
   { key: 'credit-management', label: 'Credit Management', icon: <DollarOutlined /> },
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
   { key: 'settings', label: 'Settings', icon: <SettingOutlined /> },
@@ -56,6 +58,7 @@ const ConstructionAdminDashboard = () => {
   const [employeePositions, setEmployeePositions] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [items, setItems] = useState([]);
+  const [vehiclesDisplay, setVehiclesDisplay] = useState([]);
   const [creditPayments, setCreditPayments] = useState([]);
   const [creditOverview, setCreditOverview] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -75,11 +78,92 @@ const ConstructionAdminDashboard = () => {
   const [employeeHistory, setEmployeeHistory] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [vehicleHistory, setVehicleHistory] = useState(null);
+  const [showEmployeeLogs, setShowEmployeeLogs] = useState(false);
+  const [selectedEmployeeForLogs, setSelectedEmployeeForLogs] = useState(null);
+  const [lockEmployeeField, setLockEmployeeField] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [monthDetailVisible, setMonthDetailVisible] = useState(false);
+  const [monthDetailTitle, setMonthDetailTitle] = useState('');
+  const [monthDetailRows, setMonthDetailRows] = useState([]);
+  const [employeeMonthKey, setEmployeeMonthKey] = useState(null);
+  const [vehicleSheetVisible, setVehicleSheetVisible] = useState(false);
+  const [selectedVehicleForSheet, setSelectedVehicleForSheet] = useState(null);
+  const [sheetRows, setSheetRows] = useState([]);
+  const [salaryRows, setSalaryRows] = useState([]);
+  const [expenseRows, setExpenseRows] = useState([]);
+  const [yesterdayBalance, setYesterdayBalance] = useState(0);
+  const [setCashTaken, setSetCashTaken] = useState();
+  const [selectedEmployeeForSalary, setSelectedEmployeeForSalary] = useState('');
+  const [selectedEmployeeForExpense, setSelectedEmployeeForExpense] = useState('');
+  const [salaryPaymentMethod, setSalaryPaymentMethod] = useState(''); // 'balance' or 'salary'
+  const [salaryAmount, setSalaryAmount] = useState(0);
+  const [salaryPaid, setSalaryPaid] = useState(false);
+  const [salaryPaymentModalVisible, setSalaryPaymentModalVisible] = useState(false);
+  const [expensesSaved, setExpensesSaved] = useState(false);
+  const [walletModalVisible, setWalletModalVisible] = useState(false);
+  const [selectedEmployeeForWallet, setSelectedEmployeeForWallet] = useState(null);
+  const [walletHistory, setWalletHistory] = useState([]);
+  const [walletMarkPaidAmount, setWalletMarkPaidAmount] = useState();
+  const [smsModalVisible, setSmsModalVisible] = useState(false);
+  const [smsCustomerName, setSmsCustomerName] = useState('');
+  const [smsCustomerPhone, setSmsCustomerPhone] = useState('');
+
+  const getEmployeeTripAndMonthlyStats = (employeeId) => {
+    const logs = vehicleLogs.filter(l => l.employeeId === employeeId);
+    const totalTrips = logs.length;
+    const totalKm = logs.reduce((sum, l) => sum + (l.workingKm || 0), 0);
+    const totalFuel = logs.reduce((sum, l) => sum + (l.fuel?.liters || 0), 0);
+    const totalExpenses = logs.reduce((sum, l) => {
+      const expenses = (l.expenses || []).reduce((s, e) => {
+        // Exclude salary from expenses
+        if (e.description && e.description.toLowerCase().includes('salary')) {
+          return s;
+        }
+        return s + (e.amount || 0);
+      }, 0);
+      return sum + expenses;
+    }, 0);
+    const months = {};
+    logs.forEach(l => {
+      const key = dayjs(l.date).format('YYYY-MM');
+      if (!months[key]) months[key] = { key, month: dayjs(l.date).format('MMM YYYY'), trips: 0, totalKm: 0, totalFuel: 0, expenses: 0 };
+      months[key].trips += 1;
+      months[key].totalKm += l.workingKm || 0;
+      months[key].totalFuel += l.fuel?.liters || 0;
+      const exp = (l.expenses || []).reduce((s, e) => {
+        // Exclude salary from expenses
+        if (e.description && e.description.toLowerCase().includes('salary')) {
+          return s;
+        }
+        return s + (e.amount || 0);
+      }, 0);
+      // Only operational expenses; exclude any payments/credits
+      months[key].expenses += exp;
+    });
+    const monthlyRows = Object.values(months).sort((a, b) => new Date(a.key + '-01') - new Date(b.key + '-01'));
+    return { totalTrips, totalKm, totalFuel, totalExpenses, monthlyRows };
+  };
+
+  const openMonthExpenseDetail = (employeeId, monthKey) => {
+    // Show ONLY operational expenses (exclude payments/credits)
+    const rows = vehicleLogs
+      .filter(l => l.employeeId === employeeId && dayjs(l.date).format('YYYY-MM') === monthKey)
+      .flatMap(l => (l.expenses || []).map(exp => ({
+        date: dayjs(l.date).format('DD/MM/YYYY'),
+        description: exp.description,
+        amount: exp.amount || 0
+      })));
+    const total = rows.reduce((s, r) => s + (r.amount || 0), 0);
+    setMonthDetailRows(rows);
+    setMonthDetailTitle(`${dayjs(monthKey + '-01').format('MMM YYYY')} • Total Expenses: Rs. ${Number(total).toLocaleString()}`);
+    setMonthDetailVisible(true);
+  };
   const [form] = Form.useForm();
   const [employeeForm] = Form.useForm();
   const [customerForm] = Form.useForm();
   const [itemForm] = Form.useForm();
   const [creditPaymentForm] = Form.useForm();
+  const [addVehicleForm] = Form.useForm();
 
   useEffect(() => {
     checkAuth();
@@ -90,6 +174,7 @@ const ConstructionAdminDashboard = () => {
     loadCustomers();
     loadItems();
     loadCreditOverview();
+    loadCreditPayments();
   }, []);
 
   useEffect(() => {
@@ -131,10 +216,61 @@ const ConstructionAdminDashboard = () => {
       const response = await api.get('/api/construction-admin/vehicles', {
         headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
       });
-      setVehicles(response.data);
+      const raw = Array.isArray(response.data) ? response.data : [];
+      // Preserve full list for display (objects preferred)
+      const displayList = raw.map(v => (typeof v === 'string' ? { vehicleNumber: v, name: '' } : { vehicleNumber: v?.vehicleNumber, name: v?.name || '' }))
+        .filter(v => v.vehicleNumber);
+      // Deduplicate by vehicleNumber
+      const seen = new Set();
+      const uniqueDisplay = displayList.filter(v => {
+        if (seen.has(v.vehicleNumber)) return false;
+        seen.add(v.vehicleNumber);
+        return true;
+      }).sort((a,b) => String(a.vehicleNumber).localeCompare(String(b.vehicleNumber)));
+      setVehiclesDisplay(uniqueDisplay);
+
+      // Normalize to strings for dropdowns and other usage
+      const normalized = uniqueDisplay.map(v => v.vehicleNumber);
+      setVehicles(normalized);
     } catch (error) {
       message.error('Failed to load vehicles');
     }
+  };
+
+  const handleAddVehicle = async (values) => {
+    try {
+      await api.post('/api/construction-admin/vehicles', values, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      message.success('Vehicle added');
+      addVehicleForm.resetFields();
+      await loadVehicles();
+    } catch (error) {
+      const err = error?.response?.data?.error || 'Failed to add vehicle';
+      message.error(err);
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleNumber) => {
+    Modal.confirm({
+      title: 'Delete Vehicle',
+      content: `Are you sure you want to delete vehicle "${vehicleNumber}"? This action cannot be undone.`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await api.delete(`/api/construction-admin/vehicles/${vehicleNumber}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+          });
+          message.success('Vehicle deleted successfully');
+          await loadVehicles();
+        } catch (error) {
+          const err = error?.response?.data?.error || 'Failed to delete vehicle';
+          message.error(err);
+        }
+      }
+    });
   };
 
   const loadEmployees = async () => {
@@ -204,6 +340,17 @@ const ConstructionAdminDashboard = () => {
     }
   };
 
+  const loadCreditPayments = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/credit-payments', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setCreditPayments(response.data);
+    } catch (error) {
+      console.error('Error loading credit payments:', error);
+    }
+  };
+
   const loadEmployeeHistory = async (employeeId) => {
     try {
       const response = await api.get(`/api/construction-admin/employees/${employeeId}/history`, {
@@ -220,6 +367,8 @@ const ConstructionAdminDashboard = () => {
       const response = await api.get(`/api/construction-admin/vehicles/${vehicleNumber}/logs`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
       });
+      console.log('Vehicle history data received:', response.data);
+      console.log('Vehicle history logs:', response.data.logs);
       setVehicleHistory(response.data);
     } catch (error) {
       message.error('Failed to load vehicle history');
@@ -255,6 +404,33 @@ const ConstructionAdminDashboard = () => {
     }
   };
 
+  const fixYesterdayBalances = async () => {
+    try {
+      const response = await api.post('/api/construction-admin/fix-yesterday-balances', {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      message.success(response.data.message);
+      await loadVehicleLogs(); // Reload logs to show updated balances
+    } catch (error) {
+      console.error('Failed to fix yesterday balances:', error);
+      message.error('Failed to fix yesterday balances');
+    }
+  };
+
+  const clearAllData = async () => {
+    try {
+      const response = await api.post('/api/construction-admin/clear-vehicle-logs', {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      message.success(response.data.message);
+      await loadVehicleLogs(); // Reload logs to show empty state
+      await loadEmployees(); // Reload employees to show reset wallet data
+    } catch (error) {
+      console.error('Failed to clear all data:', error);
+      message.error('Failed to clear all data');
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('constructionAdminToken');
     localStorage.removeItem('adminRole');
@@ -264,6 +440,15 @@ const ConstructionAdminDashboard = () => {
   const handleAddLog = () => {
     setEditingLog(null);
     form.resetFields();
+    setLockEmployeeField(false);
+    setModalVisible(true);
+  };
+
+  const handleAddLogForEmployee = (employee) => {
+    setEditingLog(null);
+    form.resetFields();
+    form.setFieldsValue({ employeeId: employee.employeeId });
+    setLockEmployeeField(true);
     setModalVisible(true);
   };
 
@@ -289,6 +474,29 @@ const ConstructionAdminDashboard = () => {
     }
   };
 
+  const sendSMS = async () => {
+    try {
+      if (!smsCustomerPhone) {
+        message.error('Please enter customer phone number');
+        return;
+      }
+
+      await api.post('/api/construction-admin/send-sms', {
+        phoneNumber: smsCustomerPhone,
+        customerName: smsCustomerName
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+
+      message.success('SMS sent successfully!');
+      setSmsModalVisible(false);
+      setSmsCustomerName('');
+      setSmsCustomerPhone('');
+    } catch (error) {
+      message.error('Failed to send SMS: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   const handleSubmit = async (values) => {
     try {
       // Find employee name
@@ -306,16 +514,29 @@ const ConstructionAdminDashboard = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
         });
         message.success('Vehicle log updated successfully');
+        setModalVisible(false);
+        loadVehicleLogs();
+        loadDashboardData();
       } else {
-        await api.post('/api/construction-admin/vehicle-logs', logData, {
+        const response = await api.post('/api/construction-admin/vehicle-logs', logData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
         });
-        message.success('Vehicle log created successfully');
+        
+        if (response.data.suggestSMS) {
+          // Customer didn't use credit, show SMS suggestion
+          const found = customers.find(c => c.name === response.data.customerName);
+          setSmsCustomerName(response.data.customerName);
+          setSmsCustomerPhone(found?.phone || '');
+          setModalVisible(false);
+          setSmsModalVisible(true);
+        } else {
+          message.success('Vehicle log created successfully');
+          setModalVisible(false);
+        }
+        
+        loadVehicleLogs();
+        loadDashboardData();
       }
-      
-      setModalVisible(false);
-      loadVehicleLogs();
-      loadDashboardData();
     } catch (error) {
       message.error('Failed to save vehicle log');
     }
@@ -488,6 +709,8 @@ const ConstructionAdminDashboard = () => {
       creditPaymentForm.resetFields();
       loadCreditOverview();
       loadDashboardData();
+      // Refresh vehicle logs so credit status updates reflect in UI
+      await loadVehicleLogs();
     } catch (error) {
       console.error('Credit payment error:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to record credit payment';
@@ -498,6 +721,31 @@ const ConstructionAdminDashboard = () => {
   const handleViewEmployeeHistory = async (employee) => {
     setSelectedEmployee(employee);
     await loadEmployeeHistory(employee._id);
+  };
+
+  const loadWalletHistory = async (employeeId) => {
+    try {
+      const response = await api.get(`/api/construction-admin/employees/${employeeId}/wallet-history`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      // Update the employee object with wallet data
+      setSelectedEmployeeForWallet(prev => ({
+        ...prev,
+        pendingSalary: response.data.pendingSalary,
+        yesterdayBalance: response.data.yesterdayBalance,
+        lastSalaryPaid: response.data.lastSalaryPaid,
+        lastSalaryAmount: response.data.lastSalaryAmount
+      }));
+    } catch (error) {
+      console.error('Failed to load wallet history:', error);
+      message.error('Failed to load wallet history');
+    }
+  };
+
+  const handleViewWallet = async (employee) => {
+    setSelectedEmployeeForWallet(employee);
+    await loadWalletHistory(employee.employeeId);
+    setWalletModalVisible(true);
   };
 
   const handleViewVehicleHistory = async (vehicleNumber) => {
@@ -516,8 +764,14 @@ const ConstructionAdminDashboard = () => {
       months[month].trips++;
       months[month].totalKm += log.workingKm || 0;
       months[month].fuel += log.fuel?.liters || 0;
-      const logExpenses = log.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
-      months[month].expenses += logExpenses + (log.payments?.total || 0);
+      const logExpenses = log.expenses?.reduce((sum, exp) => {
+        // Exclude salary from expenses
+        if (exp.description && exp.description.toLowerCase().includes('salary')) {
+          return sum;
+        }
+        return sum + exp.amount;
+      }, 0) || 0;
+      months[month].expenses += logExpenses;
     });
     
     return Object.entries(months).map(([month, data]) => ({
@@ -593,7 +847,7 @@ const ConstructionAdminDashboard = () => {
           }
           return sum;
         }, 0) || 0;
-        const totalExpenses = fuelExpense + otherExpenses + (log.payments?.total || 0);
+        const totalExpenses = fuelExpense + otherExpenses;
         
         return [
           log.employeeId,
@@ -628,8 +882,14 @@ const ConstructionAdminDashboard = () => {
         const totalKm = empLogs.reduce((sum, log) => sum + (log.workingKm || 0), 0);
         const totalFuel = empLogs.reduce((sum, log) => sum + (log.fuel?.liters || 0), 0);
         const totalExpenses = empLogs.reduce((sum, log) => {
-          const logExpenses = log.expenses?.reduce((logSum, expense) => logSum + expense.amount, 0) || 0;
-          return sum + logExpenses + (log.payments?.total || 0);
+          const logExpenses = log.expenses?.reduce((logSum, expense) => {
+            // Exclude salary from expenses
+            if (expense.description && expense.description.toLowerCase().includes('salary')) {
+              return logSum;
+            }
+            return logSum + expense.amount;
+          }, 0) || 0;
+          return sum + logExpenses;
         }, 0);
         const avgTripCost = totalTrips > 0 ? Math.round(totalExpenses / totalTrips) : 0;
         
@@ -678,8 +938,14 @@ const ConstructionAdminDashboard = () => {
         const totalKm = logsForVehicle.reduce((sum, log) => sum + (log.workingKm || 0), 0);
         const totalFuel = logsForVehicle.reduce((sum, log) => sum + (log.fuel?.liters || 0), 0);
         const totalExpenses = logsForVehicle.reduce((sum, log) => {
-          const logExpenses = log.expenses?.reduce((logSum, expense) => logSum + expense.amount, 0) || 0;
-          return sum + logExpenses + (log.payments?.total || 0);
+          const logExpenses = log.expenses?.reduce((logSum, expense) => {
+            // Exclude salary from expenses
+            if (expense.description && expense.description.toLowerCase().includes('salary')) {
+              return logSum;
+            }
+            return logSum + expense.amount;
+          }, 0) || 0;
+          return sum + logExpenses;
         }, 0);
         const avgTripDistance = totalTrips > 0 ? Math.round(totalKm / totalTrips) : 0;
         
@@ -748,15 +1014,203 @@ const ConstructionAdminDashboard = () => {
     window.print();
   };
 
+  const exportVehicleLogAsPDF = async (log) => {
+    try {
+      const expenses = (log.expenses || []).filter(exp => 
+        !exp.description.toLowerCase().includes('salary')
+      );
+      const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const salary = (log.salary || []);
+      const totalSalary = salary.reduce((sum, sal) => sum + (sal.amount || 0), 0);
+
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      tempDiv.innerHTML = `
+         <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+           <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+             <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+             <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+             <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+           </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+              <div>Vehicle No: ${log.vehicleNumber}</div>
+              <div style="text-align: center;">
+                <div style="color: #2e7d32; font-size: 18px; margin-bottom: 5px;">Log for Employee: ${log.employeeName}</div>
+                <div style="color: #666; font-size: 14px;">(${log.employeeId})</div>
+              </div>
+              <div>Date: ${dayjs(log.date).format('DD/MM/YYYY')}</div>
+            </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Employee</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">From</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">To</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Item</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Start(km)</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">End(km)</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Customer</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Cash</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Credit</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Yesterday Balance</th>
+                 <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Set</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.employeeName}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.startPlace || ''}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.endPlace || ''}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${(log.itemsLoading || []).join(', ')}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.startMeter || 0}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.endMeter || 0}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${log.customerName || ''}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">Rs. ${Number(log.payments?.cash || 0).toLocaleString()}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">Rs. ${Number(log.payments?.credit || 0).toLocaleString()}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">Rs. ${Number(log.yesterdayBalance || 0).toLocaleString()}</td>
+                 <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">Rs. ${Number(log.setCashTaken || 0).toLocaleString()}</td>
+              </tr>
+              ${(Number(log.payments?.cash || 0) + Number(log.setCashTaken || 0) + Number(log.yesterdayBalance || 0)) > 0 ? `
+              <tr style="background-color: #f0f0f0; font-weight: bold;">
+                <td colspan="7" style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;"><strong>Total</strong></td>
+                <td colspan="4" style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;"><strong>Rs. ${(Number(log.payments?.cash || 0) + Number(log.setCashTaken || 0) + Number(log.yesterdayBalance || 0)).toLocaleString()}</strong></td>
+              </tr>
+              ` : ''}
+            </tbody>
+          </table>
+
+           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px;">
+             ${salary.length > 0 ? `
+             <div style="border: 1px solid #2e7d32;">
+               <div style="background-color: white; color: #2e7d32; text-align: center; font-weight: bold; padding: 12px; border-bottom: 1px solid #2e7d32; font-size: 15px;">Salary</div>
+               <table style="width: 100%; border-collapse: collapse;">
+                 <thead>
+                   <tr>
+                     <th style="background-color: white; color: #2e7d32; font-weight: bold; padding: 10px; border: 1px solid #2e7d32; text-align: center; font-size: 13px;">Item</th>
+                     <th style="background-color: white; color: #2e7d32; font-weight: bold; padding: 10px; border: 1px solid #2e7d32; text-align: center; font-size: 13px;">Amount</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   ${salary.map(sal => `
+                     <tr>
+                       <td style="padding: 10px; border: 1px solid #2e7d32; text-align: left; font-size: 13px;">${sal.item}</td>
+                       <td style="padding: 10px; border: 1px solid #2e7d32; text-align: right; font-size: 13px;">Rs. ${Number(sal.amount || 0).toLocaleString()}</td>
+                     </tr>
+                   `).join('')}
+                   ${totalSalary > 0 ? `
+                   <tr style="background-color: #f0f0f0; font-weight: bold;">
+                     <td style="padding: 10px; border: 1px solid #2e7d32; text-align: left; font-size: 13px;"><strong>Total</strong></td>
+                     <td style="padding: 10px; border: 1px solid #2e7d32; text-align: right; font-size: 13px;"><strong>Rs. ${totalSalary.toLocaleString()}</strong></td>
+                   </tr>
+                   ` : ''}
+                 </tbody>
+               </table>
+               ${totalSalary > 0 ? `
+               <div style="padding: 12px; text-align: center; font-weight: bold; background-color: #f0f0f0; color: #2e7d32; font-size: 13px;">
+                 ${log.salaryDeductedFromBalance && log.salaryDeductedFromBalance > 0 ? 'Deducted from Balance' : 'Added to Pending Salary'}
+               </div>
+               ` : ''}
+             </div>
+             ` : ''}
+             
+             <div style="border: 1px solid #2e7d32;">
+               <div style="background-color: white; color: #2e7d32; text-align: center; font-weight: bold; padding: 12px; border-bottom: 1px solid #2e7d32; font-size: 15px;">Expenses</div>
+               <table style="width: 100%; border-collapse: collapse;">
+                 <thead>
+                   <tr>
+                     <th style="background-color: white; color: #2e7d32; font-weight: bold; padding: 10px; border: 1px solid #2e7d32; text-align: center; font-size: 13px;">Expenses</th>
+                     <th style="background-color: white; color: #2e7d32; font-weight: bold; padding: 10px; border: 1px solid #2e7d32; text-align: center; font-size: 13px;">Cost</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   ${expenses.length > 0 ? expenses.map(exp => `
+                     <tr>
+                       <td style="padding: 10px; border: 1px solid #2e7d32; text-align: left; font-size: 13px;">${exp.description}</td>
+                       <td style="padding: 10px; border: 1px solid #2e7d32; text-align: right; font-size: 13px;">Rs. ${Number(exp.amount || 0).toLocaleString()}</td>
+                     </tr>
+                   `).join('') : '<tr><td colspan="2" style="padding: 10px; border: 1px solid #2e7d32; text-align: center; color: #666; font-size: 13px;">No expenses recorded</td></tr>'}
+                   ${expenses.length > 0 && totalExpenses > 0 ? `
+                   <tr style="background-color: #f0f0f0; font-weight: bold;">
+                     <td style="padding: 10px; border: 1px solid #2e7d32; text-align: left; font-size: 13px;"><strong>Total Expenses</strong></td>
+                     <td style="padding: 10px; border: 1px solid #2e7d32; text-align: right; font-size: 13px;"><strong>Rs. ${totalExpenses.toLocaleString()}</strong></td>
+                   </tr>
+                   ` : ''}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+
+          <div style="background-color: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px;">
+            Balance: Rs. ${(() => {
+              const total = Number(log.payments?.cash || 0) + Number(log.setCashTaken || 0) + Number(log.yesterdayBalance || 0);
+              const salaryDeducted = (log.salaryDeductedFromBalance && log.salaryDeductedFromBalance > 0) ? totalSalary : 0;
+              return (total - totalExpenses - salaryDeducted).toLocaleString();
+            })()}
+          </div>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Supervisor Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Center the image vertically if it's smaller than page height
+      const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+      
+      pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      
+      // Save the PDF
+      const fileName = `Vehicle_Log_${log.vehicleNumber}_${dayjs(log.date).format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
 
 
   const vehicleLogColumns = [
-    {
-      title: 'Employee',
-      dataIndex: 'employeeName',
-      key: 'employeeName',
-      width: 120,
-    },
+    
     {
       title: 'Vehicle Number',
       dataIndex: 'vehicleNumber',
@@ -779,6 +1233,18 @@ const ConstructionAdminDashboard = () => {
       render: (date) => dayjs(date).format('DD/MM/YYYY'),
     },
     {
+      title: 'Employee',
+      dataIndex: 'employeeName',
+      key: 'employeeName',
+      width: 120,
+      render: (name, record) => (
+        <div>
+          <div style={{ fontWeight: 'bold' }}>{name}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.employeeId}</div>
+        </div>
+      ),
+    },
+    {
       title: 'Start Place',
       dataIndex: 'startPlace',
       key: 'startPlace',
@@ -789,25 +1255,6 @@ const ConstructionAdminDashboard = () => {
       dataIndex: 'endPlace',
       key: 'endPlace',
       width: 120,
-    },
-    {
-      title: 'Working KM',
-      dataIndex: 'workingKm',
-      key: 'workingKm',
-      width: 100,
-    },
-    {
-      title: 'Duties',
-      dataIndex: 'duties',
-      key: 'duties',
-      width: 150,
-      render: (duties) => (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-          {duties?.map(duty => (
-            <Tag key={duty} size="small">{duty}</Tag>
-          ))}
-        </div>
-      ),
     },
     {
       title: 'Items Loading',
@@ -861,31 +1308,51 @@ const ConstructionAdminDashboard = () => {
       render: (payments) => `Rs. ${payments?.total || 0}`,
     },
     {
-      title: 'Credit Status',
-      dataIndex: 'payments',
-      key: 'creditStatus',
+      title: 'Set Cash',
+      dataIndex: 'setCashTaken',
+      key: 'setCashTaken',
+      width: 100,
+      render: (amount) => `Rs. ${Number(amount || 0).toLocaleString()}`,
+    },
+    {
+      title: 'Expenses',
+      dataIndex: 'expenses',
+      key: 'expenses',
       width: 120,
-      render: (payments) => {
-        if (!payments?.credit || payments.credit === 0) return '-';
-        const status = payments.creditStatus || 'pending';
-        const color = status === 'completed' ? 'green' : status === 'partial' ? 'orange' : 'red';
-        return <Tag color={color} size="small">{status.toUpperCase()}</Tag>;
+      render: (expenses) => {
+        const total = (expenses || []).reduce((sum, exp) => {
+          // Exclude salary from expenses
+          if (exp.description && exp.description.toLowerCase().includes('salary')) {
+            return sum;
+          }
+          return sum + (exp.amount || 0);
+        }, 0);
+        return `Rs. ${total.toLocaleString()}`;
       },
     },
     {
-      title: 'Fuel (L)',
-      dataIndex: 'fuel',
-      key: 'fuelLiters',
-      width: 100,
-      render: (fuel) => fuel?.liters || 0,
+      title: 'Yesterday Balance',
+      dataIndex: 'yesterdayBalance',
+      key: 'yesterdayBalance',
+      width: 120,
+      render: (amount) => `Rs. ${Number(amount || 0).toLocaleString()}`,
     },
+    
+    
 
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_, record) => (
         <Space>
+          <Button 
+            type="default" 
+            size="small" 
+            icon={<DownloadOutlined />}
+            onClick={() => exportVehicleLogAsPDF(record)}
+            title="Export as PDF"
+          />
           <Button 
             type="primary" 
             size="small" 
@@ -935,26 +1402,7 @@ const ConstructionAdminDashboard = () => {
       key: 'phone',
       width: 120,
     },
-    {
-      title: 'Assigned Vehicles',
-      dataIndex: 'assignedVehicles',
-      key: 'assignedVehicles',
-      width: 150,
-      render: (vehicles) => (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-          {vehicles?.map(vehicle => (
-            <Tag 
-              key={vehicle} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => handleViewVehicleHistory(vehicle)}
-              size="small"
-            >
-              {vehicle}
-            </Tag>
-          ))}
-        </div>
-      ),
-    },
+    
     {
       title: 'Duties',
       dataIndex: 'duties',
@@ -992,6 +1440,13 @@ const ConstructionAdminDashboard = () => {
             onClick={() => handleViewEmployeeHistory(record)}
           />
           <Button 
+            type="default" 
+            size="small" 
+            icon={<DollarOutlined />}
+            onClick={() => handleViewWallet(record)}
+            title="View Wallet"
+          />
+          <Button 
             type="primary" 
             size="small" 
             icon={<EditOutlined />}
@@ -1017,367 +1472,244 @@ const ConstructionAdminDashboard = () => {
 
   const renderDashboard = () => (
     <div>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Today's Logs"
-              value={dashboardData?.totalLogsToday || 0}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Monthly Logs"
-              value={dashboardData?.totalLogsMonth || 0}
-              prefix={<CalendarOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Vehicles"
-              value={dashboardData?.totalVehicles || 0}
-              prefix={<CarOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Employees"
-              value={dashboardData?.totalEmployees || 0}
-              prefix={<TeamOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Monthly Expenses"
-              value={dashboardData?.totalExpenses || 0}
-              prefix={<DollarOutlined />}
-              suffix="Rs."
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Credit"
-              value={dashboardData?.totalCredit || 0}
-              prefix={<DollarOutlined />}
-              suffix="Rs."
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Cash"
-              value={dashboardData?.totalCash || 0}
-              prefix={<DollarOutlined />}
-              suffix="Rs."
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Payments"
-              value={dashboardData?.totalPayments || 0}
-              prefix={<DollarOutlined />}
-              suffix="Rs."
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Divider />
-
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={12}>
-          <Card title="Credit Overview" size="small">
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>Total Pending Credit:</span>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#cf1322' }}>
-                  Rs. {creditOverview?.reduce((sum, customer) => sum + customer.remainingCredit, 0) || 0}
-                </span>
+      {/* Vehicles Section */}
+      <Card 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '600' }}>Vehicles</span>
+            <span style={{ 
+              background: '#f0f9ff', 
+              color: '#1890ff', 
+              padding: '2px 8px', 
+              borderRadius: '12px', 
+              fontSize: '12px', 
+              fontWeight: '500' 
+            }}>
+              {(vehicles || []).length}
+            </span>
+          </div>
+        }
+        style={{ marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {(vehicles || []).map(v => {
+            const vn = typeof v === 'string' ? v : v?.vehicleNumber;
+            if (!vn) return null;
+            return (
+              <div
+                key={vn}
+                onClick={() => handleViewVehicleHistory(vn)}
+                style={{ 
+                  cursor: 'pointer', 
+                  border: '2px solid #e6f7ff', 
+                  borderRadius: '12px', 
+                  padding: '16px 20px', 
+                  minWidth: '180px', 
+                  textAlign: 'center', 
+                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%)',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#1890ff';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e6f7ff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div style={{ 
+                  fontWeight: '700', 
+                  fontSize: '16px', 
+                  color: '#1890ff',
+                  marginBottom: '4px'
+                }}>
+                  {vn}
+                </div>
+                <div style={{ 
+                  color: '#8c8c8c', 
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}>
+                  Click to view history
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>Customers with Pending Credit:</span>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-                  {creditOverview?.length || 0}
-                </span>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Employees Section */}
+      <Card 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '600' }}>Employees</span>
+            <span style={{ 
+              background: '#f6ffed', 
+              color: '#52c41a', 
+              padding: '2px 8px', 
+              borderRadius: '12px', 
+              fontSize: '12px', 
+              fontWeight: '500' 
+            }}>
+              {(employees || []).length}
+            </span>
+          </div>
+        }
+        style={{ marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {(employees || []).map(emp => (
+            <div
+              key={emp.employeeId}
+              onClick={() => handleViewWallet(emp)}
+              style={{ 
+                cursor: 'pointer', 
+                border: '2px solid #f6ffed', 
+                borderRadius: '12px', 
+                padding: '16px 20px', 
+                minWidth: '200px', 
+                background: 'linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%)',
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#52c41a';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(82, 196, 26, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#f6ffed';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ 
+                fontWeight: '700', 
+                fontSize: '16px', 
+                color: '#52c41a',
+                marginBottom: '4px'
+              }}>
+                {emp.name}
+              </div>
+              <div style={{ 
+                color: '#8c8c8c', 
+                fontSize: '12px',
+                fontWeight: '500',
+                marginBottom: '4px'
+              }}>
+                {emp.employeeId}
+              </div>
+              <div style={{ 
+                color: '#8c8c8c', 
+                fontSize: '11px',
+                fontStyle: 'italic'
+              }}>
+                Click to view wallet
               </div>
             </div>
-            
-            {/* Customer Credit Details Table */}
-            {creditOverview && creditOverview.length > 0 ? (
-              <div>
-                <Divider style={{ margin: '12px 0' }}>Customer Credit Details</Divider>
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {creditOverview.map((customer, index) => (
-                    <div 
-                      key={customer.customerId} 
-                      style={{ 
-                        padding: '12px', 
-                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
-                        border: '1px solid #e8e8e8',
-                        borderRadius: '6px',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1890ff', marginBottom: '4px' }}>
-                            {customer.customerName}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                            📞 {customer.customerPhone}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#cf1322', fontWeight: 'bold' }}>
-                            Credit: Rs. {customer.remainingCredit?.toLocaleString() || 0}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right', flex: 1 }}>
-                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                            🚚 Delivery Employee:
-                          </div>
-                          {customer.deliveryEmployees?.map((employee, empIndex) => (
-                            <div key={empIndex} style={{ fontSize: '11px', color: '#1890ff', marginBottom: '2px' }}>
-                              👤 {employee.name} ({employee.employeeId})
-                            </div>
-                          )) || (
-                            <div style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>
-                              No employee info
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#999', fontStyle: 'italic', padding: '20px 0' }}>
-                No pending credits
-              </div>
-            )}
-            
-            <Divider style={{ margin: '16px 0' }} />
-            <Button 
-              type="primary" 
-              size="small"
-              onClick={() => setSelectedSection('credit-management')}
-              style={{ width: '100%' }}
-            >
-              View Full Credit Details
-            </Button>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Recent Vehicle Logs">
-                    <Table
-          dataSource={dashboardData?.recentLogs || []}
-          style={{ fontSize: '12px' }}
+          ))}
+        </div>
+      </Card>
+
+
+      {/* Credit Summary Section */}
+      <Card 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '600' }}>Credit Summary (Pending)</span>
+            <span style={{ 
+              background: '#fff7e6', 
+              color: '#fa8c16', 
+              padding: '2px 8px', 
+              borderRadius: '12px', 
+              fontSize: '12px', 
+              fontWeight: '500' 
+            }}>
+              {(dashboardData?.creditSummary || []).length}
+            </span>
+          </div>
+        }
+        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+      >
+        <Table
+          dataSource={(dashboardData?.creditSummary || []).sort((a,b) => b.remainingCredit - a.remainingCredit)}
           columns={[
-                {
-                  title: 'Employee',
-                  dataIndex: 'employeeName',
-                  key: 'employeeName',
-                  width: 120,
-                },
-                {
-                  title: 'Vehicle Number',
-                  dataIndex: 'vehicleNumber',
-                  key: 'vehicleNumber',
-                  width: 120,
-                  render: (vehicleNumber) => (
-                    <Tag 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleViewVehicleHistory(vehicleNumber)}
-                    >
-                      {vehicleNumber}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: 'Date',
-                  dataIndex: 'date',
-                  key: 'date',
-                  width: 100,
-                  render: (date) => dayjs(date).format('DD/MM/YYYY'),
-                },
-                {
-                  title: 'Start Place',
-                  dataIndex: 'startPlace',
-                  key: 'startPlace',
-                  width: 120,
-                },
-                {
-                  title: 'End Place',
-                  dataIndex: 'endPlace',
-                  key: 'endPlace',
-                  width: 120,
-                },
-                {
-                  title: 'Working KM',
-                  dataIndex: 'workingKm',
-                  key: 'workingKm',
-                  width: 100,
-                },
-                {
-                  title: 'Duties',
-                  dataIndex: 'duties',
-                  key: 'duties',
-                  width: 150,
-                  render: (duties) => (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {duties?.map(duty => (
-                        <Tag key={duty} size="small">{duty}</Tag>
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  title: 'Total Payment',
-                  dataIndex: 'payments',
-                  key: 'totalPayment',
-                  width: 120,
-                  render: (payments) => `Rs. ${payments?.total || 0}`,
-                },
-                {
-                  title: 'Fuel (L)',
-                  dataIndex: 'fuel',
-                  key: 'fuelLiters',
-                  width: 100,
-                  render: (fuel) => fuel?.liters || 0,
-                },
-
-              ]}
-              pagination={false}
-              size="small"
-              rowKey="_id"
-              scroll={{ x: 800 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Recent Employees">
-            <Table
-              dataSource={dashboardData?.recentEmployees || []}
-              style={{ fontSize: '12px' }}
-              columns={[
-                {
-                  title: 'Employee ID',
-                  dataIndex: 'employeeId',
-                  key: 'employeeId',
-                  width: 120,
-                },
-                {
-                  title: 'Name',
-                  dataIndex: 'name',
-                  key: 'name',
-                  width: 150,
-                },
-                {
-                  title: 'Position',
-                  dataIndex: 'position',
-                  key: 'position',
-                  width: 120,
-                },
-                {
-                  title: 'Phone',
-                  dataIndex: 'phone',
-                  key: 'phone',
-                  width: 120,
-                },
-                {
-                  title: 'Assigned Vehicles',
-                  dataIndex: 'assignedVehicles',
-                  key: 'assignedVehicles',
-                  width: 150,
-                  render: (vehicles) => (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {vehicles?.map(vehicle => (
-                        <Tag 
-                          key={vehicle} 
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleViewVehicleHistory(vehicle)}
-                          size="small"
-                        >
-                          {vehicle}
-                        </Tag>
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  title: 'Duties',
-                  dataIndex: 'duties',
-                  key: 'duties',
-                  width: 200,
-                  render: (duties) => (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {duties?.map(duty => (
-                        <Tag key={duty} size="small">{duty}</Tag>
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  title: 'Status',
-                  dataIndex: 'status',
-                  key: 'status',
-                  width: 100,
-                  render: (status) => (
-                    <Tag color={status === 'active' ? 'green' : status === 'inactive' ? 'red' : 'orange'} size="small">
-                      {status?.toUpperCase()}
-                    </Tag>
-                  ),
-                },
-              ]}
-              pagination={false}
-              size="small"
-              rowKey="_id"
-              scroll={{ x: 800 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Divider />
-
-      <Card title="All Vehicles" style={{ marginTop: 16 }}>
-        <Row gutter={[16, 16]}>
-          {vehicles.map(vehicle => (
-            <Col xs={24} sm={12} md={8} lg={6} key={vehicle}>
-              <Card 
-                size="small" 
-                hoverable
-                onClick={() => handleViewVehicleHistory(vehicle)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div style={{ textAlign: 'center' }}>
-                  <CarOutlined style={{ fontSize: 24, color: '#1890ff', marginBottom: 8 }} />
-                  <div><strong>{vehicle}</strong></div>
-                  <div style={{ fontSize: 12, color: '#666' }}>
-                    Click to view history
+            { 
+              title: 'Customer', 
+              dataIndex: 'customerName', 
+              key: 'customerName', 
+              width: 200,
+              render: (text) => (
+                <div style={{ 
+                  fontWeight: '600', 
+                  color: '#262626',
+                  fontSize: '14px'
+                }}>
+                  {text}
+                </div>
+              )
+            },
+            { 
+              title: 'Remaining', 
+              dataIndex: 'remainingCredit', 
+              key: 'remainingCredit', 
+              render: (v) => (
+                <div style={{ 
+                  fontWeight: '700', 
+                  color: '#cf1322',
+                  fontSize: '14px'
+                }}>
+                  Rs. {Number(v||0).toLocaleString()}
+                </div>
+              )
+            },
+            { 
+              title: 'Employee', 
+              key: 'employee', 
+              render: (_, r) => (
+                <div style={{ fontSize: '13px' }}>
+                  <div style={{ fontWeight: '500', color: '#262626' }}>
+                    {r.lastEmployeeName || 'Unknown'}
+                  </div>
+                  <div style={{ color: '#8c8c8c', fontSize: '11px' }}>
+                    {r.lastEmployeeId || 'N/A'}
                   </div>
                 </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+              )
+            },
+            { 
+              title: 'Last Payment', 
+              dataIndex: 'lastDate', 
+              key: 'lastDate', 
+              render: (d) => (
+                <div style={{ 
+                  color: d ? '#52c41a' : '#8c8c8c',
+                  fontWeight: '500',
+                  fontSize: '13px'
+                }}>
+                  {d ? dayjs(d).format('DD/MM/YYYY') : 'No payments'}
+                </div>
+              )
+            }
+          ]}
+          pagination={false}
+          size="small"
+          rowKey={(r) => r.customerName}
+          style={{ 
+            background: '#fafafa',
+            borderRadius: '8px'
+          }}
+        />
       </Card>
+
+
+      
     </div>
   );
 
@@ -1449,89 +1781,319 @@ const ConstructionAdminDashboard = () => {
 
   const renderVehicleLogs = () => (
     <div>
-      <Card>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={6}>
-            <Select
-              placeholder="Filter by Employee"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={(value) => setFilters(prev => ({ ...prev, employeeId: value }))}
-            >
-              {employees.map(employee => (
-                <Select.Option key={employee.employeeId} value={employee.employeeId}>
-                  {employee.name} ({employee.employeeId})
-                </Select.Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={6}>
-            <Select
-              placeholder="Filter by Vehicle"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={(value) => setFilters(prev => ({ ...prev, vehicleNumber: value }))}
-            >
-              {vehicles.map(vehicle => (
-                <Select.Option key={vehicle} value={vehicle}>{vehicle}</Select.Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={6}>
-            <RangePicker
-              style={{ width: '100%' }}
-              onChange={(dates) => {
-                if (dates) {
-                  setFilters(prev => ({
-                    ...prev,
-                    startDate: dates[0].format('YYYY-MM-DD'),
-                    endDate: dates[1].format('YYYY-MM-DD')
-                  }));
-                } else {
-                  setFilters(prev => {
-                    const { startDate, endDate, ...rest } = prev;
-                    return rest;
-                  });
-                }
-              }}
+      <Card title={'Vehicle Logs'}>
+        <div style={{ marginBottom: 16 }}>
+          <Button 
+            type="primary" 
+            onClick={fixYesterdayBalances}
+            style={{ marginRight: 8, marginBottom: 16 }}
+          >
+            Fix Yesterday Balances
+          </Button>
+          <Button 
+            type="primary" 
+            danger
+            onClick={clearAllData}
+            style={{ marginBottom: 16 }}
+          >
+            Clear All Data (Logs + Employee Wallets)
+          </Button>
+        </div>
+        <Row gutter={[16,16]} style={{ marginBottom: 12 }}>
+          <Col xs={24}>
+            <Table
+              dataSource={vehicles.map(v => ({ key: typeof v === 'string' ? v : v.vehicleNumber, vehicleNumber: typeof v === 'string' ? v : v.vehicleNumber }))}
+              columns={[
+                { title: 'Vehicle', dataIndex: 'vehicleNumber', key: 'vehicleNumber' },
+                { title: 'Actions', key: 'actions', render: (_, r) => (
+                  <Space>
+                    <Button size="small" type="primary" onClick={() => openVehicleSheet(r.vehicleNumber)}>Open sheet</Button>
+                    <Button size="small" onClick={() => handleViewVehicleHistory(r.vehicleNumber)}>View history</Button>
+                  </Space>
+                )}
+              ]}
+              pagination={{ pageSize: 10 }}
+              rowKey={r => r.vehicleNumber}
             />
           </Col>
-          <Col xs={24} sm={6}>
+        </Row>
+      </Card>
+      <Modal
+        title={`Vehicle Sheet • ${selectedVehicleForSheet || ''}`}
+        open={vehicleSheetVisible}
+        onCancel={() => setVehicleSheetVisible(false)}
+        footer={null}
+        width={1400}
+      >
+        <Row gutter={[12,12]}>
+          <Col xs={24}>
+            <Card size="small" title="Vehicle Log">
+              <div style={{ marginBottom: 8 }}>
+                <Space>
+                  <Button size="small" type="primary" onClick={() => setSheetRows(prev => ([...prev, {
+                    key: `new-${Date.now()}`,
+                    date: dayjs().toDate(),
+                    employeeId: '',
+                    employee: '',
+                    from: '',
+                    to: '',
+                    item: '',
+                    startKm: 0,
+                    endKm: 0,
+                    customer: '',
+                    yBal: 0,
+                    setCash: 0,
+                    cash: 0,
+                    credit: 0,
+                    saved: false
+                  }]))}>Add row</Button>
+                  <span style={{ color: '#6b7280' }}>Add and edit rows like a spreadsheet, then click Save on that row.</span>
+                </Space>
+              </div>
+              <Table
+                dataSource={sheetRows}
+                columns={[
+                  { title: 'date', dataIndex: 'date', key: 'date', width: 120, render: (v, r, i) => (
+                    <DatePicker value={v ? dayjs(v) : null} onChange={(d) => { const copy=[...sheetRows]; const newDate = d?.toDate()||null; const empId = copy[i].employeeId; copy[i]={...copy[i], date: newDate, yBal: computeEmployeeYesterdayBalance(empId, newDate)}; setSheetRows(copy); }} format="DD/MM/YYYY" />
+                  ) },
+                  { title: 'employee', dataIndex: 'employee', key: 'employee', width: 240, render: (v, r, i) => (
+            <Select
+                      showSearch
+                      placeholder="Select employee"
+                      value={r.employeeId || undefined}
+                      onChange={(val) => { 
+                        const emp = employees.find(e=>e.employeeId===val); 
+                        const copy=[...sheetRows]; 
+                        const baseDate = copy[i].date || new Date(); 
+                        copy[i]={...copy[i], employeeId:val, employee: emp?.name || '', yBal: computeEmployeeYesterdayBalance(val, baseDate)}; 
+                        setSheetRows(copy);
+                        
+                        // Auto-select employee for salary and expenses
+                        if (val && !selectedEmployeeForSalary) {
+                          setSelectedEmployeeForSalary(val);
+                        }
+                        if (val && !selectedEmployeeForExpense) {
+                          setSelectedEmployeeForExpense(val);
+                        }
+                      }}
+                      style={{ width: 220 }}
+                      optionFilterProp="children"
+                    >
+                      {employees.map(e => <Option key={e.employeeId} value={e.employeeId}>{e.name} ({e.employeeId})</Option>)}
+                    </Select>
+                  ) },
+                  { title: 'from', dataIndex: 'from', key: 'from', width: 160, render: (v,r,i)=>(<Input value={v} onChange={e=>{ const c=[...sheetRows]; c[i]={...c[i], from:e.target.value}; setSheetRows(c); }} />) },
+                  { title: 'to', dataIndex: 'to', key: 'to', width: 160, render: (v,r,i)=>(<Input value={v} onChange={e=>{ const c=[...sheetRows]; c[i]={...c[i], to:e.target.value}; setSheetRows(c); }} />) },
+                  { title: 'item', dataIndex: 'item', key: 'item', width: 180, render: (v,r,i)=>(
+                    <Select
+                      showSearch
+                      placeholder="Select item"
+                      value={v || undefined}
+                      onChange={(val)=>{ const c=[...sheetRows]; c[i]={...c[i], item:val}; setSheetRows(c); }}
+              style={{ width: '100%' }}
+                      optionFilterProp="children"
+              allowClear
+                    >
+                      {items.map(it => (
+                        <Option key={it._id} value={it.name}>{it.name}</Option>
+              ))}
+            </Select>
+                  ) },
+                  { title: 'start(km)', dataIndex: 'startKm', key: 'startKm', width: 110, render: (v,r,i)=>(<InputNumber value={v} onChange={val=>{ const c=[...sheetRows]; c[i]={...c[i], startKm:Number(val||0)}; setSheetRows(c); }} style={{ width: '100%' }} />) },
+                  { title: 'end(km)', dataIndex: 'endKm', key: 'endKm', width: 110, render: (v,r,i)=>(<InputNumber value={v} onChange={val=>{ const c=[...sheetRows]; c[i]={...c[i], endKm:Number(val||0)}; setSheetRows(c); }} style={{ width: '100%' }} />) },
+                  { title: 'customer', dataIndex: 'customer', key: 'customer', width: 200, render: (v,r,i)=>(
+            <Select
+                      showSearch
+                      placeholder="Select customer"
+                      value={v || undefined}
+                      onChange={(val)=>{ const c=[...sheetRows]; c[i]={...c[i], customer:val}; setSheetRows(c); }}
+              style={{ width: '100%' }}
+                      optionFilterProp="children"
+              allowClear
+            >
+                      {customers.map(ct => (
+                        <Option key={ct._id} value={ct.name}>{ct.name}</Option>
+              ))}
+            </Select>
+                  ) },
+                  { title: 'yesterday bal.', dataIndex: 'yBal', key: 'yBal', width: 140, render: (v)=> (<InputNumber value={v || 0} disabled style={{ width:'100%' }} />) },
+                  { title: 'set cash', dataIndex: 'setCash', key: 'setCash', width: 120, render: (v,r,i)=> (
+                    <InputNumber value={v} placeholder="enter" onChange={val=>{ const c=[...sheetRows]; c[i]={...c[i], setCash:Number(val||0)}; setSheetRows(c); }} style={{ width:'100%' }} />
+                  ) },
+                  { title: 'cash', dataIndex: 'cash', key: 'cash', width: 140, render: (v,r,i)=>(<InputNumber value={v} onChange={val=>{ const c=[...sheetRows]; c[i]={...c[i], cash:Number(val||0)}; setSheetRows(c); }} style={{ width: '100%' }} />) },
+                  { title: 'credit', dataIndex: 'credit', key: 'credit', width: 140, render: (v,r,i)=>(<InputNumber value={v} onChange={val=>{ const c=[...sheetRows]; c[i]={...c[i], credit:Number(val||0)}; setSheetRows(c); }} style={{ width: '100%' }} />) }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="key"
+                scroll={{ x: 1700 }}
+              />
+              {/* Removed separate totals row (set cash/yesterday) per request */}
+            </Card>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Card size="small" title="Salary">
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <span>Employee:</span>
+                  <Select
+                    placeholder="Select employee"
+                    value={selectedEmployeeForSalary}
+                    onChange={setSelectedEmployeeForSalary}
+                    style={{ width: 200 }}
+                  >
+                    {employees.map(emp => (
+                      <Option key={emp.employeeId} value={emp.employeeId}>{emp.name}</Option>
+                    ))}
+                  </Select>
+                </Space>
+              </div>
+              <Table
+                dataSource={salaryRows.map((r, i) => ({ key: i, ...r }))}
+                columns={[
+                  { title: 'item', dataIndex: 'item', key: 'item', render: (v, r, i) => (
+                    <Select
+                      showSearch
+                      placeholder="Select item"
+                      value={v || undefined}
+                      onChange={(val)=>{ const copy=[...salaryRows]; copy[i]={...copy[i], item:val}; setSalaryRows(copy); }}
+              style={{ width: '100%' }}
+                      optionFilterProp="children"
+                      allowClear
+                    >
+                      {items.map(it => (
+                        <Option key={it._id} value={it.name}>{it.name}</Option>
+                      ))}
+                    </Select>
+                  ) },
+                  { title: 'amount', dataIndex: 'amount', key: 'amount', render: (v, r, i) => <InputNumber value={v} onChange={val => {
+                    const copy=[...salaryRows]; copy[i]={...copy[i], amount:Number(val||0)}; setSalaryRows(copy);
+                  }} style={{ width: '100%' }} /> },
+                  { title: 'op', key: 'op', render: (_, __, i) => <Button size="small" danger onClick={()=>{ const copy=[...salaryRows]; copy.splice(i,1); setSalaryRows(copy); }}>Delete</Button> }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="key"
+              />
+              <div style={{ marginTop: 8 }}>
+                <Space>
+                  <Button size="small" onClick={() => setSalaryRows(prev => [...prev, { item:'', amount:0 }])}>Add</Button>
+                  <div>
+                    <strong>Total:</strong> Rs. {sheetTotals.salaryTotal.toLocaleString()}
+                    {selectedEmployeeForSalary && employees.find(emp => emp.employeeId === selectedEmployeeForSalary)?.pendingSalary > 0 && (
+                      <span style={{ color: '#1890ff', fontSize: '12px', marginLeft: '8px' }}>
+                        (includes Rs. {(employees.find(emp => emp.employeeId === selectedEmployeeForSalary)?.pendingSalary || 0).toLocaleString()} pending)
+                      </span>
+                    )}
+                  </div>
+                  {salaryPaid && (
+                    <div style={{ color: salaryPaymentMethod === 'balance' ? '#52c41a' : '#1890ff' }}>
+                      <strong>
+                        {salaryPaymentMethod === 'balance' ? '✓ Deducted from Balance' : '✓ Added to Pending Salary'}
+                      </strong>
+                    </div>
+                  )}
+                  {!salaryPaid && (
+                    <>
+                      <Button type="primary" size="small" onClick={() => {
+                        if (!selectedEmployeeForSalary) {
+                          message.error('Please select an employee first');
+                          return;
+                        }
+                        setSalaryPaymentMethod('balance');
+                        // Deduct FULL amount (current rows + pending)
+                        setSalaryAmount(sheetTotals.salaryTotal || 0);
+                        setSalaryPaymentModalVisible(true);
+                      }}>Deduct from Balance</Button>
+                      <Button type="primary" size="small" onClick={() => {
+                        if (!selectedEmployeeForSalary) {
+                          message.error('Please select an employee first');
+                          return;
+                        }
+                        setSalaryPaymentMethod('salary');
+                        setSalaryAmount(sheetTotals.salaryFromRows || 0);
+                        setSalaryPaymentModalVisible(true);
+                      }}>Add to Pending Salary</Button>
+                    </>
+                  )}
+                </Space>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Card size="small" title="Expenses">
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <span>Employee:</span>
+                  <Select
+                    placeholder="Select employee"
+                    value={selectedEmployeeForExpense}
+                    onChange={setSelectedEmployeeForExpense}
+                    style={{ width: 200 }}
+                  >
+                    {employees.map(emp => (
+                      <Option key={emp.employeeId} value={emp.employeeId}>{emp.name}</Option>
+                    ))}
+                  </Select>
+                </Space>
+              </div>
+        <Table
+                dataSource={expenseRows.map((r,i)=>({ key:i, ...r }))}
+                columns={[
+                  { title: 'Expenses', dataIndex: 'expense', key: 'expense', render: (v, r, i) => <Input value={v} onChange={e => { const copy=[...expenseRows]; copy[i]={...copy[i], expense:e.target.value}; setExpenseRows(copy); }} /> },
+                  { title: 'cost', dataIndex: 'cost', key: 'cost', render: (v, r, i) => <InputNumber value={v} onChange={val => { const copy=[...expenseRows]; copy[i]={...copy[i], cost:Number(val||0)}; setExpenseRows(copy); }} style={{ width:'100%' }} /> },
+                  { title: 'op', key: 'op', render: (_, __, i) => <Button size="small" danger onClick={()=>{ const copy=[...expenseRows]; copy.splice(i,1); setExpenseRows(copy); }}>Delete</Button> }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="key"
+              />
+              <div style={{ marginTop: 8 }}>
+                <Space>
+                  <Button size="small" onClick={() => setExpenseRows(prev => [...prev, { expense:'', cost:0 }])}>Add</Button>
+                  <div><strong>Total:</strong> Rs. {sheetTotals.expenseTotal.toLocaleString()}</div>
+                  {expensesSaved && (
+                    <div style={{ color: '#52c41a' }}>
+                      <strong>✓ Expenses Saved</strong>
+                    </div>
+                  )}
+                  {!expensesSaved && (
+                    <Button type="primary" size="small" onClick={saveExpenses}>Save Expenses</Button>
+                  )}
+                </Space>
+              </div>
+      </Card>
+          </Col>
+          <Col xs={24}>
+            <Card size="small">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14 }}><strong>Balance:</strong> Rs. {sheetTotals.balance.toLocaleString()}</div>
             <Button 
               type="primary" 
-              icon={<PlusOutlined />}
-              onClick={handleAddLog}
-              style={{ width: '100%' }}
+                  onClick={saveVehicleSheet}
+                  style={{ marginLeft: 16 }}
             >
-              Add Vehicle Log
+                  Save All
             </Button>
+              </div>
+            </Card>
           </Col>
         </Row>
-
-        <Table
-          dataSource={vehicleLogs}
-          columns={vehicleLogColumns}
-          pagination={{
-            ...pagination,
-            onChange: (page, pageSize) => {
-              setPagination(prev => ({ ...prev, current: page, pageSize }));
-            },
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-          loading={loading}
-          rowKey="_id"
-          scroll={{ x: 1200 }}
-        />
-      </Card>
+      </Modal>
     </div>
   );
 
   const renderReports = () => {
     // Debug calculations
     const totalExpenses = vehicleLogs.reduce((sum, log) => {
-      const logExpenses = log.expenses?.reduce((logSum, expense) => logSum + expense.amount, 0) || 0;
-      return sum + logExpenses + (log.payments?.total || 0);
+      const logExpenses = log.expenses?.reduce((logSum, expense) => {
+        // Exclude salary from expenses
+        if (expense.description && expense.description.toLowerCase().includes('salary')) {
+          return logSum;
+        }
+        return logSum + expense.amount;
+      }, 0) || 0;
+      return sum + logExpenses;
     }, 0);
     
     const fuelExpenses = vehicleLogs.reduce((sum, log) => {
@@ -1835,14 +2397,7 @@ const ConstructionAdminDashboard = () => {
             { title: 'Phone', dataIndex: 'phone', key: 'phone' },
             { title: 'Email', dataIndex: 'email', key: 'email' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
-            { title: 'Credit Limit', dataIndex: 'creditLimit', key: 'creditLimit', 
-              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
-            { title: 'Total Credit', dataIndex: 'totalCredit', key: 'totalCredit',
-              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
-            { title: 'Total Paid', dataIndex: 'totalPaid', key: 'totalPaid',
-              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
-            { title: 'Remaining Credit', dataIndex: 'remainingCredit', key: 'remainingCredit',
-              render: (value) => `Rs. ${value?.toLocaleString() || 0}` },
+            
             { title: 'Status', dataIndex: 'status', key: 'status',
               render: (status) => (
                 <Tag color={status === 'active' ? 'green' : status === 'inactive' ? 'red' : 'orange'} size="small">
@@ -1982,45 +2537,20 @@ const ConstructionAdminDashboard = () => {
               title="Total Pending Credit"
               value={creditOverview.reduce((sum, customer) => sum + customer.remainingCredit, 0)}
               prefix="Rs."
-              valueStyle={{ color: '#cf1322' }}
+              valueStyle={{ color: '#ff4d4f' }}
             />
             <Divider />
             <Statistic
-              title="Customers with Pending Credit"
+              title="Customers with Credit"
               value={creditOverview.length}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Quick Actions" size="small">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  creditPaymentForm.resetFields();
-                  setCreditPaymentModalVisible(true);
-                }}
-                style={{ width: '100%' }}
-              >
-                Record Credit Payment
-              </Button>
-              <Button 
-                type="default" 
-                icon={<UserOutlined />}
-                onClick={() => setSelectedSection('customers')}
-                style={{ width: '100%' }}
-              >
-                Manage Customers
-              </Button>
-            </Space>
-          </Card>
-        </Col>
       </Row>
 
-      <Card title="Pending Credit Details" style={{ marginTop: 16 }}>
+      <Card title="Credit Details" style={{ marginTop: 16 }}>
         <Table
           dataSource={creditOverview}
           columns={[
@@ -2160,6 +2690,69 @@ const ConstructionAdminDashboard = () => {
           scroll={{ x: 1200 }}
         />
       </Card>
+
+      <Card title="Credit History" style={{ marginTop: 16 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 12 }}>
+          <Col xs={24} sm={8}>
+            <Select
+              allowClear
+              showSearch
+              placeholder="Filter by customer"
+              style={{ width: '100%' }}
+              optionFilterProp="children"
+              onChange={(val) => setFilters(prev => ({ ...prev, creditHistoryCustomer: val }))}
+              filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+            >
+              {customers.map(c => (
+                <Option key={c._id} value={c.name}>{c.name}</Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Input
+              placeholder="Search notes or reference"
+              prefix={<SearchOutlined />}
+              onChange={(e) => setFilters(prev => ({ ...prev, creditHistoryQuery: e.target.value }))}
+            />
+          </Col>
+        </Row>
+        <Table
+          bordered
+          dataSource={creditPayments.filter(p => {
+            const byCustomer = !filters.creditHistoryCustomer || p.customerName === filters.creditHistoryCustomer;
+            const q = (filters.creditHistoryQuery || '').toLowerCase();
+            const byQuery = !q || `${p.referenceNumber || ''} ${p.notes || ''}`.toLowerCase().includes(q);
+            return byCustomer && byQuery;
+          })}
+          columns={[
+            { title: 'Date', dataIndex: 'paymentDate', key: 'paymentDate', sorter: (a,b) => new Date(a.paymentDate) - new Date(b.paymentDate), render: (d) => d ? new Date(d).toLocaleDateString() : '' },
+            { title: 'Customer', key: 'customer', render: (_, r) => r.customerName },
+            { title: 'Payment Method', dataIndex: 'paymentMethod', key: 'paymentMethod', render: (m) => <Tag color={m === 'cash' ? 'green' : m === 'bank_transfer' ? 'blue' : m === 'cheque' ? 'orange' : 'default'}>{(m || '').toUpperCase()}</Tag> },
+            { title: 'Reference', dataIndex: 'referenceNumber', key: 'referenceNumber' },
+            { title: 'Amount', dataIndex: 'paymentAmount', key: 'paymentAmount', sorter: (a,b) => (a.paymentAmount||0) - (b.paymentAmount||0), render: (v) => <strong>{`Rs. ${Number(v || 0).toLocaleString()}`}</strong> },
+            { title: 'Notes', dataIndex: 'notes', key: 'notes' },
+            { title: 'Actions', key: 'actions', render: (_, r) => (
+              <Popconfirm title="Delete this payment?" okText="Yes" cancelText="No" onConfirm={async () => {
+                try {
+                  await api.delete(`/api/construction-admin/credit-payments/${r._id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+                  message.success('Payment deleted');
+                  await loadCreditPayments();
+                  await loadCreditOverview();
+                  await loadVehicleLogs();
+                } catch (e) {
+                  message.error('Failed to delete payment');
+                }
+              }}>
+                <Button danger size="small">Delete</Button>
+              </Popconfirm>
+            ) }
+          ]}
+          pagination={{ pageSize: 10, showSizeChanger: true, showQuickJumper: true }}
+          rowKey={(r) => r._id}
+          size="small"
+          locale={{ emptyText: 'No credit payments recorded' }}
+        />
+      </Card>
     </div>
   );
 
@@ -2197,6 +2790,47 @@ const ConstructionAdminDashboard = () => {
         return renderCustomers();
       case 'items':
         return renderItems();
+      case 'add-vehicle':
+        return (
+          <div>
+            <Card title="Add Vehicle">
+              <Form layout="vertical" form={addVehicleForm} onFinish={handleAddVehicle}>
+                <Row gutter={16}>
+                  <Col xs={24} sm={12} md={8}>
+                    <Form.Item name="vehicleNumber" label="Vehicle Number" rules={[{ required: true, message: 'Enter vehicle number' }]}>
+                      <Input placeholder="e.g., ABC123" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12} md={8} style={{ display: 'flex', alignItems: 'end' }}>
+                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>Add Vehicle</Button>
+                  </Col>
+                </Row>
+              </Form>
+              <Divider />
+              <Title level={5}>Existing Vehicles</Title>
+              <List
+                dataSource={vehiclesDisplay}
+                locale={{ emptyText: 'No vehicles yet' }}
+                renderItem={(v) => (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        type="link" 
+                        danger 
+                        onClick={() => handleDeleteVehicle(v.vehicleNumber)}
+                        icon={<DeleteOutlined />}
+                      >
+                        Delete
+                      </Button>
+                    ]}
+                  >
+                    <Text>{v.vehicleNumber}</Text>
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </div>
+        );
       case 'credit-management':
         return renderCreditManagement();
       case 'reports':
@@ -2205,6 +2839,206 @@ const ConstructionAdminDashboard = () => {
         return renderSettings();
       default:
         return renderDashboard();
+    }
+  };
+
+  const openVehicleSheet = (vehicleNumber) => {
+    setSelectedVehicleForSheet(vehicleNumber);
+    // Start with an empty sheet (only new logs). History is shown via View history.
+    setSheetRows([]);
+    setSalaryRows([]);
+    setExpenseRows([]);
+    setSalaryPaid(false);
+    setExpensesSaved(false);
+    setSelectedEmployeeForSalary('');
+    setSelectedEmployeeForExpense('');
+    setSalaryPaymentMethod('');
+    try {
+      const yesterdayKey = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+      const yCash = vehicleLogs
+        .filter(l => l.vehicleNumber === vehicleNumber && dayjs(l.date).format('YYYY-MM-DD') === yesterdayKey)
+        .reduce((s, l) => s + (l.payments?.cash || 0), 0);
+      setYesterdayBalance(yCash || 0);
+    } catch {}
+    setSetCashTaken(undefined);
+    setVehicleSheetVisible(true);
+  };
+
+  const sheetTotals = (() => {
+    const cashReceived = sheetRows.reduce((s, r) => s + (Number(r.cash) || 0), 0);
+    const setTaken = sheetRows.reduce((s, r) => s + (Number(r.setCash) || 0), 0);
+    
+    // Calculate yesterday balance only once per unique employee-date combination
+    const employeeDateMap = new Map();
+    sheetRows.forEach((row) => {
+      if (row.employeeId && row.date) {
+        const key = `${row.employeeId}-${dayjs(row.date).format('YYYY-MM-DD')}`;
+        if (!employeeDateMap.has(key)) {
+          employeeDateMap.set(key, Number(row.yBal) || 0);
+        }
+      }
+    });
+    const yBalSum = Array.from(employeeDateMap.values()).reduce((sum, val) => sum + val, 0);
+    
+    const total = (Number(cashReceived) || 0) + setTaken + yBalSum;
+    const salaryFromRows = salaryRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const selectedEmployee = employees.find(emp => emp.employeeId === selectedEmployeeForSalary);
+    const pendingSalary = selectedEmployee ? (selectedEmployee.pendingSalary || 0) : 0;
+    // Display total includes pending salary, but operational deductions should use only current rows
+    const salaryTotal = salaryFromRows + pendingSalary;
+    const expenseTotal = expenseRows.reduce((s, r) => s + (Number(r.cost) || 0), 0);
+    
+    // Only deduct salary from balance if it's been marked as "Deduct from Balance"
+    // If it's "Add to Pending Salary", it doesn't affect current balance
+    const salaryToDeduct = salaryPaid && salaryPaymentMethod === 'balance' ? salaryFromRows : 0;
+    const balance = total - expenseTotal - salaryToDeduct;
+    
+    return { cashReceived, total, salaryTotal, salaryFromRows, expenseTotal, balance };
+  })();
+
+  const markSalaryPaid = async () => {
+    try {
+      // Save salary to employee wallet
+      if (salaryRows.length > 0) {
+        const totalSalary = salaryRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+        if (totalSalary > 0) {
+          // Update employee wallet balance
+          const employeeId = sheetRows[0]?.employeeId; // Assuming all rows are for same employee
+          if (employeeId) {
+            await api.post(`/api/construction-admin/employees/${employeeId}/wallet`, {
+              amount: totalSalary,
+              type: 'salary',
+              description: 'Salary payment'
+            }, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+          }
+        }
+      }
+      setSalaryPaid(true);
+      message.success('Salary marked as paid and saved to employee wallet');
+    } catch (error) {
+      message.error('Failed to save salary');
+    }
+  };
+
+  const saveExpenses = async () => {
+    try {
+      if (!selectedEmployeeForExpense) {
+        message.error('Please select an employee first');
+        return;
+      }
+      if (expenseRows.length > 0) {
+        const totalExpenses = expenseRows.reduce((sum, row) => sum + (Number(row.cost) || 0), 0);
+        if (totalExpenses > 0) {
+          // Update employee wallet balance (subtract expenses)
+          await api.post(`/api/construction-admin/employees/${selectedEmployeeForExpense}/wallet`, {
+            amount: -totalExpenses,
+            type: 'expense',
+            description: 'Expenses deducted'
+          }, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+        }
+      }
+      setExpensesSaved(true);
+      message.success('Expenses saved to employee wallet');
+    } catch (error) {
+      message.error('Failed to save expenses');
+    }
+  };
+
+  const computeEmployeeYesterdayBalance = (employeeId, baseDate) => {
+    try {
+      if (!employeeId) return 0;
+      const logDate = baseDate ? dayjs(baseDate) : dayjs();
+      
+      // Get all previous logs for this employee, sorted by date
+      const previousLogs = vehicleLogs
+        .filter(l => l.employeeId === employeeId && dayjs(l.date).isBefore(logDate))
+        .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
+      
+      // Calculate running balance from all previous logs
+      let runningBalance = 0;
+      previousLogs.forEach(log => {
+        const cash = log.payments?.cash || 0;
+        const setCash = log.setCashTaken || 0;
+        const expenses = (log.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+        const salaryDeducted = log.salaryDeductedFromBalance || 0;
+        
+        runningBalance += cash + setCash - expenses - salaryDeducted;
+      });
+      
+      return runningBalance;
+    } catch { return 0; }
+  };
+
+  const saveVehicleSheet = async () => {
+    try {
+      console.log('Salary rows:', salaryRows);
+      console.log('Expense rows:', expenseRows);
+      console.log('Set cash taken:', setCashTaken);
+      console.log('Yesterday balance:', yesterdayBalance);
+      
+      // Build common expenses from the expenses table ONLY (do not duplicate across rows)
+      // Set Cash and Yesterday Balance are not treated as expenses and will not be added here
+      const commonExpenses = expenseRows.map(e => ({ description: e.expense, amount: Number(e.cost||0) }));
+      
+      console.log('Common expenses:', commonExpenses);
+      console.log('Expense rows total:', expenseRows.reduce((s, r) => s + (Number(r.cost) || 0), 0));
+
+      const smsSuggestions = [];
+
+      for (let i = 0; i < sheetRows.length; i += 1) {
+        const row = sheetRows[i];
+        if (!row) continue;
+        const isFirstRow = i === 0; // only attach common expenses once to avoid double counting
+        const payload = {
+          date: row.date || new Date(),
+          employeeId: row.employeeId,
+          employeeName: row.employee,
+          vehicleNumber: selectedVehicleForSheet,
+          startPlace: row.from,
+          endPlace: row.to,
+          startMeter: row.startKm,
+          endMeter: row.endKm,
+          itemsLoading: row.item ? [row.item] : [],
+          customerName: row.customer,
+          payments: { cash: row.cash || 0, credit: row.credit || 0 },
+          // Attach expenses only on the first row to prevent duplication across multiple logs
+          expenses: isFirstRow ? commonExpenses : [],
+          salary: salaryRows.map(s => ({ item: s.item, amount: Number(s.amount||0) })),
+          setCashTaken: row.setCash || 0,
+          yesterdayBalance: row.yBal || 0,
+          salaryDeductedFromBalance: row.salaryDeductedFromBalance || 0
+        };
+        console.log('Saving vehicle log payload:', payload);
+        const response = await api.post('/api/construction-admin/vehicle-logs', payload, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+        
+        // Collect SMS suggestions
+        if (response.data.suggestSMS) {
+          const found = customers.find(c => c.name === response.data.customerName);
+          smsSuggestions.push({
+            customerName: response.data.customerName,
+            phone: row.customerPhone || found?.phone || ''
+          });
+        }
+      }
+      message.success('Vehicle sheet saved successfully');
+      await loadVehicleLogs();
+      
+      // Show SMS suggestions if any (and stop here so the sheet doesn't reopen over the modal)
+      if (smsSuggestions.length > 0) {
+        const firstSuggestion = smsSuggestions[0];
+        setSmsCustomerName(firstSuggestion.customerName);
+        setSmsCustomerPhone(firstSuggestion.phone);
+        setSmsModalVisible(true);
+        return;
+      }
+
+      // Refresh vehicle history if it's currently open
+      if (selectedVehicle) {
+        await loadVehicleHistory(selectedVehicle);
+      }
+      if (selectedVehicleForSheet) openVehicleSheet(selectedVehicleForSheet);
+    } catch (e) {
+      message.error('Save failed');
     }
   };
 
@@ -2257,6 +3091,7 @@ const ConstructionAdminDashboard = () => {
         onCancel={() => setModalVisible(false)}
         footer={null}
         width={800}
+        zIndex={1000}
       >
         <Form
           form={form}
@@ -2273,7 +3108,7 @@ const ConstructionAdminDashboard = () => {
                 label="Employee"
                 rules={[{ required: true, message: 'Please select employee' }]}
               >
-                <Select placeholder="Select employee">
+                <Select placeholder="Select employee" disabled={lockEmployeeField}>
                   {employees.map(employee => (
                     <Option key={employee.employeeId} value={employee.employeeId}>
                       {employee.name} ({employee.employeeId})
@@ -2286,9 +3121,15 @@ const ConstructionAdminDashboard = () => {
               <Form.Item
                 name="vehicleNumber"
                 label="Vehicle Number"
-                rules={[{ required: true, message: 'Please enter vehicle number' }]}
+                rules={[{ required: true, message: 'Please select vehicle number' }]}
               >
-                <Input placeholder="e.g., 1J0611" />
+                <Select placeholder="Select vehicle number" showSearch allowClear filterOption={(input, option) => option?.children?.toLowerCase?.().includes(input.toLowerCase())}>
+                  {vehicles.map(v => (
+                    <Option key={typeof v === 'string' ? v : v.vehicleNumber} value={typeof v === 'string' ? v : v.vehicleNumber}>
+                      {typeof v === 'string' ? v : v.vehicleNumber}
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -2498,51 +3339,38 @@ const ConstructionAdminDashboard = () => {
             </Col>
           </Row>
 
-          <Divider>Fuel</Divider>
+          <Divider>Meters</Divider>
 
           <Row gutter={16}>
-            <Col xs={24} sm={6}>
-              <Form.Item name={['fuel', 'liters']} label="Fuel (L)">
-                <InputNumber style={{ width: '100%' }} placeholder="Liters" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item name={['fuel', 'startMeter']} label="Start Meter">
+            <Col xs={24} sm={8}>
+              <Form.Item name="startMeter" label="Start Meter">
                 <InputNumber 
                   style={{ width: '100%' }} 
                   placeholder="Start meter"
                   onChange={(value) => {
-                    const endMeter = form.getFieldValue(['fuel', 'endMeter']) || 0;
-                    if (value && endMeter) {
-                      const totalKm = endMeter - value;
-                      form.setFieldsValue({ fuel: { ...form.getFieldValue('fuel'), totalKm } });
-                    }
+                    const endMeter = form.getFieldValue('endMeter') || 0;
+                    const workingKm = (endMeter && value) ? Math.max(endMeter - value, 0) : 0;
+                    form.setFieldsValue({ workingKm });
                   }}
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item name={['fuel', 'endMeter']} label="End Meter">
+            <Col xs={24} sm={8}>
+              <Form.Item name="endMeter" label="End Meter">
                 <InputNumber 
                   style={{ width: '100%' }} 
                   placeholder="End meter"
                   onChange={(value) => {
-                    const startMeter = form.getFieldValue(['fuel', 'startMeter']) || 0;
-                    if (value && startMeter) {
-                      const totalKm = value - startMeter;
-                      form.setFieldsValue({ fuel: { ...form.getFieldValue('fuel'), totalKm } });
-                    }
+                    const startMeter = form.getFieldValue('startMeter') || 0;
+                    const workingKm = (startMeter && value) ? Math.max(value - startMeter, 0) : 0;
+                    form.setFieldsValue({ workingKm });
                   }}
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item name={['fuel', 'totalKm']} label="Total (KM)">
-                <InputNumber 
-                  style={{ width: '100%' }} 
-                  placeholder="Auto-calculated"
-                  disabled
-                />
+            <Col xs={24} sm={8}>
+              <Form.Item name="workingKm" label="Total (KM)">
+                <InputNumber style={{ width: '100%' }} placeholder="Total KM" disabled />
               </Form.Item>
             </Col>
           </Row>
@@ -2750,19 +3578,7 @@ const ConstructionAdminDashboard = () => {
             </Col>
           </Row>
 
-          <Divider>Assigned Vehicles</Divider>
-
-          <Form.Item name="assignedVehicles" label="Assigned Vehicles">
-            <Select
-              mode="multiple"
-              placeholder="Select vehicles"
-              style={{ width: '100%' }}
-            >
-              {vehicles.map(vehicle => (
-                <Option key={vehicle} value={vehicle}>{vehicle}</Option>
-              ))}
-            </Select>
-          </Form.Item>
+          
 
           <Divider>Duties</Divider>
 
@@ -2858,57 +3674,55 @@ const ConstructionAdminDashboard = () => {
            setVehicleHistory(null);
          }}
          footer={null}
-         width={1200}
+         width={1300}
        >
          {vehicleHistory && (
            <div>
-             <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-               <Col xs={24} md={8}>
-                 <Card title="Vehicle Info" size="small">
-                   <p><strong>Vehicle Number:</strong> {selectedVehicle}</p>
-                   <p><strong>Total Trips:</strong> {vehicleHistory.statistics.totalTrips}</p>
-                   <p><strong>Total KM:</strong> {vehicleHistory.statistics.totalKm}</p>
-                   <p><strong>Total Fuel:</strong> {vehicleHistory.statistics.totalFuel}L</p>
-                   <p><strong>Total Expenses:</strong> Rs. {vehicleHistory.statistics.totalExpenses}</p>
-                 </Card>
-               </Col>
-               <Col xs={24} md={8}>
-                 <Card title="Assigned Employees" size="small">
-                   {vehicleHistory.assignedEmployees?.map(employee => (
-                     <Tag key={employee._id} style={{ margin: 2 }}>
-                       {employee.name} ({employee.employeeId})
-                     </Tag>
-                   ))}
-                 </Card>
-               </Col>
-               <Col xs={24} md={8}>
-                 <Card title="Quick Actions" size="small">
-                   <Button 
-                     type="primary" 
-                     icon={<PlusOutlined />}
-                     onClick={() => {
-                       setSelectedVehicle(null);
-                       setVehicleHistory(null);
-                       form.setFieldsValue({ vehicleNumber: selectedVehicle });
-                       setModalVisible(true);
-                     }}
-                     style={{ width: '100%', marginBottom: 8 }}
-                   >
-                     Add Log for This Vehicle
-                   </Button>
-                 </Card>
-               </Col>
-             </Row>
-
              <Card title="Vehicle Log History">
-               <Table
-                 dataSource={vehicleHistory.logs}
-                 columns={vehicleLogColumns.filter(col => col.key !== 'actions')}
-                 pagination={false}
-                 size="small"
-                 rowKey="_id"
-                 scroll={{ x: 1000 }}
-               />
+               <div style={{ marginBottom: 16 }}>
+                 <Button 
+                   type="primary" 
+                   onClick={() => loadVehicleHistory(selectedVehicle)}
+                   icon={<SearchOutlined />}
+                 >
+                   Refresh History
+                 </Button>
+               <Button 
+                 style={{ marginLeft: 8 }}
+                 onClick={() => {
+                   setSelectedVehicle(null); // Close history modal
+                   setVehicleHistory(null);
+                   setSelectedSection('vehicle-logs'); // Navigate to Vehicle Logs tab
+                 }}
+                 icon={<PlusOutlined />}
+               >
+                 Add Vehicle Log
+               </Button>
+               </div>
+              <Table
+                dataSource={vehicleHistory.logs}
+                columns={[
+                  ...vehicleLogColumns.filter(col => col.key !== 'actions'),
+                  {
+                    title: 'Export',
+                    key: 'export',
+                    width: 80,
+                    render: (_, record) => (
+                      <Button 
+                        type="default" 
+                        size="small" 
+                        icon={<DownloadOutlined />}
+                        onClick={() => exportVehicleLogAsPDF(record)}
+                        title="Export as PDF"
+                      />
+                    ),
+                  }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="_id"
+                scroll={{ x: 1300 }}
+              />
              </Card>
            </div>
          )}
@@ -2958,14 +3772,7 @@ const ConstructionAdminDashboard = () => {
                  <Input placeholder="Email address" />
                </Form.Item>
              </Col>
-             <Col xs={24} sm={12}>
-               <Form.Item
-                 name="creditLimit"
-                 label="Credit Limit"
-               >
-                 <InputNumber style={{ width: '100%' }} placeholder="Credit limit amount" />
-               </Form.Item>
-             </Col>
+            
            </Row>
 
            <Form.Item name="address" label="Address">
@@ -3236,6 +4043,174 @@ const ConstructionAdminDashboard = () => {
     </Form.Item>
   </Form>
 </Modal>
+
+{/* Salary Payment Modal */}
+<Modal
+  title={`${salaryPaymentMethod === 'balance' ? 'Deduct from Balance' : 'Add to Pending Salary'}`}
+  open={salaryPaymentModalVisible}
+  onCancel={() => setSalaryPaymentModalVisible(false)}
+  zIndex={2000}
+  onOk={async () => {
+    try {
+      if (salaryPaymentMethod === 'balance') {
+        // Deduct from employee wallet balance
+        await api.post(`/api/construction-admin/employees/${selectedEmployeeForSalary}/wallet`, {
+          amount: -salaryAmount,
+          type: 'salary_deduction',
+          description: 'Salary deducted from balance'
+        }, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+        
+        // Update all current sheet rows to track salary deducted from balance
+        const updatedRows = sheetRows.map(row => ({
+          ...row,
+          salaryDeductedFromBalance: salaryAmount
+        }));
+        setSheetRows(updatedRows);
+        
+        message.success('Salary deducted from employee balance');
+        setSalaryPaid(true); // Mark as paid so it affects balance
+      } else {
+        // Add to pending salary (tracked separately)
+        await api.post(`/api/construction-admin/employees/${selectedEmployeeForSalary}/pending-salary`, {
+          amount: salaryAmount,
+          description: 'Pending salary added'
+        }, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+        message.success('Salary added to pending salary');
+        setSalaryPaid(false); // Don't mark as paid so it doesn't affect current balance
+        
+        // Add to salaryRows for vehicle log saving
+        const salaryItem = salaryRows.find(s => s.item && s.amount > 0);
+        if (salaryItem) {
+          setSalaryRows([salaryItem]); // Keep the salary item for saving
+        }
+      }
+      setSalaryPaymentModalVisible(false);
+    } catch (error) {
+      message.error('Failed to process salary payment');
+    }
+  }}
+>
+  <div>
+    <p><strong>Employee:</strong> {employees.find(emp => emp.employeeId === selectedEmployeeForSalary)?.name}</p>
+    <p><strong>Amount:</strong> Rs. {salaryAmount.toLocaleString()}</p>
+    <p><strong>Method:</strong> {salaryPaymentMethod === 'balance' ? 'Deduct from Balance' : 'Add to Pending Salary'}</p>
+    {salaryPaymentMethod === 'salary' && (
+      <div style={{ marginTop: 16 }}>
+        <label>Amount to add to pending salary:</label>
+        <InputNumber
+          value={salaryAmount}
+          onChange={setSalaryAmount}
+          style={{ width: '100%', marginTop: 8 }}
+          formatter={value => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/Rs.\s?|(,*)/g, '')}
+        />
+      </div>
+    )}
+  </div>
+</Modal>
+
+{/* Wallet Modal */}
+<Modal
+  title={`Wallet Details - ${selectedEmployeeForWallet?.name}`}
+  open={walletModalVisible}
+  onCancel={() => setWalletModalVisible(false)}
+  footer={[
+    <Button key="close" onClick={() => setWalletModalVisible(false)}>
+      Close
+    </Button>
+  ]}
+  width={600}
+  zIndex={1500}
+>
+  <div style={{ marginBottom: 20 }}>
+    <Row gutter={[16, 16]}>
+      <Col span={12}>
+        <Card size="small" title="Pending Salary">
+          <div style={{ fontSize: 24, fontWeight: 'bold', color: selectedEmployeeForWallet?.pendingSalary > 0 ? '#1890ff' : '#8c8c8c' }}>
+            Rs. {Number(selectedEmployeeForWallet?.pendingSalary || 0).toLocaleString()}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Space.Compact style={{ width: '100%' }}>
+              <InputNumber
+                min={1}
+                placeholder="Amount"
+                style={{ width: '60%' }}
+                value={walletMarkPaidAmount}
+                onChange={setWalletMarkPaidAmount}
+              />
+              <Button type="primary" onClick={async () => {
+                if (!selectedEmployeeForWallet) return;
+                const amt = Number(walletMarkPaidAmount || 0);
+                if (!amt || amt <= 0) { message.error('Enter amount'); return; }
+                try {
+                  await api.post(`/api/construction-admin/employees/${selectedEmployeeForWallet.employeeId}/mark-salary-paid`, { amount: amt }, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+                  message.success('Marked as paid');
+                  await loadEmployees();
+                  await loadWalletHistory(selectedEmployeeForWallet.employeeId);
+                  setWalletMarkPaidAmount(undefined);
+                } catch {
+                  message.error('Failed to mark paid');
+                }
+              }}>Mark Paid</Button>
+            </Space.Compact>
+          </div>
+        </Card>
+      </Col>
+      <Col span={12}>
+        <Card size="small" title="Yesterday Balance">
+          <div style={{ fontSize: 24, fontWeight: 'bold', color: selectedEmployeeForWallet?.yesterdayBalance >= 0 ? '#52c41a' : '#ff4d4f' }}>
+            Rs. {Number(selectedEmployeeForWallet?.yesterdayBalance || 0).toLocaleString()}
+          </div>
+        </Card>
+      </Col>
+    </Row>
+  </div>
+  
+  {/* Removed Last Salary Payment card per request */}
+</Modal>
+
+     {/* SMS Modal */}
+     <Modal
+       title="Send Thank You Message"
+       open={smsModalVisible}
+       onCancel={() => {
+         setSmsModalVisible(false);
+         setSmsCustomerName('');
+         setSmsCustomerPhone('');
+       }}
+       footer={[
+         <Button key="cancel" onClick={() => {
+           setSmsModalVisible(false);
+           setSmsCustomerName('');
+           setSmsCustomerPhone('');
+         }}>
+           Skip
+         </Button>,
+         <Button key="send" type="primary" onClick={sendSMS}>
+           Send SMS
+         </Button>
+       ]}
+     >
+       <div style={{ padding: '20px 0' }}>
+         <p style={{ marginBottom: '16px', fontSize: '16px' }}>
+           Customer <strong>{smsCustomerName}</strong> didn't use credit. Would you like to send a thank you message?
+         </p>
+         <p style={{ marginBottom: '20px', color: '#666' }}>
+           Message: "Thank you for contacting AKR Construction. Contact 0773111226 for any inquiries."
+         </p>
+         <div>
+           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+             Customer Phone Number:
+           </label>
+           <Input
+             placeholder="Enter phone number (e.g., 0771234567)"
+             value={smsCustomerPhone}
+             onChange={(e) => setSmsCustomerPhone(e.target.value)}
+             style={{ width: '100%' }}
+           />
+         </div>
+       </div>
+     </Modal>
      </Layout>
    );
    };

@@ -1,13 +1,16 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const ConstructionAdmin = require('../models/ConstructionAdmin');
 const VehicleLog = require('../models/VehicleLog');
+const Vehicle = require('../models/Vehicle');
 const Employee = require('../models/Employee');
 const Customer = require('../models/Customer');
 const Item = require('../models/Item');
 const CreditPayment = require('../models/CreditPayment');
+const smsService = require('../utils/smsService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -60,11 +63,17 @@ router.get('/dashboard', requireConstructionAdmin, async (req, res) => {
     const totalVehicles = (await VehicleLog.distinct('vehicleNumber')).length;
     const totalEmployees = await Employee.countDocuments({ status: 'active' });
     
-    // Calculate total expenses for the month
+    // Calculate total expenses for the month (excluding salary)
     const monthlyLogs = await VehicleLog.find({ date: { $gte: monthStart } });
     const totalExpenses = monthlyLogs.reduce((sum, log) => {
-      const logExpenses = log.expenses.reduce((logSum, expense) => logSum + expense.amount, 0);
-      return sum + logExpenses + (log.payments.total || 0);
+      const logExpenses = log.expenses.reduce((logSum, expense) => {
+        // Exclude salary from expenses
+        if (expense.description && expense.description.toLowerCase().includes('salary')) {
+          return logSum;
+        }
+        return logSum + expense.amount;
+      }, 0);
+      return sum + logExpenses;
     }, 0);
     
     // Calculate credit information
@@ -104,6 +113,31 @@ router.get('/dashboard', requireConstructionAdmin, async (req, res) => {
     
     const recentLogs = await VehicleLog.find().sort({ date: -1 }).limit(5);
     const recentEmployees = await Employee.find({ status: 'active' }).sort({ createdAt: -1 }).limit(5);
+
+    // Build: last three logs for each employee
+    const allActiveEmployees = await Employee.find({ status: 'active' }).select('employeeId name').lean();
+    const lastThreeLogsByEmployee = {};
+    for (const emp of allActiveEmployees) {
+      const logs = await VehicleLog.find({ employeeId: emp.employeeId }).sort({ date: -1 }).limit(3).lean();
+      lastThreeLogsByEmployee[emp.employeeId] = { employee: emp, logs };
+    }
+
+    // Build: credit summary overview (pending only)
+    const creditLogs = await VehicleLog.find({ 'payments.credit': { $gt: 0 } }).sort({ date: -1 }).lean();
+    const creditSummaryMap = new Map();
+    creditLogs.forEach(l => {
+      const key = (l.customerName || 'Unknown').trim();
+      const prev = creditSummaryMap.get(key) || { customerName: key, remainingCredit: 0, lastEmployeeName: l.employeeName, lastEmployeeId: l.employeeId, lastDate: l.date };
+      const remaining = Math.max((l.payments?.credit || 0) - (l.payments?.creditPaidAmount || 0), 0);
+      prev.remainingCredit += remaining;
+      if (l.date && (!prev.lastDate || l.date > prev.lastDate)) {
+        prev.lastDate = l.date;
+        prev.lastEmployeeName = l.employeeName;
+        prev.lastEmployeeId = l.employeeId;
+      }
+      creditSummaryMap.set(key, prev);
+    });
+    const creditSummary = Array.from(creditSummaryMap.values()).filter(c => c.remainingCredit > 0);
     
     res.json({
       totalLogsToday,
@@ -116,7 +150,9 @@ router.get('/dashboard', requireConstructionAdmin, async (req, res) => {
       totalPayments,
       creditOverview,
       recentLogs,
-      recentEmployees
+      recentEmployees,
+      lastThreeLogsByEmployee,
+      creditSummary
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -159,6 +195,7 @@ router.get('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
 // POST /api/construction-admin/vehicle-logs
 router.post('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
   try {
+    console.log('Received vehicle log data:', req.body);
     const vehicleLog = new VehicleLog(req.body);
     
     // Auto-calculate working kilometers if start and end meters are provided
@@ -185,8 +222,87 @@ router.post('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
       }
     }
     
+    // Calculate yesterday balance (running balance from all previous logs)
+    // Only calculate if not provided from frontend (for vehicle sheet)
+    if (vehicleLog.employeeId && vehicleLog.date && vehicleLog.yesterdayBalance === undefined) {
+      const logDate = new Date(vehicleLog.date);
+      
+      // Get all previous logs for this employee, sorted by date
+      const previousLogs = await VehicleLog.find({
+        employeeId: vehicleLog.employeeId,
+        date: { $lt: logDate }
+      }).sort({ date: 1 });
+      
+      // Calculate running balance from all previous logs
+      let runningBalance = 0;
+      previousLogs.forEach(log => {
+        const cash = log.payments?.cash || 0;
+        const setCash = log.setCashTaken || 0;
+        // Only include non-salary expenses in balance calculation
+        const expenses = (log.expenses || []).reduce((s, e) => {
+          // Exclude salary from expenses calculation
+          if (e.description && e.description.toLowerCase().includes('salary')) {
+            return s;
+          }
+          return s + (e.amount || 0);
+        }, 0);
+        const salaryDeducted = log.salaryDeductedFromBalance || 0;
+        
+        runningBalance += cash + setCash - expenses - salaryDeducted;
+      });
+      
+      vehicleLog.yesterdayBalance = runningBalance;
+    }
+    
     await vehicleLog.save();
-    res.status(201).json(vehicleLog);
+    console.log('Saved vehicle log:', {
+      _id: vehicleLog._id,
+      vehicleNumber: vehicleLog.vehicleNumber,
+      startPlace: vehicleLog.startPlace,
+      endPlace: vehicleLog.endPlace,
+      itemsLoading: vehicleLog.itemsLoading,
+      customerName: vehicleLog.customerName,
+      setCashTaken: vehicleLog.setCashTaken,
+      yesterdayBalance: vehicleLog.yesterdayBalance
+    });
+
+    // Update employee wallet (only if salary is explicitly deducted from balance)
+    try {
+      if (vehicleLog.employeeId) {
+        const emp = await Employee.findOne({ employeeId: vehicleLog.employeeId });
+        if (emp) {
+          const setCashTaken = Number(req.body.payments?.setCashTaken || 0);
+          const yesterdayBalance = Number(req.body.payments?.yesterdayBalance || 0);
+          const salaryDeductedFromBalance = Number(req.body.salaryDeductedFromBalance || 0);
+          
+          // Only include non-salary expenses in the calculation
+          const expensesTotal = (vehicleLog.expenses || []).reduce((s, e) => {
+            // Exclude salary from expenses calculation
+            if (e.description && e.description.toLowerCase().includes('salary')) {
+              return s;
+            }
+            return s + (e.amount || e.cost || 0);
+          }, 0);
+          
+          // Calculate delta: cash + setCash + yesterdayBalance - expenses - salaryDeductedFromBalance
+          const delta = (Number(vehicleLog.payments?.cash || 0) + setCashTaken + yesterdayBalance) - expensesTotal - salaryDeductedFromBalance;
+          emp.walletBalance = (emp.walletBalance || 0) + delta;
+          await emp.save();
+        }
+      }
+    } catch {}
+
+    // Check if customer didn't use credit and suggest SMS
+    const response = { vehicleLog };
+    
+    if (vehicleLog.customerName && vehicleLog.payments && vehicleLog.payments.credit === 0) {
+      // Customer didn't use credit, suggest sending SMS
+      response.suggestSMS = true;
+      response.customerName = vehicleLog.customerName;
+      response.message = 'Customer did not use credit. Would you like to send a thank you message?';
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -247,6 +363,15 @@ router.delete('/vehicle-logs/:id', requireConstructionAdmin, async (req, res) =>
 // GET /api/construction-admin/vehicles
 router.get('/vehicles', requireConstructionAdmin, async (req, res) => {
   try {
+    // Vehicles from dedicated collection (tolerate empty/missing)
+    let savedVehicles = [];
+    try {
+      savedVehicles = await Vehicle.find().sort({ vehicleNumber: 1 }).lean();
+    } catch (innerErr) {
+      console.error('Vehicle collection fetch failed:', innerErr?.message);
+      savedVehicles = [];
+    }
+
     // Get vehicles from logs
     const logVehicles = await VehicleLog.distinct('vehicleNumber');
     
@@ -254,9 +379,77 @@ router.get('/vehicles', requireConstructionAdmin, async (req, res) => {
     const employeeVehicles = await Employee.distinct('assignedVehicles');
     
     // Combine and remove duplicates
-    const allVehicles = [...new Set([...logVehicles, ...employeeVehicles])];
+    const allVehicleStrings = [...new Set([...logVehicles, ...employeeVehicles])].filter(Boolean);
+
+    // Build a map for saved vehicles by number
+    const byNumber = new Map(savedVehicles.map(v => [v.vehicleNumber, v]));
+
+    // Merge: ensure all string vehicle numbers appear; attach name if saved
+    const merged = Array.from(new Set([...(byNumber ? byNumber.keys() : []), ...allVehicleStrings]))
+      .sort()
+      .map(vn => ({
+        vehicleNumber: vn,
+        name: byNumber.get(vn)?.name || ''
+      }));
+
+    res.json(merged);
+  } catch (error) {
+    console.error('GET /vehicles error:', error);
+    // Fallback: return vehicles from logs and employees only
+    try {
+      const logVehicles = await VehicleLog.distinct('vehicleNumber');
+      const employeeVehicles = await Employee.distinct('assignedVehicles');
+      const allVehicleStrings = [...new Set([...logVehicles, ...employeeVehicles])].filter(Boolean).sort();
+      return res.json(allVehicleStrings.map(vn => ({ vehicleNumber: vn, name: '' })));
+    } catch (fallbackErr) {
+      console.error('Vehicles fallback failed:', fallbackErr);
+    res.status(500).json({ error: error.message });
+    }
+  }
+});
+
+// POST /api/construction-admin/vehicles
+router.post('/vehicles', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { vehicleNumber } = req.body;
+    if (!vehicleNumber || !vehicleNumber.trim()) {
+      return res.status(400).json({ error: 'Vehicle number is required' });
+    }
+    const existing = await Vehicle.findOne({ vehicleNumber: vehicleNumber.trim() });
+    if (existing) {
+      return res.status(409).json({ error: 'Vehicle already exists' });
+    }
+    const vehicle = new Vehicle({ 
+      name: vehicleNumber.trim(), // Set name same as vehicle number
+      vehicleNumber: vehicleNumber.trim() 
+    });
+    await vehicle.save();
+    res.status(201).json(vehicle);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/construction-admin/vehicles/:vehicleNumber
+router.delete('/vehicles/:vehicleNumber', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { vehicleNumber } = req.params;
     
-    res.json(allVehicles);
+    // Check if vehicle exists
+    const vehicle = await Vehicle.findOne({ vehicleNumber });
+    if (!vehicle) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+    
+    // Check if vehicle has any logs
+    const hasLogs = await VehicleLog.findOne({ vehicleNumber });
+    if (hasLogs) {
+      return res.status(400).json({ error: 'Cannot delete vehicle with existing logs. Please delete all logs first.' });
+    }
+    
+    // Delete the vehicle
+    await Vehicle.deleteOne({ vehicleNumber });
+    res.json({ message: 'Vehicle deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -356,8 +549,14 @@ router.get('/employees/:id/history', requireConstructionAdmin, async (req, res) 
     const totalTrips = vehicleLogs.length;
     const totalKm = vehicleLogs.reduce((sum, log) => sum + (log.workingKm || 0), 0);
     const totalExpenses = vehicleLogs.reduce((sum, log) => {
-      const logExpenses = log.expenses.reduce((logSum, expense) => logSum + expense.amount, 0);
-      return sum + logExpenses + (log.payments.total || 0);
+      const logExpenses = log.expenses.reduce((logSum, expense) => {
+        // Exclude salary from expenses
+        if (expense.description && expense.description.toLowerCase().includes('salary')) {
+          return logSum;
+        }
+        return logSum + expense.amount;
+      }, 0);
+      return sum + logExpenses;
     }, 0);
     
     res.json({
@@ -403,6 +602,16 @@ router.get('/vehicles/:vehicleNumber/logs', requireConstructionAdmin, async (req
       .limit(limit * 1)
       .skip((page - 1) * limit);
     
+    console.log(`Found ${logs.length} logs for vehicle ${vehicleNumber}:`, logs.map(l => ({
+      _id: l._id,
+      startPlace: l.startPlace,
+      endPlace: l.endPlace,
+      itemsLoading: l.itemsLoading,
+      customerName: l.customerName,
+      setCashTaken: l.setCashTaken,
+      yesterdayBalance: l.yesterdayBalance
+    })));
+    
     const total = await VehicleLog.countDocuments(query);
     
     // Calculate vehicle statistics
@@ -410,8 +619,14 @@ router.get('/vehicles/:vehicleNumber/logs', requireConstructionAdmin, async (req
     const totalKm = allLogs.reduce((sum, log) => sum + (log.workingKm || 0), 0);
     const totalFuel = allLogs.reduce((sum, log) => sum + (log.fuel?.liters || 0), 0);
     const totalExpenses = allLogs.reduce((sum, log) => {
-      const logExpenses = log.expenses.reduce((logSum, expense) => logSum + expense.amount, 0);
-      return sum + logExpenses + (log.payments.total || 0);
+      const logExpenses = log.expenses.reduce((logSum, expense) => {
+        // Exclude salary from expenses
+        if (expense.description && expense.description.toLowerCase().includes('salary')) {
+          return logSum;
+        }
+        return logSum + expense.amount;
+      }, 0);
+      return sum + logExpenses;
     }, 0);
     
     // Get employees assigned to this vehicle
@@ -479,8 +694,14 @@ router.get('/reports/summary', requireConstructionAdmin, async (req, res) => {
       const totalKm = vehicleLogs.reduce((sum, log) => sum + (log.workingKm || 0), 0);
       const totalFuel = vehicleLogs.reduce((sum, log) => sum + (log.fuel?.liters || 0), 0);
       const totalExpenses = vehicleLogs.reduce((sum, log) => {
-        const logExpenses = log.expenses.reduce((logSum, expense) => logSum + expense.amount, 0);
-        return sum + logExpenses + (log.payments.total || 0);
+        const logExpenses = log.expenses.reduce((logSum, expense) => {
+          // Exclude salary from expenses
+          if (expense.description && expense.description.toLowerCase().includes('salary')) {
+            return logSum;
+          }
+          return logSum + expense.amount;
+        }, 0);
+        return sum + logExpenses;
       }, 0);
       
       vehicleStats.byVehicle[vehicle] = {
@@ -494,8 +715,14 @@ router.get('/reports/summary', requireConstructionAdmin, async (req, res) => {
     
     // Financial statistics
     const totalExpenses = vehicleLogs.reduce((sum, log) => {
-      const logExpenses = log.expenses.reduce((logSum, expense) => logSum + expense.amount, 0);
-      return sum + logExpenses + (log.payments.total || 0);
+      const logExpenses = log.expenses.reduce((logSum, expense) => {
+        // Exclude salary from expenses
+        if (expense.description && expense.description.toLowerCase().includes('salary')) {
+          return logSum;
+        }
+        return logSum + expense.amount;
+      }, 0);
+      return sum + logExpenses;
     }, 0);
     
     const fuelExpenses = vehicleLogs.reduce((sum, log) => {
@@ -515,8 +742,14 @@ router.get('/reports/summary', requireConstructionAdmin, async (req, res) => {
       monthlyData[month].trips++;
       monthlyData[month].totalKm += log.workingKm || 0;
       monthlyData[month].fuel += log.fuel?.liters || 0;
-      const logExpenses = log.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-      monthlyData[month].expenses += logExpenses + (log.payments.total || 0);
+      const logExpenses = log.expenses.reduce((sum, exp) => {
+        // Exclude salary from expenses
+        if (exp.description && exp.description.toLowerCase().includes('salary')) {
+          return sum;
+        }
+        return sum + exp.amount;
+      }, 0);
+      monthlyData[month].expenses += logExpenses;
     });
     
     // Duty breakdown
@@ -668,29 +901,110 @@ router.get('/credit-payments', requireConstructionAdmin, async (req, res) => {
 // POST /api/construction-admin/credit-payments
 router.post('/credit-payments', requireConstructionAdmin, async (req, res) => {
   try {
-    const payment = new CreditPayment({
-      ...req.body,
-      adminId: req.constructionAdmin.username
-    });
+    // Allow recording payments by customerName when customerId is not present (log-only customers)
+    const payload = { ...req.body };
+    // Sanitize customerId: if it's not a valid ObjectId, drop it so schema won't try to cast
+    if (payload.customerId && !mongoose.Types.ObjectId.isValid(payload.customerId)) {
+      delete payload.customerId;
+    }
+    if (!payload.customerId && payload.customerName) {
+      const customer = await Customer.findOne({ name: payload.customerName });
+      if (customer) {
+        payload.customerId = customer._id;
+      }
+    }
+    // New payments should start as 'completed' to be counted in overview, unless explicitly pending
+    const status = payload.status || 'completed';
+    const payment = new CreditPayment({ ...payload, status, adminId: req.constructionAdmin.username });
     await payment.save();
     
     // Update customer's total paid amount
-    const customer = await Customer.findById(req.body.customerId);
-    if (customer) {
-      customer.totalPaid += req.body.paymentAmount;
+    const customer = payment.customerId ? await Customer.findById(payment.customerId) : null;
+    if (customer && status === 'completed' && payment.paymentAmount > 0) {
+      customer.totalPaid += payment.paymentAmount;
       await customer.save();
     }
     
     // Update vehicle log's credit paid amount
-    if (req.body.vehicleLogId) {
-      const vehicleLog = await VehicleLog.findById(req.body.vehicleLogId);
+    if (payment.vehicleLogId) {
+      const vehicleLog = await VehicleLog.findById(payment.vehicleLogId);
       if (vehicleLog) {
-        vehicleLog.payments.creditPaidAmount += req.body.paymentAmount;
+        vehicleLog.payments.creditPaidAmount += payment.paymentAmount;
         await vehicleLog.save();
+      }
+    } else {
+      // No specific log: distribute payment across this customer's unpaid credit logs (by customerName)
+      if (payment.customerName) {
+        let remaining = payment.paymentAmount;
+        const logs = await VehicleLog.find({
+          customerName: payment.customerName,
+          'payments.credit': { $gt: 0 }
+        }).sort({ date: 1 });
+        for (const log of logs) {
+          const alreadyPaid = log.payments.creditPaidAmount || 0;
+          const credit = log.payments.credit || 0;
+          const due = Math.max(credit - alreadyPaid, 0);
+          if (due <= 0) continue;
+          const apply = Math.min(due, remaining);
+          log.payments.creditPaidAmount = alreadyPaid + apply;
+          log.markModified('payments');
+          await log.save();
+          remaining -= apply;
+          if (remaining <= 0) break;
+        }
       }
     }
     
     res.status(201).json(payment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/construction-admin/credit-payments/:id
+router.delete('/credit-payments/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const payment = await CreditPayment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    // Revert customer totalPaid if linked
+    if (payment.customerId) {
+      const customer = await Customer.findById(payment.customerId);
+      if (customer) {
+        customer.totalPaid = Math.max(0, (customer.totalPaid || 0) - (payment.paymentAmount || 0));
+        await customer.save();
+      }
+    }
+
+    // Revert vehicle log creditPaidAmount
+    if (payment.vehicleLogId) {
+      const log = await VehicleLog.findById(payment.vehicleLogId);
+      if (log) {
+        const current = log.payments?.creditPaidAmount || 0;
+        log.payments.creditPaidAmount = Math.max(0, current - (payment.paymentAmount || 0));
+        log.markModified('payments');
+        await log.save();
+      }
+    } else if (payment.customerName) {
+      // Reverse-distribute reduction across this customer's logs (newest first)
+      let remaining = payment.paymentAmount || 0;
+      const logs = await VehicleLog.find({
+        customerName: payment.customerName,
+        'payments.creditPaidAmount': { $gt: 0 }
+      }).sort({ date: -1 });
+      for (const log of logs) {
+        if (remaining <= 0) break;
+        const current = log.payments?.creditPaidAmount || 0;
+        const reduceBy = Math.min(current, remaining);
+        log.payments.creditPaidAmount = Math.max(0, current - reduceBy);
+        log.markModified('payments');
+        await log.save();
+        remaining -= reduceBy;
+      }
+    }
+
+    await payment.deleteOne();
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -704,6 +1018,36 @@ router.get('/credit-overview', requireConstructionAdmin, async (req, res) => {
     
     // Get all vehicle logs with credit payments
     const vehicleLogs = await VehicleLog.find({ 'payments.credit': { $gt: 0 } }).populate('employeeId', 'name employeeId');
+    // Fetch recorded credit payments grouped by customer
+    // Only count completed payments with positive amount
+    const payments = await CreditPayment.find({ status: 'completed', paymentAmount: { $gt: 0 } }).sort({ paymentDate: -1 });
+    const paidByCustomerId = payments.reduce((map, p) => {
+      const key = String(p.customerId);
+      map[key] = (map[key] || 0) + (p.paymentAmount || 0);
+      return map;
+    }, {});
+    const lastPaymentByCustomerId = payments.reduce((map, p) => {
+      const key = String(p.customerId);
+      if (!map[key] || new Date(p.paymentDate) > new Date(map[key])) {
+        map[key] = p.paymentDate;
+      }
+      return map;
+    }, {});
+    // Also track payments grouped by customerName (for log-only customers or when customerId missing)
+    const paidByCustomerName = payments.reduce((map, p) => {
+      const key = (p.customerName || '').trim();
+      if (!key) return map;
+      map[key] = (map[key] || 0) + (p.paymentAmount || 0);
+      return map;
+    }, {});
+    const lastPaymentByCustomerName = payments.reduce((map, p) => {
+      const key = (p.customerName || '').trim();
+      if (!key) return map;
+      if (!map[key] || new Date(p.paymentDate) > new Date(map[key])) {
+        map[key] = p.paymentDate;
+      }
+      return map;
+    }, {});
     console.log('Found vehicle logs with credit:', vehicleLogs.length);
     console.log('Sample vehicle log:', vehicleLogs[0] ? {
       customerName: vehicleLogs[0].customerName,
@@ -712,12 +1056,19 @@ router.get('/credit-overview', requireConstructionAdmin, async (req, res) => {
       payments: vehicleLogs[0].payments
     } : 'No logs');
     
+    // Build a map of customerName -> logs with credit
+    const logsByCustomerName = vehicleLogs.reduce((map, log) => {
+      const key = (log.customerName || 'Unknown').trim();
+      if (!key) return map;
+      if (!map[key]) map[key] = [];
+      map[key].push(log);
+      return map;
+    }, {});
+
+    // Seed overview with real customers first
     const creditOverview = customers.map(customer => {
       // Try to find vehicle logs for this customer
-      let customerLogs = [];
-      
-      // First try exact match by customer name
-      customerLogs = vehicleLogs.filter(log => log.customerName === customer.name);
+      const customerLogs = logsByCustomerName[customer.name] || [];
       
       // If no exact match, try to find logs that might be for this customer
       // This is a fallback for existing data that doesn't have customer names
@@ -728,8 +1079,18 @@ router.get('/credit-overview', requireConstructionAdmin, async (req, res) => {
       }
       
       const totalCredit = customerLogs.reduce((sum, log) => sum + (log.payments.credit || 0), 0);
-      const totalPaid = customerLogs.reduce((sum, log) => sum + (log.payments.creditPaidAmount || 0), 0);
-      const remainingCredit = totalCredit - totalPaid;
+      // Only consider recorded payments entries for paid amounts (ignore any log-side paid markers)
+      // Avoid double-counting the same payment by ID and Name.
+      // Prefer customerId mapping; fall back to name only if id mapping absent.
+      const idKey = String(customer._id);
+      const hasIdPayment = Object.prototype.hasOwnProperty.call(paidByCustomerId, idKey);
+      const paidFromPayments = hasIdPayment
+        ? (paidByCustomerId[idKey] || 0)
+        : (paidByCustomerName[customer.name] || 0);
+      // Prevent overpayment from making remaining negative
+      const totalPaid = Math.min(totalCredit, paidFromPayments);
+      const remainingCredit = Math.max(totalCredit - totalPaid, 0);
+      const lastPayment = lastPaymentByCustomerId[String(customer._id)] || lastPaymentByCustomerName[customer.name] || (customerLogs.length > 0 ? customerLogs[0].date : null);
       
       // Get unique employees who delivered to this customer
       const deliveryEmployees = [...new Set(customerLogs.map(log => ({
@@ -750,21 +1111,388 @@ router.get('/credit-overview', requireConstructionAdmin, async (req, res) => {
         totalPaid,
         remainingCredit,
         creditStatus: remainingCredit > 0 ? 'pending' : 'completed',
-        lastPayment: customerLogs.length > 0 ? customerLogs[0].date : null,
+        lastPayment,
         deliveryEmployees,
         totalDeliveries: customerLogs.length
       };
-    }).filter(customer => customer.remainingCredit > 0);
+    }).filter(customer => customer.totalCredit > 0);
+
+    // Include customers that exist only in logs (not in customers collection)
+    const existingNames = new Set(creditOverview.map(c => c.customerName));
+    Object.entries(logsByCustomerName).forEach(([name, customerLogs]) => {
+      if (existingNames.has(name)) return;
+      const totalCredit = customerLogs.reduce((sum, log) => sum + (log.payments.credit || 0), 0);
+      // Only count recorded payments (by customer name) for log-only customers
+      const totalPaid = Math.min(totalCredit, (paidByCustomerName[name] || 0));
+      const remainingCredit = Math.max(totalCredit - totalPaid, 0);
+      if (totalCredit > 0) {
+        // Derive delivery employees from logs
+        const employeesMap = new Map();
+        customerLogs.forEach(log => {
+          const key = log.employeeId || log.employeeName;
+          if (!employeesMap.has(key)) {
+            employeesMap.set(key, {
+              name: log.employeeName || 'Unknown',
+              employeeId: log.employeeId || 'N/A'
+            });
+          }
+        });
+        const deliveryEmployees = Array.from(employeesMap.values());
+        creditOverview.push({
+          customerId: name, // use name as stable key
+          customerName: name,
+          customerPhone: '',
+          totalCredit,
+          totalPaid,
+          remainingCredit,
+          creditStatus: 'pending',
+          lastPayment: customerLogs.length > 0 ? customerLogs[0].date : null,
+          deliveryEmployees,
+          totalDeliveries: customerLogs.length
+        });
+      }
+    });
     
     console.log('Credit overview result:', creditOverview.map(c => ({
       name: c.customerName,
-      credit: c.remainingCredit,
+      totalCredit: c.totalCredit,
+      totalPaid: c.totalPaid,
+      remainingCredit: c.remainingCredit,
       employees: c.deliveryEmployees.length
     })));
+    
+    console.log('Total customers with credit:', creditOverview.length);
     
     res.json(creditOverview);
   } catch (error) {
     console.error('Credit overview error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/employees/:employeeId/wallet
+router.post('/employees/:employeeId/wallet', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { amount, type, description } = req.body;
+
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Update wallet balance
+    const numericAmount = Number(amount) || 0;
+    employee.walletBalance = (employee.walletBalance || 0) + numericAmount;
+
+    // If we are deducting salary from balance, also clear pending salary up to the deducted amount
+    if (type === 'salary_deduction' && numericAmount < 0) {
+      const pending = Number(employee.pendingSalary || 0);
+      const reduceBy = Math.min(pending, Math.abs(numericAmount));
+      if (reduceBy > 0) {
+        employee.pendingSalary = pending - reduceBy;
+        // Update last salary payment metadata
+        employee.lastSalaryPaid = new Date();
+        employee.lastSalaryAmount = reduceBy;
+      }
+    }
+    await employee.save();
+
+    res.json({ 
+      success: true, 
+      walletBalance: employee.walletBalance,
+      pendingSalary: employee.pendingSalary || 0,
+      message: `${type === 'salary' ? 'Salary' : 'Expense'} ${amount >= 0 ? 'added' : 'deducted'} successfully`
+    });
+  } catch (error) {
+    console.error('Wallet update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/employees/:employeeId/pending-salary
+router.post('/employees/:employeeId/pending-salary', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { amount, description } = req.body;
+
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Add to pending salary (tracked separately from wallet)
+    employee.pendingSalary = (employee.pendingSalary || 0) + (Number(amount) || 0);
+    await employee.save();
+
+    res.json({ 
+      success: true, 
+      pendingSalary: employee.pendingSalary,
+      message: 'Pending salary added successfully'
+    });
+  } catch (error) {
+    console.error('Pending salary update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/employees/:employeeId/wallet-history
+router.get('/employees/:employeeId/wallet-history', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Calculate running balance from all logs for this employee
+    const allLogs = await VehicleLog.find({
+      employeeId: employeeId
+    }).sort({ date: 1 });
+    
+    let yesterdayBalance = 0;
+    allLogs.forEach(log => {
+      const cash = log.payments?.cash || 0;
+      const setCash = log.setCashTaken || 0;
+      // Only include non-salary expenses in balance calculation
+      const expenses = (log.expenses || []).reduce((s, e) => {
+        // Exclude salary from expenses calculation
+        if (e.description && e.description.toLowerCase().includes('salary')) {
+          return s;
+        }
+        return s + (e.amount || 0);
+      }, 0);
+      const salaryDeducted = log.salaryDeductedFromBalance || 0;
+      
+      yesterdayBalance += cash + setCash - expenses - salaryDeducted;
+    });
+
+    // Find last salary payment from vehicle logs
+    const lastSalaryLog = await VehicleLog.findOne({
+      employeeId: employeeId,
+      'payments.credit': { $gt: 0 } // Assuming salary payments have credit > 0
+    }).sort({ date: -1 });
+
+    const lastSalaryPaid = lastSalaryLog?.date || null;
+    const lastSalaryAmount = lastSalaryLog?.payments?.credit || 0;
+
+    // Update employee with calculated values
+    employee.yesterdayBalance = yesterdayBalance;
+    employee.lastSalaryAmount = lastSalaryAmount;
+    if (lastSalaryPaid) {
+      employee.lastSalaryPaid = lastSalaryPaid;
+    }
+    await employee.save();
+
+    res.json({
+      pendingSalary: employee.pendingSalary || 0,
+      yesterdayBalance: yesterdayBalance,
+      lastSalaryPaid: lastSalaryPaid,
+      lastSalaryAmount: lastSalaryAmount
+    });
+  } catch (error) {
+    console.error('Wallet history error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/employees/:employeeId/mark-salary-paid
+router.post('/employees/:employeeId/mark-salary-paid', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const amount = Number(req.body.amount || 0);
+    if (amount <= 0) return res.status(400).json({ error: 'Amount must be greater than 0' });
+
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+
+    const pending = Number(employee.pendingSalary || 0);
+    const reduceBy = Math.min(pending, amount);
+    employee.pendingSalary = Math.max(0, pending - reduceBy);
+    employee.lastSalaryPaid = new Date();
+    employee.lastSalaryAmount = reduceBy;
+    await employee.save();
+
+    res.json({ success: true, pendingSalary: employee.pendingSalary, lastSalaryPaid: employee.lastSalaryPaid, lastSalaryAmount: employee.lastSalaryAmount });
+  } catch (error) {
+    console.error('Mark salary paid error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/fix-yesterday-balances
+router.post('/fix-yesterday-balances', requireConstructionAdmin, async (req, res) => {
+  try {
+    console.log('Starting to fix yesterday balances for all vehicle logs...');
+    
+    // Get all vehicle logs grouped by employee and sorted by date
+    const logs = await VehicleLog.find({}).sort({ employeeId: 1, date: 1 });
+    console.log(`Found ${logs.length} total logs`);
+    
+    // Group logs by employee
+    const employeeLogs = {};
+    logs.forEach(log => {
+      if (!employeeLogs[log.employeeId]) {
+        employeeLogs[log.employeeId] = [];
+      }
+      employeeLogs[log.employeeId].push(log);
+    });
+    
+    let updatedCount = 0;
+    const results = [];
+    
+    // Update each employee's logs
+    for (const employeeId in employeeLogs) {
+      const empLogs = employeeLogs[employeeId];
+      
+      // Sort logs by date to ensure chronological order
+      empLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      let runningBalance = 0;
+      
+      console.log(`Processing employee ${employeeId} with ${empLogs.length} logs`);
+      
+      for (let i = 0; i < empLogs.length; i++) {
+        const log = empLogs[i];
+        
+        // Set yesterday balance to current running balance
+        const oldYesterdayBalance = log.yesterdayBalance;
+        log.yesterdayBalance = runningBalance;
+        await log.save();
+        updatedCount++;
+        
+        // Update running balance for next log
+        const cash = log.payments?.cash || 0;
+        const setCash = log.setCashTaken || 0;
+        // Only include non-salary expenses in balance calculation
+        const expenses = (log.expenses || []).reduce((s, e) => {
+          // Exclude salary from expenses calculation
+          if (e.description && e.description.toLowerCase().includes('salary')) {
+            return s;
+          }
+          return s + (e.amount || 0);
+        }, 0);
+        const salaryDeducted = log.salaryDeductedFromBalance || 0;
+        
+        runningBalance += cash + setCash - expenses - salaryDeducted;
+        
+        results.push({
+          logId: log._id,
+          date: log.date,
+          employeeId: log.employeeId,
+          oldYesterdayBalance,
+          newYesterdayBalance: log.yesterdayBalance,
+          runningBalance,
+          cash,
+          setCash,
+          expenses,
+          salaryDeducted
+        });
+        
+        console.log(`Updated log ${log._id}: date=${log.date}, yesterdayBalance: ${oldYesterdayBalance} -> ${log.yesterdayBalance}, runningBalance: ${runningBalance}`);
+      }
+    }
+    
+    console.log(`Yesterday balance fix completed! Updated ${updatedCount} logs.`);
+    res.json({ 
+      success: true, 
+      message: `Successfully updated yesterday balances for ${updatedCount} vehicle logs`,
+      updatedCount,
+      results: results.slice(0, 10) // Return first 10 results for debugging
+    });
+  } catch (error) {
+    console.error('Error fixing yesterday balances:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/clear-vehicle-logs
+router.post('/clear-vehicle-logs', requireConstructionAdmin, async (req, res) => {
+  try {
+    console.log('Starting to clear all vehicle logs and reset employee wallets...');
+    
+    // Count existing logs
+    const countBefore = await VehicleLog.countDocuments();
+    console.log(`Found ${countBefore} vehicle logs in database`);
+    
+    // Delete all vehicle logs
+    const vehicleLogResult = await VehicleLog.deleteMany({});
+    console.log(`Successfully deleted ${vehicleLogResult.deletedCount} vehicle logs`);
+    
+    // Reset all employee wallet data
+    const employeeResult = await Employee.updateMany({}, {
+      $set: {
+        walletBalance: 0,
+        pendingSalary: 0,
+        yesterdayBalance: 0,
+        lastSalaryAmount: 0,
+        lastSalaryPaid: null
+      }
+    });
+    console.log(`Reset wallet data for ${employeeResult.modifiedCount} employees`);
+    
+    res.json({ 
+      success: true, 
+      message: `Successfully deleted ${vehicleLogResult.deletedCount} vehicle logs and reset wallet data for ${employeeResult.modifiedCount} employees`,
+      deletedLogs: vehicleLogResult.deletedCount,
+      resetEmployees: employeeResult.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error clearing vehicle logs and resetting wallets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/send-sms
+router.post('/send-sms', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { phoneNumber, customerName } = req.body;
+    
+    console.log('SMS request received:', { phoneNumber, customerName });
+    
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const result = await smsService.sendThankYouMessage(phoneNumber, customerName);
+    
+    console.log('SMS service result:', result);
+    
+    if (result.success) {
+      res.json({ success: true, message: 'SMS sent successfully' });
+    } else {
+      console.error('SMS failed:', result);
+      res.status(500).json({ 
+        success: false, 
+        error: result.message,
+        details: result.details || result.error
+      });
+    }
+  } catch (error) {
+    console.error('SMS sending error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/test-sms
+router.post('/test-sms', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    
+    console.log('Testing SMS to:', phoneNumber);
+    
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const result = await smsService.sendSMS(phoneNumber, 'Test message from AKR Construction');
+    
+    console.log('Test SMS result:', result);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Test SMS error:', error);
     res.status(500).json({ error: error.message });
   }
 });

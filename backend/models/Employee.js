@@ -9,6 +9,10 @@ const EmployeeSchema = new mongoose.Schema({
   department: { type: String, default: 'Construction' },
   duties: [{ type: String }], // Array of assigned duties
   assignedVehicles: [{ type: String }], // Vehicle numbers assigned to this employee
+  walletBalance: { type: Number, default: 0 },
+  pendingSalary: { type: Number, default: 0 },
+  yesterdayBalance: { type: Number, default: 0 },
+  lastSalaryAmount: { type: Number, default: 0 },
   salary: { type: Number },
   joiningDate: { type: Date, default: Date.now },
   status: { type: String, enum: ['active', 'inactive', 'on_leave'], default: 'active' },

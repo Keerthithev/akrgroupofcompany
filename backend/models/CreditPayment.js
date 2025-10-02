@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const CreditPaymentSchema = new mongoose.Schema({
-  customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   customerName: { type: String, required: true },
   vehicleLogId: { type: mongoose.Schema.Types.ObjectId, ref: 'VehicleLog' },
   originalCreditAmount: { type: Number, required: true }, // Original credit amount from vehicle log
