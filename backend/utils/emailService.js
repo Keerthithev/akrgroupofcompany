@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { sendReviewInvitation: cloudSendReviewInvitation } = require('./emailServiceCloud');
 const { sendReviewInvitation: alternativeSendReviewInvitation } = require('./emailServiceAlternative');
 
 // Create transporter with production-ready configuration
@@ -42,6 +43,12 @@ const generateReviewToken = () => {
 
 // Send review invitation email
 const sendReviewInvitation = async (booking, room) => {
+  // Use cloud-optimized service for production environments
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🌐 Using cloud-optimized email service for production...');
+    return await cloudSendReviewInvitation(booking, room);
+  }
+  
   try {
     console.log('📧 Sending review invitation email...');
     console.log('📧 To:', booking.customerEmail);

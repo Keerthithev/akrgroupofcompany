@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { testEmailConnection, sendEmailWithRetry } = require('../utils/emailConfig');
 const { sendReviewInvitation } = require('../utils/emailService');
+const { sendReviewInvitation: cloudSendReviewInvitation } = require('../utils/emailServiceCloud');
 
 // Test email connection
 router.get('/test', async (req, res) => {
@@ -194,6 +195,54 @@ router.get('/simple-test', async (req, res) => {
       success: false,
       error: error.message,
       code: error.code,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test cloud email service specifically
+router.post('/test-cloud-email', async (req, res) => {
+  try {
+    console.log('🌐 Testing cloud email service...');
+    
+    const testBooking = {
+      _id: 'test_cloud_booking_' + Date.now(),
+      customerName: 'Test Customer',
+      customerEmail: req.body.email || 'keerthiganthevarasa@gmail.com',
+      checkIn: new Date('2025-01-15'),
+      checkOut: new Date('2025-01-17')
+    };
+
+    const testRoom = {
+      _id: 'test_cloud_room_' + Date.now(),
+      name: 'Test Room 101'
+    };
+
+    console.log('🌐 Environment:', process.env.NODE_ENV || 'development');
+    console.log('🌐 Testing cloud-optimized email service...');
+    
+    const result = await cloudSendReviewInvitation(testBooking, testRoom);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Cloud email service test successful',
+        messageId: result.result.messageId,
+        reviewToken: result.reviewToken,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ Cloud email test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
