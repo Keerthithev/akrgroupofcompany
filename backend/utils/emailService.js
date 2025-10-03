@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { sendReviewInvitation: alternativeSendReviewInvitation } = require('./emailServiceAlternative');
 
 // Create transporter with production-ready configuration
 const transporter = nodemailer.createTransport({
@@ -12,17 +13,26 @@ const transporter = nodemailer.createTransport({
   },
   // Additional settings for better reliability in production
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
   },
-  // Connection timeout
-  connectionTimeout: 60000,
+  // Connection timeout - reduced for cloud environments
+  connectionTimeout: 30000,
   // Greeting timeout
-  greetingTimeout: 30000,
+  greetingTimeout: 15000,
   // Socket timeout
-  socketTimeout: 60000,
+  socketTimeout: 30000,
   // Debug mode for troubleshooting
   debug: process.env.NODE_ENV === 'development',
-  logger: process.env.NODE_ENV === 'development'
+  logger: process.env.NODE_ENV === 'development',
+  // Additional options for cloud environments
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 3,
+  rateLimit: 14, // max 14 emails per second
+  // Retry configuration
+  retryDelay: 1000,
+  retryAttempts: 3
 });
 
 // Generate unique review token
@@ -141,7 +151,9 @@ const sendReviewInvitation = async (booking, room) => {
       errorMessage = error.message;
     }
     
-    return { success: false, error: errorMessage };
+    // If primary method fails, try alternative method
+    console.log('🔄 Primary email method failed, trying alternative method...');
+    return await alternativeSendReviewInvitation(booking, room);
   }
 };
 

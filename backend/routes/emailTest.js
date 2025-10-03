@@ -152,4 +152,51 @@ router.post('/test-review-invitation', async (req, res) => {
   }
 });
 
+// Simple email test endpoint
+router.get('/simple-test', async (req, res) => {
+  try {
+    console.log('🧪 Simple email test...');
+    
+    const nodemailer = require('nodemailer');
+    
+    // Try the simplest possible configuration
+    const transporter = nodemailer.createTransporter({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'keerthiganthevarasa@gmail.com',
+        pass: 'rvnh sfki ilmg qizs'
+      }
+    });
+    
+    console.log('📧 Testing connection...');
+    await transporter.verify();
+    console.log('✅ Connection verified!');
+    
+    const result = await transporter.sendMail({
+      from: 'keerthiganthevarasa@gmail.com',
+      to: 'keerthiganthevarasa@gmail.com',
+      subject: 'Simple Test Email',
+      text: 'This is a simple test email from Render deployment.'
+    });
+    
+    res.json({
+      success: true,
+      message: 'Simple email test successful',
+      messageId: result.messageId,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Simple email test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 module.exports = router; 
