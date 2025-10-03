@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { sendReviewInvitation: resendSendReviewInvitation } = require('./emailServiceResend');
 const { sendReviewInvitation: cloudSendReviewInvitation } = require('./emailServiceCloud');
 const { sendReviewInvitation: alternativeSendReviewInvitation } = require('./emailServiceAlternative');
 
@@ -43,10 +44,10 @@ const generateReviewToken = () => {
 
 // Send review invitation email
 const sendReviewInvitation = async (booking, room) => {
-  // Use cloud-optimized service for production environments
+  // Use Resend API service for production environments (works better with cloud hosting)
   if (process.env.NODE_ENV === 'production') {
-    console.log('🌐 Using cloud-optimized email service for production...');
-    return await cloudSendReviewInvitation(booking, room);
+    console.log('📧 Using Resend API email service for production...');
+    return await resendSendReviewInvitation(booking, room);
   }
   
   try {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { testEmailConnection, sendEmailWithRetry } = require('../utils/emailConfig');
 const { sendReviewInvitation } = require('../utils/emailService');
+const { sendReviewInvitation: resendSendReviewInvitation } = require('../utils/emailServiceResend');
 const { sendReviewInvitation: cloudSendReviewInvitation } = require('../utils/emailServiceCloud');
 
 // Test email connection
@@ -240,6 +241,54 @@ router.post('/test-cloud-email', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Cloud email test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test Resend API email service
+router.post('/test-resend-email', async (req, res) => {
+  try {
+    console.log('📧 Testing Resend API email service...');
+    
+    const testBooking = {
+      _id: 'test_resend_booking_' + Date.now(),
+      customerName: 'Test Customer',
+      customerEmail: req.body.email || 'keerthiganthevarasa@gmail.com',
+      checkIn: new Date('2025-01-15'),
+      checkOut: new Date('2025-01-17')
+    };
+
+    const testRoom = {
+      _id: 'test_resend_room_' + Date.now(),
+      name: 'Test Room 101'
+    };
+
+    console.log('📧 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📧 Testing Resend API email service...');
+    
+    const result = await resendSendReviewInvitation(testBooking, testRoom);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Resend API email service test successful',
+        messageId: result.result.messageId,
+        reviewToken: result.reviewToken,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ Resend email test failed:', error);
     res.status(500).json({
       success: false,
       error: error.message,
