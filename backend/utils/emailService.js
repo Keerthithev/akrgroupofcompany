@@ -1,15 +1,28 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
-// Create transporter
+// Create transporter with production-ready configuration
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: process.env.SMTP_PORT || 587,
-  secure: false,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com',
     pass: process.env.EMAIL_PASS || 'rvnh sfki ilmg qizs'
-  }
+  },
+  // Additional settings for better reliability in production
+  tls: {
+    rejectUnauthorized: false
+  },
+  // Connection timeout
+  connectionTimeout: 60000,
+  // Greeting timeout
+  greetingTimeout: 30000,
+  // Socket timeout
+  socketTimeout: 60000,
+  // Debug mode for troubleshooting
+  debug: process.env.NODE_ENV === 'development',
+  logger: process.env.NODE_ENV === 'development'
 });
 
 // Generate unique review token
@@ -20,8 +33,17 @@ const generateReviewToken = () => {
 // Send review invitation email
 const sendReviewInvitation = async (booking, room) => {
   try {
+    console.log('📧 Sending review invitation email...');
+    console.log('📧 To:', booking.customerEmail);
+    console.log('📧 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📧 SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
+    console.log('📧 SMTP User:', process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com');
+    console.log('📧 Frontend URL:', process.env.FRONTEND_URL || 'http://localhost:8082');
+    
     const reviewToken = generateReviewToken();
     const reviewUrl = `${process.env.FRONTEND_URL || 'http://localhost:8082'}/review/${booking._id}/${reviewToken}`;
+    
+    console.log('📧 Review URL:', reviewUrl);
     
     const mailOptions = {
       from: `"AKR Hotel" <${process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com'}>`,
@@ -92,10 +114,18 @@ const sendReviewInvitation = async (booking, room) => {
       `
     };
 
+    console.log('📧 Attempting to send email...');
     const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully!');
+    console.log('📧 Message ID:', result.messageId);
+    console.log('📧 Response:', result.response);
+    
     return { success: true, reviewToken, result };
   } catch (error) {
-    console.error('Error sending review invitation email:', error);
+    console.error('❌ Error sending review invitation email:', error);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Full error:', error);
     
     // Provide specific error messages
     let errorMessage = 'Failed to send email';
@@ -103,6 +133,10 @@ const sendReviewInvitation = async (booking, room) => {
       errorMessage = 'Email authentication failed. Please check Gmail app password configuration.';
     } else if (error.code === 'ECONNECTION') {
       errorMessage = 'Email connection failed. Please check internet connection.';
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'Email connection timed out. Please try again.';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'SMTP server not found. Please check SMTP_HOST configuration.';
     } else if (error.message) {
       errorMessage = error.message;
     }

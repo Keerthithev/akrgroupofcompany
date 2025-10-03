@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { testEmailConnection, sendEmailWithRetry } = require('../utils/emailConfig');
+const { sendReviewInvitation } = require('../utils/emailService');
 
 // Test email connection
 router.get('/test', async (req, res) => {
@@ -97,6 +98,58 @@ router.get('/config', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
+});
+
+// Test review invitation email specifically
+router.post('/test-review-invitation', async (req, res) => {
+  try {
+    console.log('🧪 Testing review invitation email...');
+    
+    const testBooking = {
+      _id: 'test_booking_deployment_' + Date.now(),
+      customerName: 'Test Customer',
+      customerEmail: req.body.email || 'keerthiganthevarasa@gmail.com',
+      checkIn: new Date('2025-01-15'),
+      checkOut: new Date('2025-01-17')
+    };
+
+    const testRoom = {
+      _id: 'test_room_deployment_' + Date.now(),
+      name: 'Test Room 101'
+    };
+
+    console.log('📧 Environment check:');
+    console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+    console.log('SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com');
+    console.log('SMTP_USER:', process.env.SMTP_USER || 'keerthiganthevarasa@gmail.com');
+    console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'http://localhost:8082');
+    
+    const result = await sendReviewInvitation(testBooking, testRoom);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Review invitation email sent successfully',
+        messageId: result.result.messageId,
+        reviewToken: result.reviewToken,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ Review invitation test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 module.exports = router; 
