@@ -60,7 +60,7 @@ const createCloudTransporter = () => {
   for (let i = 0; i < configs.length; i++) {
     try {
       console.log(`📧 Trying cloud configuration ${i + 1}...`);
-      const transporter = nodemailer.createTransporter(configs[i]);
+      const transporter = nodemailer.createTransport(configs[i]);
       return transporter;
     } catch (error) {
       console.log(`❌ Configuration ${i + 1} failed:`, error.message);

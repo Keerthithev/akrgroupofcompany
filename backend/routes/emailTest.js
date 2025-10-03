@@ -161,7 +161,7 @@ router.get('/simple-test', async (req, res) => {
     const nodemailer = require('nodemailer');
     
     // Try the simplest possible configuration
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
