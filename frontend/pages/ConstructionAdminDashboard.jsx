@@ -11,6 +11,7 @@ import {
   DeleteOutlined,
   SearchOutlined,
   FileTextOutlined,
+  FilePdfOutlined,
   BarChartOutlined,
   CalendarOutlined,
   UserOutlined,
@@ -21,7 +22,8 @@ import {
   MenuUnfoldOutlined,
   TeamOutlined,
   HistoryOutlined,
-  SaveOutlined
+  SaveOutlined,
+  WalletOutlined
 } from '@ant-design/icons';
 import api from "../lib/axios";
 import dayjs from 'dayjs';
@@ -37,9 +39,12 @@ const { Option } = Select;
 const SECTIONS = [
   { key: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
   { key: 'employees', label: 'Employees', icon: <TeamOutlined /> },
+  { key: 'suppliers', label: 'Suppliers', icon: <TeamOutlined /> },
   { key: 'vehicle-logs', label: 'Vehicle Logs', icon: <CarOutlined /> },
   { key: 'customers', label: 'Customers', icon: <UserOutlined /> },
   { key: 'items', label: 'Items', icon: <FileTextOutlined /> },
+  { key: 'fuel-management', label: 'Fuel Management', icon: <CarOutlined /> },
+  { key: 'shed-wallet', label: 'Shed Wallet', icon: <WalletOutlined /> },
   { key: 'add-vehicle', label: 'Add Vehicle', icon: <PlusOutlined /> },
   { key: 'credit-management', label: 'Credit Management', icon: <DollarOutlined /> },
   { key: 'reports', label: 'Reports', icon: <BarChartOutlined /> },
@@ -55,6 +60,7 @@ const ConstructionAdminDashboard = () => {
   const [vehicleLogs, setVehicleLogs] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [employeePositions, setEmployeePositions] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [items, setItems] = useState([]);
@@ -70,10 +76,12 @@ const ConstructionAdminDashboard = () => {
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [creditPaymentModalVisible, setCreditPaymentModalVisible] = useState(false);
+  const [supplierModalVisible, setSupplierModalVisible] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [editingSupplier, setEditingSupplier] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeHistory, setEmployeeHistory] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -89,6 +97,34 @@ const ConstructionAdminDashboard = () => {
   const [vehicleSheetVisible, setVehicleSheetVisible] = useState(false);
   const [selectedVehicleForSheet, setSelectedVehicleForSheet] = useState(null);
   const [sheetRows, setSheetRows] = useState([]);
+  const [supplierRows, setSupplierRows] = useState([]);
+  const [supplierPaid, setSupplierPaid] = useState(0);
+  const [supplierPaymentDescription, setSupplierPaymentDescription] = useState('');
+  const [sheetSupplierId, setSheetSupplierId] = useState();
+  
+  // Fuel Management States
+  const [fuelLogs, setFuelLogs] = useState([]);
+  const [fuelSummary, setFuelSummary] = useState(null);
+  const [fuelModalVisible, setFuelModalVisible] = useState(false);
+  const [editingFuelLog, setEditingFuelLog] = useState(null);
+  const [fuelForm] = Form.useForm();
+  const [selectedVehicleForFuel, setSelectedVehicleForFuel] = useState(null);
+  const [fuelEfficiency, setFuelEfficiency] = useState(null);
+  const [fuelPaymentModalVisible, setFuelPaymentModalVisible] = useState(false);
+  const [selectedFuelLogForPayment, setSelectedFuelLogForPayment] = useState(null);
+  const [fuelPaymentForm] = Form.useForm();
+  
+  // Shed Wallet Management States
+  const [shedWallet, setShedWallet] = useState(null);
+  const [shedTransactions, setShedTransactions] = useState([]);
+  const [pendingDetails, setPendingDetails] = useState(null);
+  const [shedWalletModalVisible, setShedWalletModalVisible] = useState(false);
+  const [shedTransactionModalVisible, setShedTransactionModalVisible] = useState(false);
+  const [shedTransactionForm] = Form.useForm();
+  const [shedWalletForm] = Form.useForm();
+  const [datePickerModalVisible, setDatePickerModalVisible] = useState(false);
+  const [datePickerForm] = Form.useForm();
+  
   const [salaryRows, setSalaryRows] = useState([]);
   const [expenseRows, setExpenseRows] = useState([]);
   const [yesterdayBalance, setYesterdayBalance] = useState(0);
@@ -107,6 +143,9 @@ const ConstructionAdminDashboard = () => {
   const [smsModalVisible, setSmsModalVisible] = useState(false);
   const [smsCustomerName, setSmsCustomerName] = useState('');
   const [smsCustomerPhone, setSmsCustomerPhone] = useState('');
+  const [supplierWalletVisible, setSupplierWalletVisible] = useState(false);
+  const [selectedSupplierForWallet, setSelectedSupplierForWallet] = useState(null);
+  const [supplierWalletByItem, setSupplierWalletByItem] = useState([]);
 
   const getEmployeeTripAndMonthlyStats = (employeeId) => {
     const logs = vehicleLogs.filter(l => l.employeeId === employeeId);
@@ -162,6 +201,7 @@ const ConstructionAdminDashboard = () => {
   const [employeeForm] = Form.useForm();
   const [customerForm] = Form.useForm();
   const [itemForm] = Form.useForm();
+  const [supplierForm] = Form.useForm();
   const [creditPaymentForm] = Form.useForm();
   const [addVehicleForm] = Form.useForm();
 
@@ -170,11 +210,18 @@ const ConstructionAdminDashboard = () => {
     loadDashboardData();
     loadVehicles();
     loadEmployees();
+    loadSuppliers();
     loadEmployeePositions();
     loadCustomers();
     loadItems();
     loadCreditOverview();
     loadCreditPayments();
+    loadFuelLogs();
+    loadFuelSummary();
+    loadFuelEfficiency();
+    loadShedWallet();
+    loadShedTransactions();
+    loadPendingDetails();
   }, []);
 
   useEffect(() => {
@@ -234,6 +281,83 @@ const ConstructionAdminDashboard = () => {
       setVehicles(normalized);
     } catch (error) {
       message.error('Failed to load vehicles');
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/suppliers', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setSuppliers(Array.isArray(response.data) ? response.data : []);
+    } catch (e) {
+      message.error('Failed to load suppliers');
+    }
+  };
+
+  const loadFuelLogs = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/fuel-logs', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setFuelLogs(Array.isArray(response.data) ? response.data : []);
+    } catch (e) {
+      message.error('Failed to load fuel logs');
+    }
+  };
+
+  const loadFuelSummary = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/fuel-summary', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setFuelSummary(response.data);
+    } catch (e) {
+      message.error('Failed to load fuel summary');
+    }
+  };
+
+  const loadFuelEfficiency = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/vehicles-fuel-efficiency', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setFuelEfficiency(Array.isArray(response.data) ? response.data : []);
+    } catch (e) {
+      message.error('Failed to load fuel efficiency');
+    }
+  };
+
+  const loadShedWallet = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/shed-wallet', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setShedWallet(response.data);
+    } catch (e) {
+      message.error('Failed to load shed wallet');
+    }
+  };
+
+  const loadShedTransactions = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/shed-wallet/transactions', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setShedTransactions(response.data.transactions || []);
+    } catch (e) {
+      message.error('Failed to load shed transactions');
+    }
+  };
+
+  const loadPendingDetails = async () => {
+    try {
+      const response = await api.get('/api/construction-admin/shed-wallet/pending-details', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+      });
+      setPendingDetails(response.data);
+    } catch (e) {
+      message.error('Failed to load pending details');
     }
   };
 
@@ -1014,6 +1138,1716 @@ const ConstructionAdminDashboard = () => {
     window.print();
   };
 
+  // Employee PDF Export
+  const exportEmployeesAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalEmployees = employees.length;
+      const activeEmployees = employees.filter(emp => emp.status === 'active').length;
+      const inactiveEmployees = employees.filter(emp => emp.status === 'inactive').length;
+      const onLeaveEmployees = employees.filter(emp => emp.status === 'on_leave').length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Employee Details Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${totalEmployees}</div>
+              <div style="font-size: 14px; color: #666;">Total Employees</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #52c41a;">${activeEmployees}</div>
+              <div style="font-size: 14px; color: #666;">Active</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #ff4d4f;">${inactiveEmployees}</div>
+              <div style="font-size: 14px; color: #666;">Inactive</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #faad14;">${onLeaveEmployees}</div>
+              <div style="font-size: 14px; color: #666;">On Leave</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Full Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Phone Number</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Email</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Position</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Salary</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Joining Date</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Status</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Department</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employees.map(emp => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; font-weight: bold;">${emp.name || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.phone || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.email || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.position || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">Rs. ${emp.salary ? emp.salary.toLocaleString() : 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.joiningDate ? dayjs(emp.joiningDate).format('DD/MM/YYYY') : 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">
+                    <span style="color: ${emp.status === 'active' ? '#52c41a' : emp.status === 'inactive' ? '#ff4d4f' : '#faad14'}; font-weight: bold;">
+                      ${(emp.status || 'active').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.department || 'Construction'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px;">${emp.address || 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          ${employees.some(emp => emp.emergencyContact?.name || emp.duties?.length > 0) ? `
+          <div style="margin-top: 30px;">
+            <h3 style="color: #2e7d32; font-size: 18px; margin-bottom: 20px; text-align: center; border-bottom: 2px solid #2e7d32; padding-bottom: 10px;">Additional Employee Information</h3>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr>
+                  <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Employee Name</th>
+                  <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Emergency Contact</th>
+                  <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Contact Phone</th>
+                  <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Relationship</th>
+                  <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Assigned Duties</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${employees.filter(emp => emp.emergencyContact?.name || emp.duties?.length > 0).map(emp => `
+                  <tr>
+                    <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; font-weight: bold;">${emp.name || ''}</td>
+                    <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.emergencyContact?.name || 'N/A'}</td>
+                    <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.emergencyContact?.phone || 'N/A'}</td>
+                    <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.emergencyContact?.relationship || 'N/A'}</td>
+                    <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px;">${(emp.duties || []).join(', ') || 'N/A'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          <div style="margin-top: 35px; display: flex; justify-content: space-between;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                HR Manager Signature
+              </div>
+            </div>
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Employee_Details_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Employee details PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Customer PDF Export
+  const exportCustomersAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Customer Details Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Phone</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Email</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customers.map(cust => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; font-weight: bold;">${cust.name || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${cust.phone || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${cust.email || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${cust.address || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Customer_Details_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Customer details PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Items PDF Export
+  const exportItemsAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalItems = items.length;
+      const activeItems = items.filter(item => item.status === 'active').length;
+      const inactiveItems = items.filter(item => item.status === 'inactive').length;
+      const categories = [...new Set(items.map(item => item.category))];
+      const totalValue = items.reduce((sum, item) => sum + (item.pricePerUnit || 0), 0);
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Items Catalog Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${totalItems}</div>
+              <div style="font-size: 14px; color: #666;">Total Items</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #52c41a;">${activeItems}</div>
+              <div style="font-size: 14px; color: #666;">Active</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #ff4d4f;">${inactiveItems}</div>
+              <div style="font-size: 14px; color: #666;">Inactive</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #1890ff;">${categories.length}</div>
+              <div style="font-size: 14px; color: #666;">Categories</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Item Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Category</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Unit</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Price per Unit</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Description</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Status</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: white;">Created Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px; font-weight: bold;">${item.name || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px;">${item.category || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px;">${item.unit || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px; font-weight: bold; color: #2e7d32;">Rs. ${(item.pricePerUnit || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${item.description || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px;">
+                    <span style="color: ${item.status === 'active' ? '#52c41a' : '#ff4d4f'}; font-weight: bold;">
+                      ${(item.status || 'active').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 12px;">${item.createdAt ? dayjs(item.createdAt).format('DD/MM/YYYY') : 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: space-between;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Inventory Manager Signature
+              </div>
+            </div>
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Items_Catalog_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Items catalog PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Credit Management PDF Export
+  const exportCreditManagementAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalPendingCredit = creditOverview.reduce((sum, customer) => sum + (customer.remainingCredit || 0), 0);
+      const totalCreditGiven = creditOverview.reduce((sum, customer) => sum + (customer.totalCredit || 0), 0);
+      const totalPaid = creditOverview.reduce((sum, customer) => sum + (customer.totalPaid || 0), 0);
+      const customersWithCredit = creditOverview.length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Credit Management Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #cf1322;">Rs. ${totalPendingCredit.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Pending Credit</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${customersWithCredit}</div>
+              <div style="font-size: 12px; color: #666;">Customers with Credit</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #1890ff;">Rs. ${totalCreditGiven.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Credit Given</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #3f8600;">Rs. ${totalPaid.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Paid</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Customer Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Phone</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Total Credit</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Total Paid</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Remaining Credit</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Total Deliveries</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Status</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Last Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${creditOverview.map(credit => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; font-weight: bold;">${credit.customerName || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${credit.customerPhone || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #1890ff; font-weight: bold;">Rs. ${(credit.totalCredit || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #3f8600; font-weight: bold;">Rs. ${(credit.totalPaid || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #cf1322; font-weight: bold;">Rs. ${(credit.remainingCredit || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${credit.totalDeliveries || 0}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">
+                    <span style="color: ${credit.creditStatus === 'pending' ? '#cf1322' : '#faad14'}; font-weight: bold;">
+                      ${(credit.creditStatus || 'pending').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${credit.lastPayment ? dayjs(credit.lastPayment).format('DD/MM/YYYY') : 'No payments'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Credit_Management_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Credit management PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Export All Vehicle Logs History PDF
+  const exportAllVehicleLogsAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalLogs = vehicleLogs.length;
+      const totalRevenue = vehicleLogs.reduce((sum, log) => sum + ((log.payments?.cash || 0) + (log.payments?.credit || 0)), 0);
+      const totalExpenses = vehicleLogs.reduce((sum, log) => sum + (log.expenses || []).reduce((expSum, exp) => expSum + (exp.amount || 0), 0), 0);
+      const uniqueVehicles = [...new Set(vehicleLogs.map(log => log.vehicleNumber))].length;
+      const uniqueEmployees = [...new Set(vehicleLogs.map(log => log.employeeId))].length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Complete Vehicle Logs History</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${totalLogs}</div>
+              <div style="font-size: 12px; color: #666;">Total Logs</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #1890ff;">${uniqueVehicles}</div>
+              <div style="font-size: 12px; color: #666;">Vehicles</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #722ed1;">${uniqueEmployees}</div>
+              <div style="font-size: 12px; color: #666;">Employees</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #52c41a;">Rs. ${totalRevenue.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Revenue</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #ff4d4f;">Rs. ${totalExpenses.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Expenses</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Date</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Vehicle</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Employee</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">From</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">To</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Items</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Customer</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Cash</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Credit</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vehicleLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).map(log => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${dayjs(log.date).format('DD/MM/YYYY')}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; font-weight: bold;">${log.vehicleNumber || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 10px;">
+                    <div style="font-weight: bold;">${log.employeeName || ''}</div>
+                    <div style="color: #666;">${log.employeeId || ''}</div>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.startPlace || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.endPlace || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 10px;">${(log.itemsLoading || []).join(', ') || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.customerName || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #52c41a; font-weight: bold;">Rs. ${(log.payments?.cash || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #1890ff; font-weight: bold;">Rs. ${(log.payments?.credit || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #2e7d32; font-weight: bold;">Rs. ${((log.payments?.cash || 0) + (log.payments?.credit || 0)).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `All_Vehicle_Logs_History_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('All vehicle logs history PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Export Fuel Management PDF
+  const exportFuelManagementAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalFuelLogs = fuelLogs.length;
+      const totalFuelAmount = fuelLogs.reduce((sum, log) => sum + (log.fuelAmount || 0), 0);
+      const totalFuelCost = fuelLogs.reduce((sum, log) => sum + (log.totalCost || 0), 0);
+      const totalPaidByEmployee = fuelLogs.reduce((sum, log) => sum + (log.paidAmount || 0), 0);
+      const totalOverallPaid = fuelLogs.reduce((sum, log) => sum + (log.overallPaidAmount || 0), 0);
+      const totalPending = fuelLogs.reduce((sum, log) => sum + (log.remainingAmount || 0), 0);
+      const uniqueVehicles = [...new Set(fuelLogs.map(log => log.vehicleNumber))].length;
+      const uniqueEmployees = [...new Set(fuelLogs.map(log => log.employeeId))].length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Fuel Management Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${totalFuelLogs}</div>
+              <div style="font-size: 12px; color: #666;">Total Logs</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #1890ff;">${uniqueVehicles}</div>
+              <div style="font-size: 12px; color: #666;">Vehicles</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #722ed1;">${uniqueEmployees}</div>
+              <div style="font-size: 12px; color: #666;">Employees</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #52c41a;">${totalFuelAmount.toLocaleString()}L</div>
+              <div style="font-size: 12px; color: #666;">Total Fuel</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #ff4d4f;">Rs. ${totalFuelCost.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Cost</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #fa8c16;">Rs. ${totalPending.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Pending</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Date</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Vehicle</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Employee</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Fuel Amount</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Price/L</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Total Cost</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Paid by Employee</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Overall Paid</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fuelLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).map(log => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${dayjs(log.date).format('DD/MM/YYYY')}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; font-weight: bold;">${log.vehicleNumber || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 10px;">
+                    <div style="font-weight: bold;">${log.employeeName || ''}</div>
+                    <div style="color: #666;">${log.employeeId || ''}</div>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; font-weight: bold;">${(log.fuelAmount || 0).toLocaleString()}L</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">Rs. ${(log.fuelPrice || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #2e7d32; font-weight: bold;">Rs. ${(log.totalCost || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #52c41a; font-weight: bold;">Rs. ${(log.paidAmount || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #1890ff; font-weight: bold;">Rs. ${(log.overallPaidAmount || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">
+                    <span style="
+                      padding: 4px 8px; 
+                      border-radius: 4px; 
+                      font-size: 10px; 
+                      font-weight: bold;
+                      color: white;
+                      background-color: ${log.paymentStatus === 'paid' ? '#52c41a' : log.paymentStatus === 'partial' ? '#fa8c16' : '#ff4d4f'};
+                    ">
+                      ${(log.paymentStatus || 'pending').toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Fuel_Management_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Fuel management PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Export Date-wise Vehicle Logs PDF
+  const exportDateWiseVehicleLogsAsPDF = async (selectedDate) => {
+    try {
+      // Filter vehicle logs for the selected date
+      const dateLogs = vehicleLogs.filter(log => {
+        const logDate = dayjs(log.date).format('YYYY-MM-DD');
+        const targetDate = dayjs(selectedDate).format('YYYY-MM-DD');
+        return logDate === targetDate;
+      });
+
+      if (dateLogs.length === 0) {
+        message.warning('No vehicle logs found for the selected date.');
+        return;
+      }
+
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalLogs = dateLogs.length;
+      const totalRevenue = dateLogs.reduce((sum, log) => sum + ((log.payments?.cash || 0) + (log.payments?.credit || 0)), 0);
+      const totalExpenses = dateLogs.reduce((sum, log) => sum + (log.expenses || []).reduce((expSum, exp) => expSum + (exp.amount || 0), 0), 0);
+      const uniqueVehicles = [...new Set(dateLogs.map(log => log.vehicleNumber))].length;
+      const uniqueEmployees = [...new Set(dateLogs.map(log => log.employeeId))].length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Vehicle Logs Report - ${dayjs(selectedDate).format('DD/MM/YYYY')}</div>
+            <div>Generated: ${dayjs().format('DD/MM/YYYY HH:mm')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${totalLogs}</div>
+              <div style="font-size: 12px; color: #666;">Total Logs</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #1890ff;">${uniqueVehicles}</div>
+              <div style="font-size: 12px; color: #666;">Vehicles</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #722ed1;">${uniqueEmployees}</div>
+              <div style="font-size: 12px; color: #666;">Employees</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #52c41a;">Rs. ${totalRevenue.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Revenue</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #ff4d4f;">Rs. ${totalExpenses.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Expenses</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Time</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Vehicle</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Employee</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">From</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">To</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Items</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Customer</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Cash</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Credit</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dateLogs.sort((a, b) => new Date(a.date) - new Date(b.date)).map(log => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${dayjs(log.date).format('HH:mm')}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; font-weight: bold;">${log.vehicleNumber || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 10px;">
+                    <div style="font-weight: bold;">${log.employeeName || ''}</div>
+                    <div style="color: #666;">${log.employeeId || ''}</div>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.startPlace || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.endPlace || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 10px;">${(log.itemsLoading || []).join(', ') || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${log.customerName || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #52c41a; font-weight: bold;">Rs. ${(log.payments?.cash || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #1890ff; font-weight: bold;">Rs. ${(log.payments?.credit || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; color: #2e7d32; font-weight: bold;">Rs. ${((log.payments?.cash || 0) + (log.payments?.credit || 0)).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Vehicle_Logs_${dayjs(selectedDate).format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success(`Vehicle logs PDF for ${dayjs(selectedDate).format('DD/MM/YYYY')} exported successfully!`);
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Export Shed Wallet PDF
+  const exportShedWalletAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalTransactions = shedTransactions.length;
+      const totalSent = shedTransactions.filter(t => t.type === 'payment_sent').reduce((sum, t) => sum + (t.amount || 0), 0);
+      const totalReceived = shedTransactions.filter(t => t.type === 'payment_received').reduce((sum, t) => sum + (t.amount || 0), 0);
+      const currentBalance = shedWallet?.currentBalance || 0;
+      const pendingAmount = pendingDetails?.totalPendingAmount || 0;
+      const fuelPending = pendingDetails?.totalPendingFuel || 0;
+      const setCashPending = pendingDetails?.totalSetCashTaken || 0;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Shed Wallet Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">${totalTransactions}</div>
+              <div style="font-size: 12px; color: #666;">Total Transactions</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #52c41a;">Rs. ${currentBalance.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Current Balance</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #1890ff;">Rs. ${totalReceived.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Received</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #ff4d4f;">Rs. ${totalSent.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Total Sent</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #fa8c16;">Rs. ${pendingAmount.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Pending Amount</div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #e6f7ff; padding: 15px; border-radius: 8px; border: 1px solid #91d5ff;">
+            <div style="text-align: center;">
+              <div style="font-size: 16px; font-weight: bold; color: #ff4d4f;">Rs. ${fuelPending.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Fuel Pending</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 16px; font-weight: bold; color: #fa8c16;">Rs. ${setCashPending.toLocaleString()}</div>
+              <div style="font-size: 12px; color: #666;">Set Cash Pending</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Date</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Type</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Amount</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Description</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Payment Method</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Status</th>
+                <th style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 12px; color: #2e7d32; font-weight: bold; background-color: white;">Processed By</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${shedTransactions.sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate)).map(transaction => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${dayjs(transaction.transactionDate).format('DD/MM/YYYY HH:mm')}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">
+                    <span style="
+                      padding: 4px 8px; 
+                      border-radius: 4px; 
+                      font-size: 10px; 
+                      font-weight: bold;
+                      color: white;
+                      background-color: ${transaction.type === 'payment_sent' ? '#ff4d4f' : 
+                                       transaction.type === 'payment_received' ? '#52c41a' : 
+                                       transaction.type === 'fuel_purchase' ? '#1890ff' : '#fa8c16'};
+                    ">
+                      ${(transaction.type || '').replace('_', ' ').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px; font-weight: bold; color: ${transaction.amount > 0 ? '#52c41a' : '#ff4d4f'};">Rs. ${(transaction.amount || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${transaction.description || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">
+                    <span style="
+                      padding: 2px 6px; 
+                      border-radius: 3px; 
+                      font-size: 9px; 
+                      font-weight: bold;
+                      color: white;
+                      background-color: ${transaction.paymentMethod === 'cash' ? '#52c41a' : 
+                                       transaction.paymentMethod === 'transfer' ? '#1890ff' : 
+                                       transaction.paymentMethod === 'cheque' ? '#fa8c16' : '#666'};
+                    ">
+                      ${(transaction.paymentMethod || 'cash').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">
+                    <span style="
+                      padding: 2px 6px; 
+                      border-radius: 3px; 
+                      font-size: 9px; 
+                      font-weight: bold;
+                      color: white;
+                      background-color: ${transaction.status === 'completed' ? '#52c41a' : 
+                                       transaction.status === 'pending' ? '#fa8c16' : '#ff4d4f'};
+                    ">
+                      ${(transaction.status || 'completed').toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="border: 1px solid #2e7d32; padding: 8px; text-align: center; font-size: 11px;">${transaction.processedBy || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `Shed_Wallet_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Shed wallet PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Export All Employee Wallet Details PDF
+  const exportAllEmployeeWalletsAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      
+      const totalEmployees = employees.length;
+      const totalPendingSalary = employees.reduce((sum, emp) => sum + (emp.pendingSalary || 0), 0);
+      const totalYesterdayBalance = employees.reduce((sum, emp) => sum + (emp.yesterdayBalance || 0), 0);
+      const employeesWithPendingSalary = employees.filter(emp => (emp.pendingSalary || 0) > 0).length;
+      
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: bold; font-size: 16px;">
+            <div style="color: #2e7d32; font-size: 20px;">Employee Wallet Details Report</div>
+            <div>Date: ${dayjs().format('DD/MM/YYYY')}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-around; margin-bottom: 25px; background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${totalEmployees}</div>
+              <div style="font-size: 14px; color: #666;">Total Employees</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #1890ff;">${employeesWithPendingSalary}</div>
+              <div style="font-size: 14px; color: #666;">With Pending Salary</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #faad14;">Rs. ${totalPendingSalary.toLocaleString()}</div>
+              <div style="font-size: 14px; color: #666;">Total Pending Salary</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: bold; color: #2e7d32;">Rs. ${totalYesterdayBalance.toLocaleString()}</div>
+              <div style="font-size: 14px; color: #666;">Total Yesterday Balance</div>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Employee ID</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Position</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Phone</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Pending Salary</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: bold; background-color: white;">Yesterday Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employees.sort((a, b) => (b.pendingSalary || 0) - (a.pendingSalary || 0)).map(emp => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.employeeId || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; font-weight: bold;">${emp.name || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.position || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${emp.phone || ''}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: ${(emp.pendingSalary || 0) > 0 ? '#faad14' : '#666'}; font-weight: bold;">Rs. ${(emp.pendingSalary || 0).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold;">Rs. ${(emp.yesterdayBalance || 0).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Admin Signature
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is too tall for one page, split into multiple pages
+      if (imgHeight > (pdfHeight - 20)) {
+        const pageHeight = pdfHeight - 20; // Available height per page
+        let yOffset = 0;
+        let pageNumber = 1;
+        
+        while (yOffset < imgHeight) {
+          if (pageNumber > 1) {
+            pdf.addPage();
+          }
+          
+          // Calculate the portion of image to show on this page
+          const sourceY = (yOffset * canvas.height) / imgHeight;
+          const sourceHeight = Math.min((pageHeight * canvas.height) / imgHeight, canvas.height - sourceY);
+          
+          // Create a temporary canvas for this page portion
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          // Draw the portion of the original canvas
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          
+          // Add this portion to the PDF
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const actualPageHeight = (sourceHeight * imgWidth) / canvas.width;
+          pdf.addImage(pageImgData, 'PNG', 10, 10, imgWidth, actualPageHeight);
+          
+          yOffset += pageHeight;
+          pageNumber++;
+        }
+      } else {
+        // Content fits on one page
+        const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      }
+      
+      // Save the PDF
+      const fileName = `All_Employee_Wallets_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('All employee wallet details PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
+  const exportSuppliersAsPDF = async () => {
+    try {
+      // Create a temporary div to render the content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1200px'; // Landscape width
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.3; padding: 20px;">
+          <div style="text-align: center; background-color: #2e7d32; color: white; padding: 18px; margin-bottom: 25px;">
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 6px;">A.K.R & SON'S Construction & Suppliers</div>
+            <div style="font-size: 16px; margin-bottom: 4px;">Main street, Murunkan, Mannar</div>
+            <div style="font-size: 14px;">024 222 6899 / 077 311 1266 / 077 364 6999</div>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 25px;">
+            <h2 style="color: #2e7d32; margin: 0;">Suppliers Report</h2>
+            <p style="color: #666; margin: 5px 0;">Generated on: ${dayjs().format('DD/MM/YYYY HH:mm')}</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: #f8f9fa;">Supplier Name</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: #f8f9fa;">Phone</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: #f8f9fa;">Items Supplied</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: #f8f9fa;">Pending Amount</th>
+                <th style="border: 1px solid #2e7d32; padding: 12px; text-align: center; font-size: 13px; color: #2e7d32; font-weight: bold; background-color: #f8f9fa;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${suppliers.map(supplier => `
+                <tr>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: left; font-size: 13px; font-weight: bold;">${supplier.name}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">${supplier.phone || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: left; font-size: 13px;">${(supplier.items || []).join(', ') || 'N/A'}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: right; font-size: 13px; font-weight: bold; color: ${Number(supplier.walletBalance || 0) < 0 ? '#ff4d4f' : '#52c41a'};">Rs. ${Math.abs(Number(supplier.walletBalance || 0)).toLocaleString()}</td>
+                  <td style="border: 1px solid #2e7d32; padding: 10px; text-align: center; font-size: 13px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; ${supplier.status === 'active' ? 'background-color: #f6ffed; color: #52c41a;' : 'background-color: #fff2e8; color: #fa8c16;'}">${supplier.status || 'active'}</span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: #2e7d32; margin: 0 0 10px 0; font-size: 16px;">Summary</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div>
+                <strong>Total Suppliers:</strong> ${suppliers.length}
+              </div>
+              <div>
+                <strong>Active Suppliers:</strong> ${suppliers.filter(s => s.status === 'active' || !s.status).length}
+              </div>
+              <div>
+                <strong>Total Pending Amount:</strong> Rs. ${suppliers.reduce((sum, s) => sum + Math.abs(Number(s.walletBalance || 0)), 0).toLocaleString()}
+              </div>
+              <div>
+                <strong>Suppliers with Pending:</strong> ${suppliers.filter(s => Number(s.walletBalance || 0) < 0).length}
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 35px; display: flex; justify-content: flex-end;">
+            <div style="width: 220px; text-align: center; border: 1px solid #000; padding: 45px 15px 15px 15px;">
+              <div style="margin-top: 25px; border-top: 1px solid #2e7d32; padding-top: 8px; color: #2e7d32; font-weight: bold; font-size: 14px;">
+                Supervisor Signature
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('https://cdn.skypack.dev/html2canvas')).default;
+      const { jsPDF } = await import('https://cdn.skypack.dev/jspdf');
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF in landscape orientation
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate dimensions for landscape A4 (297mm x 210mm)
+      const pdfWidth = 297;
+      const pdfHeight = 210;
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Center the image vertically if it's smaller than page height
+      const yPosition = imgHeight < (pdfHeight - 20) ? (pdfHeight - imgHeight) / 2 : 10;
+      
+      pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      
+      // Save the PDF
+      const fileName = `Suppliers_Report_${dayjs().format('DD-MM-YYYY')}.pdf`;
+      pdf.save(fileName);
+      
+      message.success('Suppliers PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      message.error('Failed to export PDF. Please try again.');
+    }
+  };
+
   const exportVehicleLogAsPDF = async (log) => {
     try {
       const expenses = (log.expenses || []).filter(exp => 
@@ -1144,6 +2978,51 @@ const ConstructionAdminDashboard = () => {
                </table>
              </div>
            </div>
+
+           ${log.supplier && log.supplier.supplierName ? `
+           <div style="border: 1px solid #2e7d32; margin-bottom: 25px;">
+             <div style="background-color: white; color: #2e7d32; text-align: center; font-weight: bold; padding: 12px; border-bottom: 1px solid #2e7d32; font-size: 15px;">Supplier Details</div>
+             <div style="padding: 15px;">
+               <div style="margin-bottom: 15px;">
+                 <strong>Supplier:</strong> ${log.supplier.supplierName || 'N/A'}
+               </div>
+               ${log.supplier.suppliedItems && log.supplier.suppliedItems.length > 0 ? `
+               <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                 <thead>
+                   <tr>
+                     <th style="background-color: #f8f9fa; color: #2e7d32; font-weight: bold; padding: 8px; border: 1px solid #2e7d32; text-align: center; font-size: 12px;">Item</th>
+                     <th style="background-color: #f8f9fa; color: #2e7d32; font-weight: bold; padding: 8px; border: 1px solid #2e7d32; text-align: center; font-size: 12px;">Quantity</th>
+                     <th style="background-color: #f8f9fa; color: #2e7d32; font-weight: bold; padding: 8px; border: 1px solid #2e7d32; text-align: center; font-size: 12px;">Unit Price</th>
+                     <th style="background-color: #f8f9fa; color: #2e7d32; font-weight: bold; padding: 8px; border: 1px solid #2e7d32; text-align: center; font-size: 12px;">Total Amount</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   ${log.supplier.suppliedItems.map(item => `
+                     <tr>
+                       <td style="padding: 8px; border: 1px solid #2e7d32; text-align: left; font-size: 12px;">${item.item || 'N/A'}</td>
+                       <td style="padding: 8px; border: 1px solid #2e7d32; text-align: center; font-size: 12px;">${item.quantity || 0}</td>
+                       <td style="padding: 8px; border: 1px solid #2e7d32; text-align: right; font-size: 12px;">Rs. ${Number(item.unitPrice || 0).toLocaleString()}</td>
+                       <td style="padding: 8px; border: 1px solid #2e7d32; text-align: right; font-size: 12px;">Rs. ${Number(item.totalAmount || 0).toLocaleString()}</td>
+                     </tr>
+                   `).join('')}
+                 </tbody>
+               </table>
+               ` : ''}
+               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                 <div><strong>Amount Payable:</strong> Rs. ${Number(log.supplier.amountPayable || 0).toLocaleString()}</div>
+                 <div><strong>Amount Paid:</strong> Rs. ${Number(log.supplier.amountPaid || 0).toLocaleString()}</div>
+               </div>
+               ${log.supplier.paymentDescription ? `
+               <div style="margin-bottom: 10px;">
+                 <strong>Payment Description:</strong> ${log.supplier.paymentDescription}
+               </div>
+               ` : ''}
+               <div style="margin-top: 10px;">
+                 <strong>Payment Status:</strong> ${log.supplier.paymentStatus || 'pending'}
+               </div>
+             </div>
+           </div>
+           ` : ''}
 
           <div style="background-color: white; border: 1px solid #2e7d32; color: #2e7d32; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px;">
             Balance: Rs. ${(() => {
@@ -1542,6 +3421,83 @@ const ConstructionAdminDashboard = () => {
           })}
         </div>
       </Card>
+      <Modal
+        title={selectedSupplierForWallet ? `Supplier Wallet • ${selectedSupplierForWallet.name}` : 'Supplier Wallet'}
+        open={supplierWalletVisible}
+        onCancel={() => setSupplierWalletVisible(false)}
+        footer={null}
+        width={500}
+      >
+        {selectedSupplierForWallet && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ 
+                background: '#f0f2f5', 
+                padding: '20px', 
+                borderRadius: '8px'
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                  Pending: Rs. {Math.abs(Number(selectedSupplierForWallet.walletBalance || 0)).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <Form
+              layout="vertical"
+              onFinish={async (values) => {
+                try {
+                  console.log('💳 Frontend: Recording payment for supplier:', selectedSupplierForWallet._id);
+                  console.log('💳 Frontend: Payment values:', values);
+                  
+                  const response = await api.post(`/api/construction-admin/suppliers/${selectedSupplierForWallet._id}/wallet`, {
+                    amount: values.amount,
+                    type: 'payment',
+                    description: values.description || 'Manual payment'
+                  });
+                  
+                  console.log('💳 Frontend: Payment response:', response.data);
+                  
+                  if (response.data.success) {
+                    message.success('Payment recorded successfully');
+                    loadSuppliers();
+                    setSupplierWalletVisible(false);
+                  }
+                } catch (error) {
+                  console.error('💳 Frontend: Payment error:', error);
+                  console.error('💳 Frontend: Error response:', error.response?.data);
+                  message.error(`Failed to record payment: ${error.response?.data?.error || error.message}`);
+                }
+              }}
+            >
+              <Form.Item
+                name="amount"
+                label="Payment Amount"
+                rules={[{ required: true, message: 'Please enter payment amount' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="Enter payment amount"
+                  formatter={value => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/Rs.\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="description"
+                label="Description"
+              >
+                <Input placeholder="Enter payment description (optional)" />
+              </Form.Item>
+
+              <Form.Item>
+                <Button type="primary" htmlType="submit" block>
+                  Record Payment
+                </Button>
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
 
       {/* Employees Section */}
       <Card 
@@ -1612,6 +3568,67 @@ const ConstructionAdminDashboard = () => {
               }}>
                 Click to view wallet
               </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Suppliers Section */}
+      <Card 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: '600' }}>Suppliers</span>
+            <span style={{ 
+              background: '#fff7e6', 
+              color: '#fa8c16', 
+              padding: '2px 8px', 
+              borderRadius: '12px', 
+              fontSize: '12px', 
+              fontWeight: '500' 
+            }}>
+              {(suppliers || []).length}
+            </span>
+          </div>
+        }
+        style={{ marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          {(suppliers || []).map(sup => (
+            <div
+              key={sup._id}
+              onClick={() => {
+                // Build pending amount by item from supplier transactions
+                const tx = Array.isArray(sup.transactions) ? sup.transactions : [];
+                const byItem = new Map();
+                tx.forEach(t => {
+                  if (t.type === 'supply') {
+                    const key = t.item || 'Unknown';
+                    byItem.set(key, (byItem.get(key)||0) + (Number(t.amount)||0));
+                  } else if (t.type === 'payment' || t.type === 'adjustment') {
+                    // amount could be negative for payment already
+                    const key = t.item || 'All';
+                    byItem.set(key, (byItem.get(key)||0) + (Number(t.amount)||0));
+                  }
+                });
+                const rows = Array.from(byItem.entries()).map(([item, amount]) => ({ item, amount }));
+                setSelectedSupplierForWallet(sup);
+                setSupplierWalletByItem(rows);
+                setSupplierWalletVisible(true);
+              }}
+              style={{ 
+                cursor: 'default', 
+                border: '2px solid #fff7e6', 
+                borderRadius: '12px', 
+                padding: '16px 20px', 
+                minWidth: '200px', 
+                textAlign: 'left', 
+                background: 'linear-gradient(135deg, #fff7e6 0%, #fff1b8 100%)',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <div style={{ fontWeight: '700', fontSize: '16px', color: '#fa8c16', marginBottom: 4 }}>{sup.name}</div>
+              <div style={{ color: '#8c8c8c', fontSize: 12, marginBottom: 8 }}>{(sup.items||[]).join(', ')}</div>
+              <div style={{ fontSize: 14 }}><strong>Pending:</strong> Rs. {Number(Math.max(0, Number(sup.walletBalance||0))).toLocaleString()}</div>
             </div>
           ))}
         </div>
@@ -1748,7 +3765,7 @@ const ConstructionAdminDashboard = () => {
               <Select.Option value="on_leave">On Leave</Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={4}>
             <Button 
               type="primary" 
               icon={<PlusOutlined />}
@@ -1756,6 +3773,26 @@ const ConstructionAdminDashboard = () => {
               style={{ width: '100%' }}
             >
               Add Employee
+            </Button>
+          </Col>
+          <Col xs={24} sm={3}>
+            <Button 
+              type="default" 
+              icon={<DownloadOutlined />}
+              onClick={exportEmployeesAsPDF}
+              style={{ width: '100%' }}
+            >
+              Export PDF
+            </Button>
+          </Col>
+          <Col xs={24} sm={3}>
+            <Button 
+              type="default" 
+              icon={<DownloadOutlined />}
+              onClick={exportAllEmployeeWalletsAsPDF}
+              style={{ width: '100%' }}
+            >
+              Export Wallets
             </Button>
           </Col>
         </Row>
@@ -1789,6 +3826,22 @@ const ConstructionAdminDashboard = () => {
             style={{ marginRight: 8, marginBottom: 16 }}
           >
             Fix Yesterday Balances
+          </Button>
+          <Button 
+            type="default" 
+            icon={<DownloadOutlined />}
+            onClick={exportAllVehicleLogsAsPDF}
+            style={{ marginRight: 8, marginBottom: 16 }}
+          >
+            Export All Logs PDF
+          </Button>
+          <Button 
+            type="default" 
+            icon={<CalendarOutlined />}
+            onClick={() => setDatePickerModalVisible(true)}
+            style={{ marginRight: 8, marginBottom: 16 }}
+          >
+            Export by Date
           </Button>
           <Button 
             type="primary" 
@@ -1853,6 +3906,23 @@ const ConstructionAdminDashboard = () => {
               <Table
                 dataSource={sheetRows}
                 columns={[
+                  { title: 'supplier', dataIndex: 'supplier', key: 'supplier', width: 240, render: (v, r, i) => (
+                    <Select
+                      showSearch
+                      placeholder="Select supplier"
+                      value={r.supplierId || undefined}
+                      onChange={(val) => {
+                        const sup = suppliers.find(s=>s._id===val);
+                        const copy=[...sheetRows];
+                        copy[i]={...copy[i], supplierId:val, supplierName: sup?.name || ''};
+                        setSheetRows(copy);
+                      }}
+                      style={{ width: 220 }}
+                      optionFilterProp="children"
+                    >
+                      {suppliers.map(s => <Option key={s._id} value={s._id}>{s.name}</Option>)}
+                    </Select>
+                  ) },
                   { title: 'date', dataIndex: 'date', key: 'date', width: 120, render: (v, r, i) => (
                     <DatePicker value={v ? dayjs(v) : null} onChange={(d) => { const copy=[...sheetRows]; const newDate = d?.toDate()||null; const empId = copy[i].employeeId; copy[i]={...copy[i], date: newDate, yBal: computeEmployeeYesterdayBalance(empId, newDate)}; setSheetRows(copy); }} format="DD/MM/YYYY" />
                   ) },
@@ -2017,6 +4087,85 @@ const ConstructionAdminDashboard = () => {
                     </>
                   )}
                 </Space>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Card size="small" title="Supplier Details">
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <span>Supplier:</span>
+                  <Select
+                    placeholder="Select supplier"
+                    value={sheetSupplierId}
+                    onChange={setSheetSupplierId}
+                    style={{ width: 220 }}
+                    showSearch
+                    optionFilterProp="children"
+                  >
+                    {suppliers.map(s => (
+                      <Option key={s._id} value={s._id}>{s.name}</Option>
+                    ))}
+                  </Select>
+                </Space>
+              </div>
+              <Table
+                dataSource={supplierRows.map((r,i)=>({ key:i, ...r }))}
+                columns={[
+                  { title: 'item', dataIndex: 'item', key: 'item', render: (v, r, i) => (
+                    <Select
+                      showSearch
+                      placeholder="Select item"
+                      value={v || undefined}
+                      onChange={(val)=>{ const copy=[...supplierRows]; copy[i]={...copy[i], item:val}; setSupplierRows(copy); }}
+                      style={{ width: '100%' }}
+                      optionFilterProp="children"
+                      allowClear
+                    >
+                      {items.map(it => (
+                        <Option key={it._id} value={it.name}>{it.name}</Option>
+                      ))}
+                    </Select>
+                  ) },
+                  { title: 'qty', dataIndex: 'quantity', key: 'quantity', render: (v, r, i) => <InputNumber value={v} onChange={val => { const copy=[...supplierRows]; copy[i]={...copy[i], quantity:Number(val||0)}; setSupplierRows(copy); }} style={{ width:'100%' }} /> },
+                  { title: 'unit', dataIndex: 'unitPrice', key: 'unitPrice', render: (v, r, i) => <InputNumber value={v} onChange={val => { const copy=[...supplierRows]; const unit=Number(val||0); const qty=Number(copy[i].quantity||0); copy[i]={...copy[i], unitPrice:unit, total: unit*qty}; setSupplierRows(copy); }} style={{ width:'100%' }} /> },
+                  { title: 'total', dataIndex: 'total', key: 'total', render: (v) => <InputNumber value={v} disabled style={{ width:'100%' }} /> },
+                  { title: 'op', key: 'op', render: (_, __, i) => <Button size="small" danger onClick={()=>{ const copy=[...supplierRows]; copy.splice(i,1); setSupplierRows(copy); }}>Delete</Button> }
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="key"
+              />
+              <div style={{ marginTop: 8 }}>
+                <Space>
+                  <Button size="small" onClick={() => setSupplierRows(prev => [...prev, { item:'', quantity:0, unitPrice:0, total:0 }])}>Add</Button>
+                  <div><strong>Payable:</strong> Rs. {supplierRows.reduce((s,r)=> s + (Number(r.total)||0), 0).toLocaleString()}</div>
+                </Space>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Row gutter={8}>
+                  <Col span={8}>
+                    <div>
+                      <span style={{ marginRight: 8 }}>Paid:</span>
+                      <InputNumber 
+                        value={supplierPaid} 
+                        onChange={val=>setSupplierPaid(Number(val||0))} 
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </Col>
+                  <Col span={16}>
+                    <div>
+                      <span style={{ marginRight: 8 }}>Description:</span>
+                      <Input 
+                        placeholder="Payment description (optional)"
+                        value={supplierPaymentDescription}
+                        onChange={e => setSupplierPaymentDescription(e.target.value)}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </Col>
+                </Row>
               </div>
             </Card>
           </Col>
@@ -2374,7 +4523,7 @@ const ConstructionAdminDashboard = () => {
               <Select.Option value="blocked">Blocked</Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={4}>
             <Button 
               type="primary" 
               icon={<PlusOutlined />}
@@ -2386,6 +4535,16 @@ const ConstructionAdminDashboard = () => {
               style={{ width: '100%' }}
             >
               Add Customer
+            </Button>
+          </Col>
+          <Col xs={24} sm={4}>
+            <Button 
+              type="default" 
+              icon={<DownloadOutlined />}
+              onClick={exportCustomersAsPDF}
+              style={{ width: '100%' }}
+            >
+              Export PDF
             </Button>
           </Col>
         </Row>
@@ -2462,7 +4621,7 @@ const ConstructionAdminDashboard = () => {
               <Select.Option value="materials">Materials</Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={4}>
             <Button 
               type="primary" 
               icon={<PlusOutlined />}
@@ -2474,6 +4633,16 @@ const ConstructionAdminDashboard = () => {
               style={{ width: '100%' }}
             >
               Add Item
+            </Button>
+          </Col>
+          <Col xs={24} sm={4}>
+            <Button 
+              type="default" 
+              icon={<DownloadOutlined />}
+              onClick={exportItemsAsPDF}
+              style={{ width: '100%' }}
+            >
+              Export PDF
             </Button>
           </Col>
         </Row>
@@ -2550,7 +4719,19 @@ const ConstructionAdminDashboard = () => {
         </Col>
       </Row>
 
-      <Card title="Credit Details" style={{ marginTop: 16 }}>
+      <Card 
+        title="Credit Details" 
+        style={{ marginTop: 16 }}
+        extra={
+          <Button 
+            type="default" 
+            icon={<DownloadOutlined />}
+            onClick={exportCreditManagementAsPDF}
+          >
+            Export PDF
+          </Button>
+        }
+      >
         <Table
           dataSource={creditOverview}
           columns={[
@@ -2778,18 +4959,1029 @@ const ConstructionAdminDashboard = () => {
     </div>
   );
 
+  const renderFuelManagement = () => {
+    // Calculate pending fuel amounts
+    const totalPending = fuelLogs.reduce((sum, log) => sum + (log.remainingAmount || 0), 0);
+    const totalPaid = fuelLogs.reduce((sum, log) => sum + (log.paidAmount || 0), 0);
+    const totalCost = fuelLogs.reduce((sum, log) => sum + (log.totalCost || 0), 0);
+    const totalFuel = fuelLogs.reduce((sum, log) => sum + (log.fuelAmount || 0), 0);
+
+    return (
+      <div>
+        {/* Amount Pending Card */}
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={8} md={6}>
+            <Card 
+              style={{ cursor: totalPending > 0 ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (totalPending > 0) {
+                  fuelPaymentForm.setFieldsValue({ 
+                    amount: totalPending,
+                    description: 'Overall fuel payment'
+                  }); 
+                  setSelectedFuelLogForPayment(null); // null means overall payment
+                  setFuelPaymentModalVisible(true);
+                }
+              }}
+            >
+              <Statistic
+                title="Amount Pending"
+                value={totalPending}
+                precision={2}
+                prefix="Rs."
+                valueStyle={{ color: totalPending > 0 ? '#ff4d4f' : '#52c41a' }}
+              />
+              {totalPending > 0 && (
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <Button type="primary" size="small">
+                    Click to Pay
+                  </Button>
+                </div>
+              )}
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Fuel Logs Table */}
+        <Card 
+          title="Fuel Logs" 
+          extra={
+            <Space>
+              <Button 
+                icon={<FilePdfOutlined />} 
+                onClick={exportFuelManagementAsPDF}
+                title="Export as PDF"
+              >
+                Export PDF
+              </Button>
+              <Button type="primary" onClick={() => { setEditingFuelLog(null); fuelForm.resetFields(); setFuelModalVisible(true); }}>
+                Add Fuel Log
+              </Button>
+            </Space>
+          }
+        >
+          <Table
+            dataSource={fuelLogs}
+            rowKey="_id"
+            columns={[
+              { title: 'Date', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+              { title: 'Vehicle', dataIndex: 'vehicleNumber', key: 'vehicleNumber' },
+              { title: 'Employee', dataIndex: 'employeeName', key: 'employeeName' },
+              { title: 'Fuel (L)', dataIndex: 'fuelAmount', key: 'fuelAmount', render: (val) => `${val || 0}L` },
+              { title: 'Price/L', dataIndex: 'fuelPrice', key: 'fuelPrice', render: (val) => `Rs. ${(val || 0).toFixed(2)}` },
+              { title: 'Total Cost', dataIndex: 'totalCost', key: 'totalCost', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+              { title: 'Paid by Employee', dataIndex: 'paidAmount', key: 'paidAmount', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+              { title: 'Overall Paid', dataIndex: 'overallPaidAmount', key: 'overallPaidAmount', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+              { title: 'Status', dataIndex: 'paymentStatus', key: 'paymentStatus', render: (status) => (
+                <Tag color={status === 'paid' ? 'green' : status === 'partial' ? 'orange' : 'red'}>
+                  {status?.toUpperCase() || 'PENDING'}
+                </Tag>
+              )},
+              { title: 'Actions', key: 'actions', render: (_, record) => (
+                <Space>
+                  <Button size="small" onClick={() => { setEditingFuelLog(record); fuelForm.setFieldsValue({ ...record, date: dayjs(record.date) }); setFuelModalVisible(true); }}>
+                    Edit
+                  </Button>
+                  <Popconfirm title="Delete fuel log?" onConfirm={async () => {
+                    try {
+                      await api.delete(`/api/construction-admin/fuel-logs/${record._id}`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                      });
+                      message.success('Fuel log deleted');
+                      loadFuelLogs();
+                    } catch (e) {
+                      message.error(e?.response?.data?.error || 'Failed to delete');
+                    }
+                  }}>
+                    <Button danger size="small">Delete</Button>
+                  </Popconfirm>
+                </Space>
+              )}
+            ]}
+            pagination={{ pageSize: 10 }}
+          />
+        </Card>
+
+
+        {/* Fuel Log Modal */}
+        <Modal
+          title={editingFuelLog ? 'Edit Fuel Log' : 'Add Fuel Log'}
+          open={fuelModalVisible}
+          onCancel={() => setFuelModalVisible(false)}
+          onOk={async () => {
+            try {
+              const values = await fuelForm.validateFields();
+              const payload = {
+                ...values,
+                date: values.date?.toDate(),
+                employeeName: employees.find(e => e._id === values.employeeId)?.name || values.employeeName
+              };
+              
+              if (editingFuelLog) {
+                await api.put(`/api/construction-admin/fuel-logs/${editingFuelLog._id}`, payload, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+                message.success('Fuel log updated');
+              } else {
+                await api.post('/api/construction-admin/fuel-logs', payload, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+                message.success('Fuel log added');
+              }
+              
+              setFuelModalVisible(false);
+              loadFuelLogs();
+              loadFuelSummary();
+              loadFuelEfficiency();
+            } catch (e) {
+              message.error(e?.response?.data?.error || 'Failed to save fuel log');
+            }
+          }}
+        >
+          <Form form={fuelForm} layout="vertical">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="vehicleNumber" label="Vehicle Number" rules={[{ required: true, message: 'Select vehicle' }]}>
+                  <Select placeholder="Select vehicle">
+                    {vehicles.map(v => (
+                      <Option key={v} value={v}>{v}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="date" label="Date" rules={[{ required: true, message: 'Select date' }]}>
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+            
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="employeeId" label="Employee" rules={[{ required: true, message: 'Select employee' }]}>
+                  <Select placeholder="Select employee">
+                    {employees.map(emp => (
+                      <Option key={emp._id} value={emp._id}>{emp.name}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="fuelAmount" label="Fuel Amount (Liters)" rules={[{ required: true, message: 'Enter fuel amount' }]}>
+                  <InputNumber 
+                    style={{ width: '100%' }} 
+                    placeholder="Liters" 
+                    min={0} 
+                    step={0.1}
+                    onChange={(value) => {
+                      const fuelPrice = fuelForm.getFieldValue('fuelPrice');
+                      if (value && fuelPrice) {
+                        fuelForm.setFieldsValue({ totalCost: value * fuelPrice });
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="fuelPrice" label="Price per Liter">
+                  <InputNumber 
+                    style={{ width: '100%' }} 
+                    placeholder="Rs. per liter" 
+                    min={0} 
+                    step={0.01}
+                    onChange={(value) => {
+                      const fuelAmount = fuelForm.getFieldValue('fuelAmount');
+                      if (value && fuelAmount) {
+                        fuelForm.setFieldsValue({ totalCost: value * fuelAmount });
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="totalCost" label="Total Cost">
+                  <InputNumber 
+                    style={{ width: '100%' }} 
+                    placeholder="Total cost" 
+                    min={0} 
+                    step={0.01}
+                    onChange={(value) => {
+                      // Allow manual override of total cost
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="paidAmount" label="Paid Amount">
+                  <InputNumber style={{ width: '100%' }} placeholder="Amount paid" min={0} step={0.01} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="fuelStation" label="Fuel Station" initialValue="AKR Shed">
+                  <Input placeholder="Fuel station name" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea placeholder="Additional notes" rows={3} />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Fuel Payment Modal */}
+        <Modal
+          title={selectedFuelLogForPayment ? `Fuel Payment - ${selectedFuelLogForPayment.vehicleNumber}` : 'Overall Fuel Payment'}
+          open={fuelPaymentModalVisible}
+          onCancel={() => setFuelPaymentModalVisible(false)}
+          onOk={async () => {
+            try {
+              const values = await fuelPaymentForm.validateFields();
+              const paymentAmount = Number(values.amount) || 0;
+              
+              if (paymentAmount <= 0) {
+                message.error('Payment amount must be greater than 0');
+                return;
+              }
+
+              if (selectedFuelLogForPayment) {
+                // Individual fuel log payment
+                const updatedFuelLog = {
+                  ...selectedFuelLogForPayment,
+                  overallPaidAmount: (selectedFuelLogForPayment.overallPaidAmount || 0) + paymentAmount
+                };
+
+                await api.put(`/api/construction-admin/fuel-logs/${selectedFuelLogForPayment._id}`, updatedFuelLog, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+              } else {
+                // Overall payment - distribute across all pending fuel logs
+                const pendingLogs = fuelLogs.filter(log => log.remainingAmount > 0);
+                let remainingPayment = paymentAmount;
+                
+                for (const log of pendingLogs) {
+                  if (remainingPayment <= 0) break;
+                  
+                  const paymentForThisLog = Math.min(remainingPayment, log.remainingAmount);
+                  const updatedFuelLog = {
+                    ...log,
+                    overallPaidAmount: (log.overallPaidAmount || 0) + paymentForThisLog
+                  };
+
+                  await api.put(`/api/construction-admin/fuel-logs/${log._id}`, updatedFuelLog, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                  });
+
+                  remainingPayment -= paymentForThisLog;
+                }
+              }
+
+              message.success('Payment recorded successfully');
+              setFuelPaymentModalVisible(false);
+              loadFuelLogs();
+            } catch (e) {
+              message.error(e?.response?.data?.error || 'Failed to record payment');
+            }
+          }}
+        >
+          <div>
+            {selectedFuelLogForPayment ? (
+              // Individual fuel log payment
+              <div>
+                <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+                  <div><strong>Vehicle:</strong> {selectedFuelLogForPayment.vehicleNumber}</div>
+                  <div><strong>Employee:</strong> {selectedFuelLogForPayment.employeeName}</div>
+                  <div><strong>Total Cost:</strong> Rs. {(selectedFuelLogForPayment.totalCost || 0).toLocaleString()}</div>
+                  <div><strong>Paid by Employee:</strong> Rs. {(selectedFuelLogForPayment.paidAmount || 0).toLocaleString()}</div>
+                  <div><strong>Overall Payments:</strong> Rs. {(selectedFuelLogForPayment.overallPaidAmount || 0).toLocaleString()}</div>
+                  <div><strong>Total Paid:</strong> Rs. {((selectedFuelLogForPayment.paidAmount || 0) + (selectedFuelLogForPayment.overallPaidAmount || 0)).toLocaleString()}</div>
+                  <div><strong>Remaining:</strong> Rs. {(selectedFuelLogForPayment.remainingAmount || 0).toLocaleString()}</div>
+                </div>
+              </div>
+            ) : (
+              // Overall payment
+              <div>
+                <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+                  <div><strong>Total Pending Amount:</strong> Rs. {totalPending.toLocaleString()}</div>
+                  <div><strong>Number of Pending Logs:</strong> {fuelLogs.filter(log => log.remainingAmount > 0).length}</div>
+                  <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                    Payment will be distributed across all pending fuel logs
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Form form={fuelPaymentForm} layout="vertical">
+              <Form.Item
+                name="amount"
+                label="Payment Amount"
+                rules={[{ required: true, message: 'Please enter payment amount' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="Enter payment amount"
+                  formatter={value => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/Rs.\s?|(,*)/g, '')}
+                  min={0}
+                  max={selectedFuelLogForPayment ? selectedFuelLogForPayment.remainingAmount : totalPending}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="description"
+                label="Description"
+              >
+                <Input placeholder="Payment description (optional)" />
+              </Form.Item>
+            </Form>
+          </div>
+        </Modal>
+      </div>
+    );
+  };
+
+  const renderShedWallet = () => {
+    return (
+      <div>
+        {/* Pending Amount Summary */}
+        {pendingDetails && (
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={8} md={8}>
+              <Card>
+                <Statistic
+                  title="Pending Amount for Fuel"
+                  value={pendingDetails.totalPendingFuel || 0}
+                  precision={2}
+                  prefix="Rs."
+                  valueStyle={{ color: (pendingDetails.totalPendingFuel || 0) > 0 ? '#ff4d4f' : '#52c41a' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8} md={8}>
+              <Card>
+                <Statistic
+                  title="Pending Amount for Shed by Employees"
+                  value={pendingDetails.totalSetCashTaken || 0}
+                  precision={2}
+                  prefix="Rs."
+                  valueStyle={{ color: (pendingDetails.totalSetCashTaken || 0) > 0 ? '#ff4d4f' : '#52c41a' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8} md={8}>
+              <Card 
+                style={{ cursor: (pendingDetails?.totalPendingAmount || 0) > 0 ? 'pointer' : 'default' }}
+                onClick={() => {
+                  if ((pendingDetails?.totalPendingAmount || 0) > 0) {
+                    shedTransactionForm.setFieldsValue({ 
+                      amount: pendingDetails.totalPendingAmount,
+                      description: 'Overall pending amount payment',
+                      type: 'payment_sent'
+                    }); 
+                    setShedTransactionModalVisible(true);
+                  }
+                }}
+              >
+                <Statistic
+                  title="Total Pending Amount"
+                  value={pendingDetails.totalPendingAmount || 0}
+                  precision={2}
+                  prefix="Rs."
+                  valueStyle={{ color: '#ff4d4f', fontWeight: 'bold' }}
+                />
+                {(pendingDetails?.totalPendingAmount || 0) > 0 && (
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <Button type="primary" size="small">
+                      Click to Pay Overall
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        )}
+
+        {/* Pending Details History */}
+        {pendingDetails && (
+          <Card 
+            title="Pending Details" 
+            extra={
+              <Button 
+                onClick={() => {
+                  shedWalletForm.setFieldsValue(shedWallet);
+                  setShedWalletModalVisible(true);
+                }}
+              >
+                Edit Wallet Info
+              </Button>
+            }
+          >
+            <Table
+              dataSource={[
+                // Fuel logs
+                ...pendingDetails.pendingByEmployee.flatMap(employee => 
+                  employee.logs.map(log => ({
+                    ...log,
+                    employeeName: employee.employeeName,
+                    employeeId: employee.employeeId,
+                    key: `fuel_${log._id}`,
+                    type: 'fuel'
+                  }))
+                ),
+                // Vehicle logs with set cash
+                ...(pendingDetails.vehicleLogsWithSetCash || []).map(log => ({
+                  ...log,
+                  key: `vehicle_${log._id}`,
+                  type: 'set_cash',
+                  fuelAmount: 0,
+                  totalCost: 0,
+                  paidAmount: 0,
+                  overallPaidAmount: 0,
+                  remainingAmount: log.remainingSetCash || log.setCashTaken,
+                  paymentStatus: 'pending'
+                }))
+              ]}
+              rowKey="key"
+              columns={[
+                { 
+                  title: 'Date', 
+                  dataIndex: 'date', 
+                  key: 'date', 
+                  render: (date) => dayjs(date).format('DD/MM/YYYY'),
+                  sorter: (a, b) => new Date(a.date) - new Date(b.date)
+                },
+                { 
+                  title: 'Employee', 
+                  dataIndex: 'employeeName', 
+                  key: 'employeeName',
+                  render: (name, record) => (
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{name}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>ID: {record.employeeId}</div>
+                    </div>
+                  )
+                },
+                { 
+                  title: 'Vehicle', 
+                  dataIndex: 'vehicleNumber', 
+                  key: 'vehicleNumber' 
+                },
+                { 
+                  title: 'Type', 
+                  dataIndex: 'type', 
+                  key: 'type',
+                  render: (type) => (
+                    <Tag color={type === 'fuel' ? 'blue' : 'orange'}>
+                      {type === 'fuel' ? 'FUEL' : 'SET CASH'}
+                    </Tag>
+                  )
+                },
+                { 
+                  title: 'Fuel Amount', 
+                  dataIndex: 'fuelAmount', 
+                  key: 'fuelAmount', 
+                  render: (val) => val > 0 ? `${val}L` : '-'
+                },
+                { 
+                  title: 'Total Cost', 
+                  dataIndex: 'totalCost', 
+                  key: 'totalCost', 
+                  render: (val) => val > 0 ? `Rs. ${val.toLocaleString()}` : '-'
+                },
+                { 
+                  title: 'Paid by Employee', 
+                  dataIndex: 'paidAmount', 
+                  key: 'paidAmount', 
+                  render: (val) => val > 0 ? `Rs. ${val.toLocaleString()}` : '-'
+                },
+                { 
+                  title: 'Overall Paid', 
+                  dataIndex: 'overallPaidAmount', 
+                  key: 'overallPaidAmount', 
+                  render: (val) => val > 0 ? `Rs. ${val.toLocaleString()}` : '-'
+                },
+                { 
+                  title: 'Remaining/Set Cash', 
+                  dataIndex: 'remainingAmount', 
+                  key: 'remainingAmount', 
+                  render: (val, record) => (
+                    <span style={{ color: val > 0 ? '#ff4d4f' : '#52c41a', fontWeight: 'bold' }}>
+                      Rs. {(val || 0).toLocaleString()}
+                    </span>
+                  )
+                },
+                { 
+                  title: 'Status', 
+                  dataIndex: 'paymentStatus', 
+                  key: 'paymentStatus', 
+                  render: (status) => (
+                    <Tag color={status === 'paid' ? 'green' : status === 'partial' ? 'orange' : 'red'}>
+                      {status?.toUpperCase() || 'PENDING'}
+                    </Tag>
+                  )
+                }
+              ]}
+              pagination={{ pageSize: 10 }}
+              summary={(pageData) => {
+                const totalRemaining = pageData.reduce((sum, item) => sum + (item.remainingAmount || 0), 0);
+                return (
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} colSpan={7}>
+                      <strong>Total Pending Amount</strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={7}>
+                      <strong style={{ color: '#ff4d4f' }}>
+                        Rs. {totalRemaining.toLocaleString()}
+                      </strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={8} />
+                  </Table.Summary.Row>
+                );
+              }}
+            />
+          </Card>
+        )}
+
+        {/* Transaction History */}
+        <Card 
+          title="Transaction History" 
+          extra={
+            <Space>
+              <Button 
+                icon={<FilePdfOutlined />} 
+                onClick={exportShedWalletAsPDF}
+                title="Export as PDF"
+              >
+                Export PDF
+              </Button>
+              <Button 
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  shedTransactionForm.resetFields();
+                  setShedTransactionModalVisible(true);
+                }}
+              >
+                Add Transaction
+              </Button>
+            </Space>
+          }
+        >
+          <Table
+            dataSource={shedTransactions}
+            rowKey="_id"
+            columns={[
+              { 
+                title: 'Date', 
+                dataIndex: 'transactionDate', 
+                key: 'transactionDate', 
+                render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+                sorter: (a, b) => new Date(a.transactionDate) - new Date(b.transactionDate)
+              },
+              { 
+                title: 'Type', 
+                dataIndex: 'type', 
+                key: 'type', 
+                render: (type) => (
+                  <Tag color={
+                    type === 'payment_sent' ? 'red' : 
+                    type === 'payment_received' ? 'green' : 
+                    type === 'fuel_purchase' ? 'blue' : 
+                    type === 'adjustment' ? 'orange' : 'default'
+                  }>
+                    {type?.replace('_', ' ').toUpperCase()}
+                  </Tag>
+                )
+              },
+              { 
+                title: 'Amount', 
+                dataIndex: 'amount', 
+                key: 'amount', 
+                render: (val) => (
+                  <span style={{ 
+                    color: val > 0 ? '#52c41a' : '#ff4d4f', 
+                    fontWeight: 'bold' 
+                  }}>
+                    Rs. {(val || 0).toLocaleString()}
+                  </span>
+                )
+              },
+              { 
+                title: 'Description', 
+                dataIndex: 'description', 
+                key: 'description',
+                ellipsis: true
+              },
+              { 
+                title: 'Fuel Details', 
+                dataIndex: 'fuelLogDetails', 
+                key: 'fuelLogDetails',
+                render: (fuelLogDetails, record) => {
+                  if (!fuelLogDetails || fuelLogDetails.length === 0) {
+                    return '-';
+                  }
+                  
+                  return (
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
+                        {fuelLogDetails.length} fuel log(s)
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {fuelLogDetails.slice(0, 2).map((log, index) => (
+                          <div key={index}>
+                            {log.vehicleNumber} - {log.employeeName} (Rs. {log.totalCost?.toLocaleString()})
+                          </div>
+                        ))}
+                        {fuelLogDetails.length > 2 && (
+                          <div>+{fuelLogDetails.length - 2} more...</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+              },
+              { 
+                title: 'Payment Method', 
+                dataIndex: 'paymentMethod', 
+                key: 'paymentMethod',
+                render: (method) => (
+                  <Tag color={
+                    method === 'cash' ? 'green' : 
+                    method === 'transfer' ? 'blue' : 
+                    method === 'cheque' ? 'orange' : 'default'
+                  }>
+                    {method?.toUpperCase()}
+                  </Tag>
+                )
+              },
+              { 
+                title: 'Status', 
+                dataIndex: 'status', 
+                key: 'status', 
+                render: (status) => (
+                  <Tag color={status === 'completed' ? 'green' : status === 'pending' ? 'orange' : 'red'}>
+                    {status?.toUpperCase()}
+                  </Tag>
+                )
+              },
+              { 
+                title: 'Processed By', 
+                dataIndex: 'processedBy', 
+                key: 'processedBy' 
+              }
+            ]}
+            pagination={{ pageSize: 10 }}
+            expandable={{
+              expandedRowRender: (record) => {
+                if (!record.fuelLogDetails || record.fuelLogDetails.length === 0) {
+                  return <div style={{ padding: '16px' }}>No fuel details available</div>;
+                }
+                
+                return (
+                  <div style={{ padding: '16px' }}>
+                    <h4>Fuel Log Details:</h4>
+                    <Table
+                      dataSource={record.fuelLogDetails}
+                      rowKey="fuelLogId"
+                      size="small"
+                      columns={[
+                        { title: 'Vehicle', dataIndex: 'vehicleNumber', key: 'vehicleNumber' },
+                        { title: 'Employee', dataIndex: 'employeeName', key: 'employeeName' },
+                        { title: 'Fuel Amount', dataIndex: 'fuelAmount', key: 'fuelAmount', render: (val) => `${val || 0}L` },
+                        { title: 'Total Cost', dataIndex: 'totalCost', key: 'totalCost', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+                        { title: 'Paid by Employee', dataIndex: 'paidAmount', key: 'paidAmount', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+                        { title: 'Overall Paid', dataIndex: 'overallPaidAmount', key: 'overallPaidAmount', render: (val) => `Rs. ${(val || 0).toLocaleString()}` },
+                        { title: 'Status', dataIndex: 'paymentStatus', key: 'paymentStatus', render: (status) => (
+                          <Tag color={status === 'paid' ? 'green' : status === 'partial' ? 'orange' : 'red'}>
+                            {status?.toUpperCase()}
+                          </Tag>
+                        )}
+                      ]}
+                      pagination={false}
+                    />
+                  </div>
+                );
+              },
+              rowExpandable: (record) => record.fuelLogDetails && record.fuelLogDetails.length > 0
+            }}
+          />
+        </Card>
+
+        {/* Shed Wallet Info Modal */}
+        <Modal
+          title="Shed Wallet Information"
+          open={shedWalletModalVisible}
+          onCancel={() => setShedWalletModalVisible(false)}
+          onOk={async () => {
+            try {
+              const values = await shedWalletForm.validateFields();
+              await api.put('/api/construction-admin/shed-wallet', values, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+              });
+              message.success('Shed wallet updated');
+              setShedWalletModalVisible(false);
+              loadShedWallet();
+            } catch (e) {
+              message.error(e?.response?.data?.error || 'Failed to update shed wallet');
+            }
+          }}
+        >
+          <Form form={shedWalletForm} layout="vertical">
+            <Form.Item name="shedName" label="Shed Name" rules={[{ required: true, message: 'Enter shed name' }]}>
+              <Input placeholder="Shed name" />
+            </Form.Item>
+            <Form.Item name="contactPerson" label="Contact Person">
+              <Input placeholder="Contact person name" />
+            </Form.Item>
+            <Form.Item name="phoneNumber" label="Phone Number">
+              <Input placeholder="Phone number" />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Add Transaction Modal */}
+        <Modal
+          title={shedTransactionForm.getFieldValue('type') === 'payment_sent' && shedTransactionForm.getFieldValue('description') === 'Overall pending amount payment' ? 'Pay Overall Pending Amount' : 'Add Transaction'}
+          open={shedTransactionModalVisible}
+          onCancel={() => setShedTransactionModalVisible(false)}
+          onOk={async () => {
+            try {
+              const values = await shedTransactionForm.validateFields();
+              
+              // If this is an overall payment, we need to update the fuel logs and vehicle logs
+              if (values.type === 'payment_sent' && values.description === 'Overall pending amount payment') {
+                const paymentAmount = Number(values.amount) || 0;
+                
+                // Update fuel logs with overall payments
+                const pendingFuelLogs = await api.get('/api/construction-admin/fuel-logs', {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+                
+                const fuelLogsToUpdate = pendingFuelLogs.data.filter(log => 
+                  log.paymentStatus === 'pending' || log.paymentStatus === 'partial'
+                );
+                
+                let remainingPayment = paymentAmount;
+                
+                // First, pay fuel logs
+                for (const log of fuelLogsToUpdate) {
+                  if (remainingPayment <= 0) break;
+                  
+                  const paymentForThisLog = Math.min(remainingPayment, log.remainingAmount || 0);
+                  if (paymentForThisLog > 0) {
+                    const updatedFuelLog = {
+                      ...log,
+                      overallPaidAmount: (log.overallPaidAmount || 0) + paymentForThisLog
+                    };
+                    
+                    await api.put(`/api/construction-admin/fuel-logs/${log._id}`, updatedFuelLog, {
+                      headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                    });
+                    
+                    remainingPayment -= paymentForThisLog;
+                  }
+                }
+                
+                // Then, pay set cash amounts
+                if (remainingPayment > 0 && pendingDetails.vehicleLogsWithSetCash) {
+                  for (const log of pendingDetails.vehicleLogsWithSetCash) {
+                    if (remainingPayment <= 0) break;
+                    
+                    const setCashPaidBack = log.setCashPaidBack || 0;
+                    const remainingSetCash = Math.max(0, (log.setCashTaken || 0) - setCashPaidBack);
+                    const paymentForThisLog = Math.min(remainingPayment, remainingSetCash);
+                    
+                    if (paymentForThisLog > 0) {
+                      const updatedVehicleLog = {
+                        setCashPaidBack: setCashPaidBack + paymentForThisLog
+                      };
+                      
+                      await api.put(`/api/construction-admin/vehicle-logs/${log._id}`, updatedVehicleLog, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                      });
+                      
+                      remainingPayment -= paymentForThisLog;
+                    }
+                  }
+                }
+                
+                // Record the transaction with fuel log details
+                const transactionData = {
+                  ...values,
+                  fuelLogDetails: fuelLogsToUpdate.map(log => ({
+                    fuelLogId: log._id,
+                    vehicleNumber: log.vehicleNumber,
+                    employeeName: log.employeeName,
+                    fuelAmount: log.fuelAmount,
+                    totalCost: log.totalCost,
+                    paidAmount: log.paidAmount,
+                    overallPaidAmount: log.overallPaidAmount,
+                    remainingAmount: log.remainingAmount,
+                    paymentStatus: log.paymentStatus
+                  }))
+                };
+                
+                await api.post('/api/construction-admin/shed-wallet/transaction', transactionData, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+                
+                message.success('Overall payment processed successfully');
+              } else {
+                // Regular transaction
+                await api.post('/api/construction-admin/shed-wallet/transaction', values, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                });
+                message.success('Transaction added');
+              }
+              
+              setShedTransactionModalVisible(false);
+              loadShedWallet();
+              loadShedTransactions();
+              loadPendingDetails();
+              loadFuelLogs();
+            } catch (e) {
+              message.error(e?.response?.data?.error || 'Failed to process transaction');
+            }
+          }}
+        >
+          {shedTransactionForm.getFieldValue('type') === 'payment_sent' && shedTransactionForm.getFieldValue('description') === 'Overall pending amount payment' && (
+            <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+              <div><strong>Overall Payment Summary:</strong></div>
+              <div><strong>Fuel Pending:</strong> Rs. {(pendingDetails?.totalPendingFuel || 0).toLocaleString()}</div>
+              <div><strong>Set Cash Taken:</strong> Rs. {(pendingDetails?.totalSetCashTaken || 0).toLocaleString()}</div>
+              <div><strong>Total Amount:</strong> Rs. {(pendingDetails?.totalPendingAmount || 0).toLocaleString()}</div>
+              <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                This payment will be distributed across all pending fuel logs and recorded as a shed transaction.
+              </div>
+            </div>
+          )}
+          
+          <Form form={shedTransactionForm} layout="vertical">
+            <Form.Item name="type" label="Transaction Type" rules={[{ required: true, message: 'Select transaction type' }]}>
+              <Select placeholder="Select type">
+                <Option value="payment_sent">Payment Sent to Shed</Option>
+                <Option value="payment_received">Payment Received from Shed</Option>
+                <Option value="fuel_purchase">Fuel Purchase</Option>
+                <Option value="adjustment">Adjustment</Option>
+                <Option value="refund">Refund</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="amount" label="Amount" rules={[{ required: true, message: 'Enter amount' }]}>
+              <InputNumber 
+                style={{ width: '100%' }} 
+                placeholder="Amount" 
+                min={0} 
+                step={0.01}
+                formatter={value => `Rs. ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={value => value.replace(/Rs.\s?|(,*)/g, '')}
+              />
+            </Form.Item>
+            <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Enter description' }]}>
+              <Input placeholder="Transaction description" />
+            </Form.Item>
+            <Form.Item name="paymentMethod" label="Payment Method">
+              <Select placeholder="Select payment method">
+                <Option value="cash">Cash</Option>
+                <Option value="transfer">Bank Transfer</Option>
+                <Option value="cheque">Cheque</Option>
+                <Option value="other">Other</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="referenceNumber" label="Reference Number">
+              <Input placeholder="Reference number (optional)" />
+            </Form.Item>
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea placeholder="Additional notes (optional)" />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (selectedSection) {
       case 'dashboard':
         return renderDashboard();
       case 'employees':
         return renderEmployees();
+      case 'suppliers':
+        return (
+          <div>
+            <Card title="Suppliers" extra={
+              <Space>
+                <Button icon={<FilePdfOutlined />} onClick={exportSuppliersAsPDF}>
+                  Export PDF
+                </Button>
+                <Button type="primary" onClick={() => { setEditingSupplier(null); supplierForm.resetFields(); setSupplierModalVisible(true); }}>
+                  Add Supplier
+                </Button>
+              </Space>
+            }>
+              <Table
+                dataSource={suppliers}
+                rowKey="_id"
+                columns={[
+                  { title: 'Name', dataIndex: 'name', key: 'name' },
+                  { title: 'Phone', dataIndex: 'phone', key: 'phone' },
+                  { title: 'Address', dataIndex: 'address', key: 'address', ellipsis: true },
+                  { title: 'Items', dataIndex: 'items', key: 'items', render: (v)=> (v||[]).join(', ') },
+                  { title: 'Wallet Balance', dataIndex: 'walletBalance', key: 'walletBalance', render: v => `Rs. ${Number(v||0).toLocaleString()}` },
+                  { title: 'Status', dataIndex: 'status', key: 'status' },
+                  { title: 'Actions', key: 'actions', render: (_, rec) => (
+                    <Space>
+                      <Button size="small" onClick={() => { setEditingSupplier(rec); supplierForm.setFieldsValue({ ...rec }); setSupplierModalVisible(true); }}>Edit</Button>
+                      <Popconfirm title="Delete supplier?" onConfirm={async () => { try { await api.delete(`/api/construction-admin/suppliers/${rec._id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } }); message.success('Supplier deleted'); loadSuppliers(); } catch(e){ message.error(e?.response?.data?.error||'Failed to delete'); } }}> 
+                        <Button danger size="small">Delete</Button>
+                      </Popconfirm>
+                    </Space>
+                  )}
+                ]}
+              />
+            </Card>
+
+            <Modal
+              title={editingSupplier ? 'Edit Supplier' : 'Add Supplier'}
+              open={supplierModalVisible}
+              onCancel={() => setSupplierModalVisible(false)}
+              onOk={async () => {
+                try {
+                  const vals = await supplierForm.validateFields();
+                  if (editingSupplier) {
+                    await api.put(`/api/construction-admin/suppliers/${editingSupplier._id}`, vals, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+                    message.success('Supplier updated');
+                  } else {
+                    await api.post('/api/construction-admin/suppliers', vals, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
+                    message.success('Supplier added');
+                  }
+                  setSupplierModalVisible(false);
+                  loadSuppliers();
+                } catch(e) {
+                  // handled by form or show error
+                }
+              }}
+              okText={editingSupplier ? 'Save' : 'Add'}
+            >
+              <Form layout="vertical" form={supplierForm} initialValues={{ status: 'active' }}>
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item name="name" label="Supplier Name" rules={[{ required: true, message: 'Enter supplier name' }]}>
+                      <Input placeholder="e.g., ABC Aggregates" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item name="phone" label="Phone">
+                      <Input placeholder="07XXXXXXXX" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24}>
+                    <Form.Item name="address" label="Address">
+                      <Input placeholder="Address" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24}>
+                    <Form.Item name="items" label="Items">
+                      <Select
+                        mode="multiple"
+                        allowClear
+                        placeholder="Select items supplied"
+                        optionFilterProp="children"
+                      >
+                        {items.map(it => (
+                          <Option key={it._id} value={it.name}>{it.name}</Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item name="status" label="Status">
+                      <Select>
+                        <Option value="active">active</Option>
+                        <Option value="inactive">inactive</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form>
+            </Modal>
+          </div>
+        );
       case 'vehicle-logs':
         return renderVehicleLogs();
       case 'customers':
         return renderCustomers();
       case 'items':
         return renderItems();
+      case 'fuel-management':
+        return renderFuelManagement();
+      case 'shed-wallet':
+        return renderShedWallet();
       case 'add-vehicle':
         return (
           <div>
@@ -3006,7 +6198,15 @@ const ConstructionAdminDashboard = () => {
           salary: salaryRows.map(s => ({ item: s.item, amount: Number(s.amount||0) })),
           setCashTaken: row.setCash || 0,
           yesterdayBalance: row.yBal || 0,
-          salaryDeductedFromBalance: row.salaryDeductedFromBalance || 0
+          salaryDeductedFromBalance: row.salaryDeductedFromBalance || 0,
+          supplier: sheetSupplierId ? {
+            supplierId: sheetSupplierId,
+            supplierName: suppliers.find(s=>s._id===sheetSupplierId)?.name,
+            suppliedItems: supplierRows.map(sr => ({ item: sr.item, quantity: Number(sr.quantity||0), unitPrice: Number(sr.unitPrice||0), total: Number(sr.total||0) })),
+            amountPayable: supplierRows.reduce((s,r)=> s + (Number(r.total)||0), 0),
+            amountPaid: Number(supplierPaid||0),
+            paymentDescription: supplierPaymentDescription || ''
+          } : undefined
         };
         console.log('Saving vehicle log payload:', payload);
         const response = await api.post('/api/construction-admin/vehicle-logs', payload, { headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` } });
@@ -3716,6 +6916,33 @@ const ConstructionAdminDashboard = () => {
                         title="Export as PDF"
                       />
                     ),
+                  },
+                  {
+                    title: 'Actions',
+                    key: 'delete',
+                    width: 90,
+                    render: (_, record) => (
+                      <Popconfirm
+                        title="Delete this vehicle log?"
+                        okText="Delete"
+                        okButtonProps={{ danger: true }}
+                        onConfirm={async () => {
+                          try {
+                            await api.delete(`/api/construction-admin/vehicle-logs/${record._id}` , {
+                              headers: { Authorization: `Bearer ${localStorage.getItem('constructionAdminToken')}` }
+                            });
+                            message.success('Vehicle log deleted');
+                            if (selectedVehicle) {
+                              await loadVehicleHistory(selectedVehicle);
+                            }
+                          } catch (e) {
+                            message.error(e?.response?.data?.error || 'Failed to delete');
+                          }
+                        }}
+                      >
+                        <Button danger size="small">Delete</Button>
+                      </Popconfirm>
+                    )
                   }
                 ]}
                 pagination={false}
@@ -4210,6 +7437,39 @@ const ConstructionAdminDashboard = () => {
            />
          </div>
        </div>
+     </Modal>
+
+     {/* Date Picker Modal for Vehicle Logs Export */}
+     <Modal
+       title="Export Vehicle Logs by Date"
+       open={datePickerModalVisible}
+       onCancel={() => setDatePickerModalVisible(false)}
+       onOk={async () => {
+         try {
+           const values = await datePickerForm.validateFields();
+           await exportDateWiseVehicleLogsAsPDF(values.selectedDate);
+           setDatePickerModalVisible(false);
+           datePickerForm.resetFields();
+         } catch (error) {
+           console.error('Date picker validation error:', error);
+         }
+       }}
+       okText="Export PDF"
+       cancelText="Cancel"
+     >
+       <Form form={datePickerForm} layout="vertical">
+         <Form.Item
+           name="selectedDate"
+           label="Select Date"
+           rules={[{ required: true, message: 'Please select a date' }]}
+         >
+           <DatePicker 
+             style={{ width: '100%' }} 
+             format="DD/MM/YYYY"
+             placeholder="Select date to export vehicle logs"
+           />
+         </Form.Item>
+       </Form>
      </Modal>
      </Layout>
    );

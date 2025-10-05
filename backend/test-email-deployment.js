@@ -28,6 +28,7 @@ async function testEmailDeployment() {
 
   try {
     console.log('📧 Creating email transporter...');
+
     const transporter = nodemailer.createTransport(testEmailConfig);
     
     console.log('📧 Verifying email connection...');

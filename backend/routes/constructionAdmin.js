@@ -6,10 +6,14 @@ const bcrypt = require('bcryptjs');
 const ConstructionAdmin = require('../models/ConstructionAdmin');
 const VehicleLog = require('../models/VehicleLog');
 const Vehicle = require('../models/Vehicle');
+const Supplier = require('../models/Supplier');
 const Employee = require('../models/Employee');
 const Customer = require('../models/Customer');
 const Item = require('../models/Item');
 const CreditPayment = require('../models/CreditPayment');
+const FuelLog = require('../models/FuelLog');
+const ShedWallet = require('../models/ShedWallet');
+const ShedTransaction = require('../models/ShedTransaction');
 const smsService = require('../utils/smsService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
@@ -255,6 +259,35 @@ router.post('/vehicle-logs', requireConstructionAdmin, async (req, res) => {
     }
     
     await vehicleLog.save();
+
+    // If supplier data present, record supplier wallet transaction
+    try {
+      if (vehicleLog.supplier && (vehicleLog.supplier.supplierId || vehicleLog.supplier.supplierName)) {
+        let supplierDoc = null;
+        if (vehicleLog.supplier.supplierId && mongoose.Types.ObjectId.isValid(vehicleLog.supplier.supplierId)) {
+          supplierDoc = await Supplier.findById(vehicleLog.supplier.supplierId);
+        }
+        if (!supplierDoc && vehicleLog.supplier.supplierName) {
+          supplierDoc = await Supplier.findOne({ name: vehicleLog.supplier.supplierName });
+        }
+        if (!supplierDoc && vehicleLog.supplier.supplierName) {
+          supplierDoc = new Supplier({ name: vehicleLog.supplier.supplierName });
+        }
+        if (supplierDoc) {
+          const payable = Number(vehicleLog.supplier.amountPayable || 0) - Number(vehicleLog.supplier.amountPaid || 0);
+          const amount = isNaN(payable) ? 0 : payable; // positive increases payable
+          supplierDoc.walletBalance = (supplierDoc.walletBalance || 0) + amount;
+          supplierDoc.transactions.push({
+            type: 'supply',
+            description: `Vehicle ${vehicleLog.vehicleNumber} log on ${new Date(vehicleLog.date).toLocaleDateString()}`,
+            item: vehicleLog.itemsLoading?.join(', '),
+            amount,
+            vehicleLogId: vehicleLog._id
+          });
+          await supplierDoc.save();
+        }
+      }
+    } catch {}
     console.log('Saved vehicle log:', {
       _id: vehicleLog._id,
       vehicleNumber: vehicleLog.vehicleNumber,
@@ -343,6 +376,34 @@ router.put('/vehicle-logs/:id', requireConstructionAdmin, async (req, res) => {
       { new: true }
     );
     if (!vehicleLog) return res.status(404).json({ error: 'Vehicle log not found' });
+    try {
+      if (updateData.supplier) {
+        // Adjust supplier wallet by difference from previous
+        const prev = await VehicleLog.findById(req.params.id).lean();
+        const prevPayable = Number(prev?.supplier?.amountPayable || 0) - Number(prev?.supplier?.amountPaid || 0);
+        const newPayable = Number(updateData.supplier.amountPayable || 0) - Number(updateData.supplier.amountPaid || 0);
+        const delta = (isNaN(newPayable) ? 0 : newPayable) - (isNaN(prevPayable) ? 0 : prevPayable);
+        if (delta !== 0) {
+          let supplierDoc = null;
+          if (updateData.supplier.supplierId && mongoose.Types.ObjectId.isValid(updateData.supplier.supplierId)) {
+            supplierDoc = await Supplier.findById(updateData.supplier.supplierId);
+          }
+          if (!supplierDoc && (updateData.supplier.supplierName || prev?.supplier?.supplierName)) {
+            supplierDoc = await Supplier.findOne({ name: updateData.supplier.supplierName || prev?.supplier?.supplierName });
+          }
+          if (supplierDoc) {
+            supplierDoc.walletBalance = (supplierDoc.walletBalance || 0) + delta;
+            supplierDoc.transactions.push({
+              type: 'adjustment',
+              description: `Adjustment for vehicle log ${vehicleLog._id}`,
+              amount: delta,
+              vehicleLogId: vehicleLog._id
+            });
+            await supplierDoc.save();
+          }
+        }
+      }
+    } catch {}
     res.json(vehicleLog);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -354,9 +415,113 @@ router.delete('/vehicle-logs/:id', requireConstructionAdmin, async (req, res) =>
   try {
     const vehicleLog = await VehicleLog.findByIdAndDelete(req.params.id);
     if (!vehicleLog) return res.status(404).json({ error: 'Vehicle log not found' });
+    // Revert supplier wallet if needed
+    try {
+      const payable = Number(vehicleLog?.supplier?.amountPayable || 0) - Number(vehicleLog?.supplier?.amountPaid || 0);
+      if (payable && (vehicleLog?.supplier?.supplierId || vehicleLog?.supplier?.supplierName)) {
+        let supplierDoc = null;
+        if (vehicleLog.supplier.supplierId && mongoose.Types.ObjectId.isValid(vehicleLog.supplier.supplierId)) {
+          supplierDoc = await Supplier.findById(vehicleLog.supplier.supplierId);
+        }
+        if (!supplierDoc && vehicleLog.supplier.supplierName) {
+          supplierDoc = await Supplier.findOne({ name: vehicleLog.supplier.supplierName });
+        }
+        if (supplierDoc) {
+          supplierDoc.walletBalance = (supplierDoc.walletBalance || 0) - payable;
+          supplierDoc.transactions.push({
+            type: 'adjustment',
+            description: `Revert for deleted vehicle log ${vehicleLog._id}`,
+            amount: -payable,
+            vehicleLogId: vehicleLog._id
+          });
+          await supplierDoc.save();
+        }
+      }
+    } catch {}
     res.json({ message: 'Vehicle log deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== Suppliers CRUD & Wallet =====
+// GET suppliers
+router.get('/suppliers', requireConstructionAdmin, async (req, res) => {
+  try {
+    const suppliers = await Supplier.find().sort({ name: 1 });
+    res.json(suppliers);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST create supplier
+router.post('/suppliers', requireConstructionAdmin, async (req, res) => {
+  try {
+    const sup = new Supplier(req.body);
+    await sup.save();
+    res.status(201).json(sup);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// PUT update supplier
+router.put('/suppliers/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const sup = await Supplier.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!sup) return res.status(404).json({ error: 'Supplier not found' });
+    res.json(sup);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// DELETE supplier (only if no transactions)
+router.delete('/suppliers/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const sup = await Supplier.findById(req.params.id);
+    if (!sup) return res.status(404).json({ error: 'Supplier not found' });
+    if (sup.transactions && sup.transactions.length > 0) {
+      return res.status(400).json({ error: 'Cannot delete supplier with transactions' });
+    }
+    await sup.deleteOne();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST supplier wallet transaction (payment or adjustment)
+router.post('/suppliers/:id/wallet', requireConstructionAdmin, async (req, res) => {
+  try {
+    console.log('📊 Supplier wallet update request:', req.body);
+    console.log('📊 Supplier ID:', req.params.id);
+    
+    const { type, amount, description } = req.body;
+    const sup = await Supplier.findById(req.params.id);
+    if (!sup) {
+      console.log('❌ Supplier not found:', req.params.id);
+      return res.status(404).json({ error: 'Supplier not found' });
+    }
+    
+    console.log('📊 Current supplier wallet balance:', sup.walletBalance);
+    
+    const numeric = Number(amount) || 0;
+    // For payments to supplier, amount should reduce wallet (payable)
+    const delta = type === 'payment' ? -Math.abs(numeric) : numeric;
+    
+    console.log('📊 Payment amount:', numeric, 'Delta:', delta);
+    
+    sup.walletBalance = (sup.walletBalance || 0) + delta;
+    sup.transactions.push({ type, amount: delta, description });
+    await sup.save();
+    
+    console.log('✅ Supplier wallet updated successfully. New balance:', sup.walletBalance);
+    res.json({ success: true, walletBalance: sup.walletBalance });
+  } catch (e) {
+    console.error('❌ Error updating supplier wallet:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -1493,6 +1658,433 @@ router.post('/test-sms', requireConstructionAdmin, async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Test SMS error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Fuel Management Routes
+// GET /api/construction-admin/fuel-logs
+router.get('/fuel-logs', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { vehicleNumber, startDate, endDate } = req.query;
+    let query = {};
+    
+    if (vehicleNumber) {
+      query.vehicleNumber = vehicleNumber;
+    }
+    
+    if (startDate && endDate) {
+      query.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const fuelLogs = await FuelLog.find(query)
+      .sort({ date: -1 })
+      .limit(100);
+    
+    res.json(fuelLogs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/fuel-logs
+router.post('/fuel-logs', requireConstructionAdmin, async (req, res) => {
+  try {
+    const fuelLog = new FuelLog(req.body);
+    await fuelLog.save();
+    res.status(201).json(fuelLog);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/construction-admin/fuel-logs/:id
+router.put('/fuel-logs/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const fuelLog = await FuelLog.findById(req.params.id);
+    if (!fuelLog) return res.status(404).json({ error: 'Fuel log not found' });
+    
+    // Update the fuel log with new data
+    Object.assign(fuelLog, req.body);
+    
+    // Save to trigger pre-save middleware for calculations
+    await fuelLog.save();
+    
+    res.json(fuelLog);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/construction-admin/fuel-logs/:id
+router.delete('/fuel-logs/:id', requireConstructionAdmin, async (req, res) => {
+  try {
+    const fuelLog = await FuelLog.findByIdAndDelete(req.params.id);
+    if (!fuelLog) return res.status(404).json({ error: 'Fuel log not found' });
+    res.json({ message: 'Fuel log deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/fuel-summary
+router.get('/fuel-summary', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { vehicleNumber, startDate, endDate } = req.query;
+    let matchQuery = {};
+    
+    if (vehicleNumber) {
+      matchQuery.vehicleNumber = vehicleNumber;
+    }
+    
+    if (startDate && endDate) {
+      matchQuery.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const summary = await FuelLog.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: null,
+          totalFuelAmount: { $sum: '$fuelAmount' },
+          totalCost: { $sum: '$totalCost' },
+          totalDistance: { $sum: '$distanceTraveled' },
+          averageEfficiency: { $avg: '$fuelEfficiency' },
+          totalPaid: { $sum: '$paidAmount' },
+          totalPending: { $sum: '$remainingAmount' },
+          totalLogs: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const result = summary[0] || {
+      totalFuelAmount: 0,
+      totalCost: 0,
+      totalDistance: 0,
+      averageEfficiency: 0,
+      totalPaid: 0,
+      totalPending: 0,
+      totalLogs: 0
+    };
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/vehicles-fuel-efficiency
+router.get('/vehicles-fuel-efficiency', requireConstructionAdmin, async (req, res) => {
+  try {
+    const efficiency = await FuelLog.aggregate([
+      {
+        $group: {
+          _id: '$vehicleNumber',
+          totalFuel: { $sum: '$fuelAmount' },
+          totalDistance: { $sum: '$distanceTraveled' },
+          averageEfficiency: { $avg: '$fuelEfficiency' },
+          lastFuelDate: { $max: '$date' },
+          totalLogs: { $sum: 1 }
+        }
+      },
+      {
+        $addFields: {
+          overallEfficiency: {
+            $cond: {
+              if: { $gt: ['$totalFuel', 0] },
+              then: { $divide: ['$totalDistance', '$totalFuel'] },
+              else: 0
+            }
+          }
+        }
+      },
+      { $sort: { overallEfficiency: -1 } }
+    ]);
+    
+    res.json(efficiency);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== SHED WALLET MANAGEMENT ROUTES =====
+
+// GET /api/construction-admin/shed-wallet
+router.get('/shed-wallet', requireConstructionAdmin, async (req, res) => {
+  try {
+    let shedWallet = await ShedWallet.findOne({ status: 'active' });
+    
+    // Create default shed wallet if none exists
+    if (!shedWallet) {
+      shedWallet = new ShedWallet({
+        shedName: 'AKR Shed',
+        currentBalance: 0,
+        pendingAmount: 0,
+        totalReceived: 0
+      });
+      await shedWallet.save();
+    }
+    
+    // Calculate pending amount from fuel logs
+    const fuelLogs = await FuelLog.find({ 
+      $or: [
+        { paymentStatus: 'pending' },
+        { paymentStatus: 'partial' }
+      ]
+    });
+    
+    const totalPendingFromFuel = fuelLogs.reduce((sum, log) => {
+      return sum + (log.remainingAmount || 0);
+    }, 0);
+    
+    // Update pending amount
+    shedWallet.pendingAmount = totalPendingFromFuel;
+    await shedWallet.save();
+    
+    res.json(shedWallet);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/shed-wallet/transactions
+router.get('/shed-wallet/transactions', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20, type, status, startDate, endDate } = req.query;
+    
+    let shedWallet = await ShedWallet.findOne({ status: 'active' });
+    if (!shedWallet) {
+      return res.json({ transactions: [], totalPages: 0, currentPage: 1, total: 0 });
+    }
+    
+    let query = { shedWalletId: shedWallet._id };
+    
+    if (type) query.type = type;
+    if (status) query.status = status;
+    if (startDate && endDate) {
+      query.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const transactions = await ShedTransaction.find(query)
+      .populate('fuelLogId', 'vehicleNumber employeeName date')
+      .sort({ transactionDate: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await ShedTransaction.countDocuments(query);
+    
+    res.json({
+      transactions,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/construction-admin/shed-wallet/transaction
+router.post('/shed-wallet/transaction', requireConstructionAdmin, async (req, res) => {
+  try {
+    const { type, amount, description, paymentMethod, referenceNumber, notes, fuelLogId, fuelLogDetails } = req.body;
+    
+    let shedWallet = await ShedWallet.findOne({ status: 'active' });
+    if (!shedWallet) {
+      shedWallet = new ShedWallet({
+        shedName: 'AKR Shed',
+        currentBalance: 0,
+        pendingAmount: 0,
+        totalReceived: 0
+      });
+      await shedWallet.save();
+    }
+    
+    const transaction = new ShedTransaction({
+      shedWalletId: shedWallet._id,
+      type,
+      amount: Number(amount),
+      description,
+      paymentMethod: paymentMethod || 'cash',
+      referenceNumber,
+      notes,
+      fuelLogId,
+      fuelLogDetails: fuelLogDetails || [],
+      processedBy: req.constructionAdmin.username,
+      status: 'completed'
+    });
+    
+    await transaction.save();
+    
+    // Update shed wallet balance
+    if (type === 'payment_sent') {
+      shedWallet.currentBalance = Math.max(0, shedWallet.currentBalance - Number(amount));
+    } else if (type === 'payment_received' || type === 'fuel_purchase') {
+      shedWallet.currentBalance += Number(amount);
+      if (type === 'payment_received') {
+        shedWallet.totalReceived += Number(amount);
+      }
+    }
+    
+    await shedWallet.save();
+    
+    res.status(201).json(transaction);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/construction-admin/shed-wallet/pending-details
+router.get('/shed-wallet/pending-details', requireConstructionAdmin, async (req, res) => {
+  try {
+    // Get all pending fuel logs with details
+    const pendingFuelLogs = await FuelLog.find({
+      $or: [
+        { paymentStatus: 'pending' },
+        { paymentStatus: 'partial' }
+      ]
+    }).sort({ date: -1 });
+    
+    // Calculate total pending fuel amount
+    const totalPendingFuel = pendingFuelLogs.reduce((sum, log) => sum + (log.remainingAmount || 0), 0);
+    
+    // Get all vehicle logs to calculate cash collected by employees from customers and set cash taken
+    const vehicleLogs = await VehicleLog.find({
+      $or: [
+        { 'payments.cash': { $gt: 0 } },
+        { setCashTaken: { $gt: 0 } }
+      ]
+    }).sort({ date: -1 });
+    
+    // Calculate total cash collected by employees from customers (this is what needs to be sent to shed)
+    const totalCashCollected = vehicleLogs.reduce((sum, log) => sum + (log.payments?.cash || 0), 0);
+    
+    // Calculate total set cash taken by employees (cash borrowed from shed) - only unpaid ones
+    const totalSetCashTaken = vehicleLogs.reduce((sum, log) => {
+      // Only count set cash that hasn't been paid back
+      const setCashPaidBack = log.setCashPaidBack || 0;
+      const remainingSetCash = Math.max(0, (log.setCashTaken || 0) - setCashPaidBack);
+      return sum + remainingSetCash;
+    }, 0);
+    
+    // Group by employee
+    const pendingByEmployee = {};
+    const pendingByVehicle = {};
+    
+    pendingFuelLogs.forEach(log => {
+      const employeeKey = log.employeeId || 'Unknown';
+      const vehicleKey = log.vehicleNumber || 'Unknown';
+      
+      if (!pendingByEmployee[employeeKey]) {
+        pendingByEmployee[employeeKey] = {
+          employeeId: log.employeeId,
+          employeeName: log.employeeName,
+          totalPending: 0,
+          logs: []
+        };
+      }
+      
+      if (!pendingByVehicle[vehicleKey]) {
+        pendingByVehicle[vehicleKey] = {
+          vehicleNumber: log.vehicleNumber,
+          totalPending: 0,
+          logs: []
+        };
+      }
+      
+      const remainingAmount = log.remainingAmount || 0;
+      pendingByEmployee[employeeKey].totalPending += remainingAmount;
+      pendingByEmployee[employeeKey].logs.push({
+        _id: log._id,
+        date: log.date,
+        vehicleNumber: log.vehicleNumber,
+        fuelAmount: log.fuelAmount,
+        totalCost: log.totalCost,
+        paidAmount: log.paidAmount,
+        overallPaidAmount: log.overallPaidAmount,
+        remainingAmount: remainingAmount,
+        paymentStatus: log.paymentStatus
+      });
+      
+      pendingByVehicle[vehicleKey].totalPending += remainingAmount;
+      pendingByVehicle[vehicleKey].logs.push({
+        _id: log._id,
+        date: log.date,
+        employeeName: log.employeeName,
+        fuelAmount: log.fuelAmount,
+        totalCost: log.totalCost,
+        paidAmount: log.paidAmount,
+        overallPaidAmount: log.overallPaidAmount,
+        remainingAmount: remainingAmount,
+        paymentStatus: log.paymentStatus
+      });
+    });
+    
+    // Calculate total pending amount (fuel pending + set cash taken by employees)
+    // Set cash taken by employees is money they owe to the shed
+    const totalPendingAmount = totalPendingFuel + totalSetCashTaken;
+    
+    // Also include vehicle logs with set cash information - only those with remaining set cash
+    const vehicleLogsWithSetCash = vehicleLogs.filter(log => {
+      const setCashPaidBack = log.setCashPaidBack || 0;
+      const remainingSetCash = Math.max(0, (log.setCashTaken || 0) - setCashPaidBack);
+      return remainingSetCash > 0;
+    });
+    
+    res.json({
+      totalPending: totalPendingFuel, // This is just fuel pending
+      totalPendingFuel,
+      totalCashCollected,
+      totalSetCashTaken,
+      totalPendingAmount, // This is the sum of fuel + set cash taken
+      pendingByEmployee: Object.values(pendingByEmployee),
+      pendingByVehicle: Object.values(pendingByVehicle),
+      vehicleLogsWithSetCash: vehicleLogsWithSetCash.map(log => {
+        const setCashPaidBack = log.setCashPaidBack || 0;
+        const remainingSetCash = Math.max(0, (log.setCashTaken || 0) - setCashPaidBack);
+        return {
+          _id: log._id,
+          date: log.date,
+          vehicleNumber: log.vehicleNumber,
+          employeeId: log.employeeId,
+          employeeName: log.employeeName,
+          setCashTaken: log.setCashTaken,
+          setCashPaidBack: setCashPaidBack,
+          remainingSetCash: remainingSetCash,
+          customerName: log.customerName,
+          startPlace: log.startPlace,
+          endPlace: log.endPlace
+        };
+      }),
+      totalLogs: pendingFuelLogs.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/construction-admin/shed-wallet
+router.put('/shed-wallet', requireConstructionAdmin, async (req, res) => {
+  try {
+    let shedWallet = await ShedWallet.findOne({ status: 'active' });
+    if (!shedWallet) {
+      shedWallet = new ShedWallet(req.body);
+    } else {
+      Object.assign(shedWallet, req.body);
+    }
+    
+    await shedWallet.save();
+    res.json(shedWallet);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

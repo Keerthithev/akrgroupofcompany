@@ -45,7 +45,17 @@ const VehicleLogSchema = new mongoose.Schema({
     item: { type: String },
     amount: { type: Number }
   }],
+  // Supplier info and payments for this log
+  supplier: {
+    supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+    supplierName: { type: String },
+    suppliedItems: [{ item: String, quantity: Number, unitPrice: Number, total: Number }],
+    amountPayable: { type: Number, default: 0 },
+    amountPaid: { type: Number, default: 0 },
+    paymentDescription: { type: String, default: '' }
+  },
   setCashTaken: { type: Number, default: 0 }, // Added setCashTaken
+  setCashPaidBack: { type: Number, default: 0 }, // Added setCashPaidBack - tracks how much of set cash has been paid back
   yesterdayBalance: { type: Number, default: 0 }, // Added yesterdayBalance
   salaryDeductedFromBalance: { type: Number, default: 0 }, // Track salary deducted from balance
   driverSignature: { type: String },
